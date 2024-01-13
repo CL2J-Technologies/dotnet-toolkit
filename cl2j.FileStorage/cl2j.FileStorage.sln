@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31729.503
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cl2j.FileStorage.TestApp", "cl2j.FileStorage.TestApp\cl2j.FileStorage.TestApp.csproj", "{D4A5B6C3-B58D-4AA8-A62D-B94E173E2251}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cl2j.FileStorage", "cl2j.FileStorage\cl2j.FileStorage.csproj", "{D9BA9B58-73BD-4A27-B434-4E895BE413C8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "cl2j.FileStorage.Tests", "cl2j.FileStorage.Tests\cl2j.FileStorage.Tests.csproj", "{C11103FA-AED6-474F-9E79-42408059961B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.FileStorage.Provider.AzureBlobStorage", "cl2j.FileStorage.Provider.AzureBlobStorage\cl2j.FileStorage.Provider.AzureBlobStorage.csproj", "{95B5ED04-D9A3-4AB5-BFEB-860D6BD35F6B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4A5B6C3-B58D-4AA8-A62D-B94E173E2251}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4A5B6C3-B58D-4AA8-A62D-B94E173E2251}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4A5B6C3-B58D-4AA8-A62D-B94E173E2251}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4A5B6C3-B58D-4AA8-A62D-B94E173E2251}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9BA9B58-73BD-4A27-B434-4E895BE413C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9BA9B58-73BD-4A27-B434-4E895BE413C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9BA9B58-73BD-4A27-B434-4E895BE413C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9BA9B58-73BD-4A27-B434-4E895BE413C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C11103FA-AED6-474F-9E79-42408059961B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C11103FA-AED6-474F-9E79-42408059961B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C11103FA-AED6-474F-9E79-42408059961B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C11103FA-AED6-474F-9E79-42408059961B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95B5ED04-D9A3-4AB5-BFEB-860D6BD35F6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95B5ED04-D9A3-4AB5-BFEB-860D6BD35F6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95B5ED04-D9A3-4AB5-BFEB-860D6BD35F6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95B5ED04-D9A3-4AB5-BFEB-860D6BD35F6B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E9C31167-2581-443F-82D1-E7BB526AD26E}
+	EndGlobalSection
+EndGlobal

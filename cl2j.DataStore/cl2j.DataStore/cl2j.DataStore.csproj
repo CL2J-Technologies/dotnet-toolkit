@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AnalysisMode>Recommended</AnalysisMode>
+
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Authors>cl2j</Authors>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Copyright />
+		<PackageProjectUrl>https://github.com/jfblier/cl2j.DataStore</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/jfblier/cl2j.DataStore</RepositoryUrl>
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
+		<Version>1.0.8</Version>
+		<Description>Multi-providers CRUD Repository abstraction .NET library written in C#</Description>
+		<Title>Multi-providers CRUD Repository abstraction .NET library written in C#</Title>		
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\readme.md" Pack="true" PackagePath="\" />
+		<None Include=".editorconfig" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EditorConfigFiles Remove=".editorconfig" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj" />
+	</ItemGroup>
+</Project>
