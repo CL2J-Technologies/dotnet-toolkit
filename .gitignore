@@ -349,9 +349,4 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 /.data/colors.json
-/.vs/dotnet-toolkit/DesignTimeBuild/.dtbcache.v2
-/.vs/dotnet-toolkit/v17/.futdcache.v2
-/.vs/dotnet-toolkit/v17/.suo
-/.vs/ProjectEvaluation/dotnet-toolkit.metadata.v7.bin
-/.vs/ProjectEvaluation/dotnet-toolkit.projects.v7.bin
-/.vs/dotnet-toolkit/FileContentIndex/08ed3e54-f951-483e-ad3a-0630318030cc.vsidx
+/.vs/**

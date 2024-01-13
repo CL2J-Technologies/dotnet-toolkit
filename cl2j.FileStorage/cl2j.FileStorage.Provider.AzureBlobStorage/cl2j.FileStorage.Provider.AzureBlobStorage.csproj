@@ -22,7 +22,7 @@
 		<PackageReadmeFile>readme.md</PackageReadmeFile>	
 	</PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
+        <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage.csproj" />
