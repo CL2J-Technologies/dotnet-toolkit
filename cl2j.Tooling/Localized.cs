@@ -74,6 +74,12 @@ namespace cl2j.Tooling
             return false;
         }
 
+        public T? GetOrDefault(string key)
+        {
+            if (TryGetValue(key, out var value)) return value;
+            return default;
+        }
+
         public void Add(KeyValuePair<string, T> item)
         {
             ((ICollection<KeyValuePair<string, T>>)data).Add(item);
