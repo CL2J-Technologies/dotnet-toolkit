@@ -66,7 +66,7 @@ namespace cl2j.FileStorage.Provider.Disk
                 return new List<string>();
 
             var list = Directory.GetFiles(fullName);
-            return list.Select(n => n.Substring(fullName.Length + 1));
+            return list.Select(n => n[(fullName.Length + 1)..]);
         }
 
         public async Task<IEnumerable<string>> ListFoldersAsync(string path)
@@ -78,7 +78,7 @@ namespace cl2j.FileStorage.Provider.Disk
                 return new List<string>();
 
             var list = Directory.GetDirectories(fullName);
-            return list.Select(n => n.Substring(fullName.Length + 1));
+            return list.Select(n => n[(fullName.Length + 1)..]);
         }
 
         public async Task<bool> ReadAsync(string name, Stream stream)

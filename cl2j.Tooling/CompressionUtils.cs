@@ -3,7 +3,7 @@ using System.Text;
 
 namespace cl2j.Tooling
 {
-    public class CompressionUtils
+    public static class CompressionUtils
     {
         public static byte[] Compress(string str)
         {

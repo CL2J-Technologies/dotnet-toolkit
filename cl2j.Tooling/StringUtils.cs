@@ -191,7 +191,7 @@ namespace cl2j.Tooling
         {
             foreach (var entry in foreign_characters)
             {
-                if (entry.Key.IndexOf(c) != -1)
+                if (entry.Key.Contains(c))
                     return entry.Value[0];
             }
             return c;

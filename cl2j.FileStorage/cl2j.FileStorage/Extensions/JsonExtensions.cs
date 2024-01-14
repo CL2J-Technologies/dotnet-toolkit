@@ -64,7 +64,8 @@ namespace cl2j.FileStorage.Extensions
                 TypeNameHandling = TypeNameHandling.Auto
             };
             var camelCaseResolver = new CamelCasePropertyNamesContractResolver();
-            camelCaseResolver.NamingStrategy.ProcessDictionaryKeys = false;
+            if (camelCaseResolver.NamingStrategy != null)
+                camelCaseResolver.NamingStrategy.ProcessDictionaryKeys = false;
             options.ContractResolver = camelCaseResolver;
             options.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
             return options;

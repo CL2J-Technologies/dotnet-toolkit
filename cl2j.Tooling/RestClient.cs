@@ -44,22 +44,22 @@ namespace cl2j.Tooling
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(key, value);
         }
 
-        public async Task<Tout?> PostAsync<Tin, Tout>(string url, Tin? data) where Tout : new()
+        public async Task<TOut?> PostAsync<TIn, TOut>(string url, TIn? data) where TOut : new()
         {
             var body = PrepareRequestBody(data);
             using HttpResponseMessage response = await client.PostAsync(url, body);
             response.EnsureSuccessStatusCode();
-            return await ParseResponseAsync<Tout>(response);
+            return await ParseResponseAsync<TOut>(response);
         }
 
-        public async Task PostAsync<Tin>(string url, Tin? data)
+        public async Task PostAsync<TIn>(string url, TIn? data)
         {
             var body = PrepareRequestBody(data);
             using HttpResponseMessage response = await client.PostAsync(url, body);
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task<Tout?> PostFiles<Tout>(string url, IFormFileCollection files)
+        public async Task<TOut?> PostFiles<TOut>(string url, IFormFileCollection files)
         {
             using var content = new MultipartFormDataContent();
             foreach (var file in files)
@@ -72,7 +72,7 @@ namespace cl2j.Tooling
 
             using HttpResponseMessage response = await client.PostAsync(url, content);
             response.EnsureSuccessStatusCode();
-            return await ParseResponseAsync<Tout>(response);
+            return await ParseResponseAsync<TOut>(response);
         }
 
         public async Task<T?> GetAsync<T>(string url) where T : new()

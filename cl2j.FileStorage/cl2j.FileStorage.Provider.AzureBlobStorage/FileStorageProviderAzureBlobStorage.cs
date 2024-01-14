@@ -77,7 +77,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                     var name = blob.Name;
                     if (name.StartsWith(path))
                     {
-                        name = name.Substring(path.Length + 1);
+                        name = name[(path.Length + 1)..];
                         if (name.IndexOf("/") < 0)
                             list.Add(name);
                     }
@@ -111,12 +111,12 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                 var name = blob.Name;
                 if (name.StartsWith(path))
                 {
-                    name = name.Substring(path.Length + 1);
+                    name = name[(path.Length + 1)..];
 
                     var n = name.IndexOf("/");
                     if (n > 0)
                     {
-                        name = name.Substring(0, n);
+                        name = name[..n];
                         list.Add(name);
                     }
                 }

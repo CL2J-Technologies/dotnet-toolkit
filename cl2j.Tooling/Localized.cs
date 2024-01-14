@@ -175,8 +175,7 @@ namespace cl2j.Tooling
 
         public override bool Equals(object? obj)
         {
-            var casted = obj as Localized<T>;
-            if (casted == null)
+            if (obj is not Localized<T> casted)
                 return false;
 
             if (Count != casted.Count)
