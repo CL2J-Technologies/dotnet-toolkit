@@ -212,5 +212,36 @@ namespace cl2j.Tooling
 
             return text.ToLower().RemoveDiacritics();
         }
+
+        public static HashSet<string> ComputeInvariantValues<T>(Func<T, string> valueResolver, IList<T> list)
+        {
+            var set = new HashSet<string>();
+            foreach (var item in list)
+            {
+                var value = valueResolver(item);
+                if (!string.IsNullOrEmpty(value))
+                    set.Add(ToInvariant(value));
+            }
+            return set;
+        }
+
+        public static HashSet<string> ComputeNormalizedValues<T>(Func<T, string> valueResolver, IEnumerable<T> list)
+        {
+            var set = new HashSet<string>();
+            foreach (var item in list)
+            {
+                var value = valueResolver(item);
+                if (!string.IsNullOrEmpty(value))
+                    set.Add(NormalizeComponentForUri(value));
+            }
+            return set;
+        }
+
+        public static string RemoveIfStartWith(this string content, string startWith)
+        {
+            if (content.StartsWith(startWith))
+                return content[startWith.Length..];
+            return content;
+        }
     }
 }

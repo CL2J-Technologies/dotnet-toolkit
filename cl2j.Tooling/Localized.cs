@@ -137,11 +137,17 @@ namespace cl2j.Tooling
             return FromDict(dict);
         }
 
+        public static Localized<T> Default(T value)
+        {
+            return new Localized<T>
+            {
+                { "*", value }
+            };
+        }
+
         public static Localized<string> EmptyString()
         {
-            return new Localized<string> {
-                { "*", string.Empty }
-            };
+            return Localized<string>.Default(string.Empty);
         }
 
         public static Localized<T> FromDict(IDictionary<string, T> dict)

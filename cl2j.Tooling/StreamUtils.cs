@@ -14,11 +14,13 @@ namespace cl2j.Tooling
             return ms;
         }
 
-        public static byte[]? ToBytes(this Stream input)
+        public static byte[]? ToBytes(this Stream? input)
         {
             if (input == null)
                 return null;
 
+            if (input.Position > 0 && input.CanSeek)
+                input.Seek(0, SeekOrigin.Begin);
             using var ms = new MemoryStream();
             CopyTo(input, ms);
             return ms.ToArray();
