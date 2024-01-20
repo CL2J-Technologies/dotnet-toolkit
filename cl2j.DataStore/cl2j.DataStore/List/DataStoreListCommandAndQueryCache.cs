@@ -1,19 +1,20 @@
 ﻿using System.Diagnostics;
+using cl2j.Tooling;
 using Microsoft.Extensions.Logging;
 
-namespace cl2j.DataStore.Cache
+namespace cl2j.DataStore.List
 {
-    public class DataStoreCache<TKey, TValue> : DataStoreBase<TKey, TValue>, Tooling.Observers.IObservable<List<TValue>>
+    public class DataStoreListCommandAndQueryCache<TKey, TValue> : DataStoreListCommandAndQueryBase<TKey, TValue>, Tooling.Observers.IObservable<List<TValue>>
     {
         private readonly CacheLoader cacheLoader;
-        private readonly IDataStore<TKey, TValue> dataStore;
+        private readonly IDataStoreListCommandAndQuery<TKey, TValue> dataStore;
         private List<TValue> cache = new();
 
         private readonly Tooling.Observers.Observable<List<TValue>> observable = new();
 
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
-        public DataStoreCache(string name, IDataStore<TKey, TValue> dataStore, TimeSpan refreshInterval, Func<TValue, TKey> getKeyPredicate, ILogger logger, Func<TValue, object?>? orderbyPredicate = null, bool? ascending = null)
+        public DataStoreListCommandAndQueryCache(string name, IDataStoreListCommandAndQuery<TKey, TValue> dataStore, TimeSpan refreshInterval, Func<TValue, TKey> getKeyPredicate, ILogger logger, Func<TValue, object?>? orderbyPredicate = null, bool? ascending = null)
             : base(getKeyPredicate)
         {
             this.dataStore = dataStore;
@@ -120,13 +121,13 @@ namespace cl2j.DataStore.Cache
             }
         }
 
-        public override async Task ReplaceAllByAsync(IDictionary<TKey, TValue> items)
+        public override async Task ReplaceAllByAsync(ICollection<TValue> items)
         {
             await semaphore.WaitAsync();
             try
             {
                 await dataStore.ReplaceAllByAsync(items);
-                cache = items.Values.ToList();
+                cache = items.ToList();
                 await NotifyAsync(cache);
             }
             finally

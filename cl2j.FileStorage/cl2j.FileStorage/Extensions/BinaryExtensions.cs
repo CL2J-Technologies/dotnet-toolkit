@@ -12,10 +12,10 @@ namespace cl2j.FileStorage.Extensions
             return null;
         }
 
-        public static async Task WriteBytesAsync(this IFileStorageProvider fileStorageProvider, string fileName, byte[] bytes)
+        public static async Task WriteBytesAsync(this IFileStorageProvider fileStorageProvider, string fileName, byte[] bytes, string? contentType = null)
         {
             using var stream = new MemoryStream(bytes);
-            await fileStorageProvider.WriteAsync(fileName, stream);
+            await fileStorageProvider.WriteAsync(fileName, stream, contentType);
         }
     }
 }

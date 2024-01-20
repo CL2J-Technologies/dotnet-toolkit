@@ -1,15 +1,15 @@
 ﻿using cl2j.FileStorage.Core;
 using cl2j.FileStorage.Extensions;
 
-namespace cl2j.DataStore.Archive
+namespace cl2j.DataStore.List
 {
-    public class DataStoreArchive<TKey, TValue> : IDataStore<TKey, TValue>
+    public class DataStoreListCommandAndQueryArchive<TKey, TValue> : IDataStoreListCommandAndQuery<TKey, TValue>
     {
-        private readonly IDataStore<TKey, TValue> dataStore;
+        private readonly IDataStoreListCommandAndQuery<TKey, TValue> dataStore;
         private readonly IFileStorageProvider fileStorageProvider;
         private readonly string filename;
 
-        public DataStoreArchive(IDataStore<TKey, TValue> dataStore, IFileStorageProvider fileStorageProvider, string filename)
+        public DataStoreListCommandAndQueryArchive(IDataStoreListCommandAndQuery<TKey, TValue> dataStore, IFileStorageProvider fileStorageProvider, string filename)
         {
             this.dataStore = dataStore;
             this.fileStorageProvider = fileStorageProvider;
@@ -44,7 +44,7 @@ namespace cl2j.DataStore.Archive
             await WriteArchiveAsync();
         }
 
-        public async Task ReplaceAllByAsync(IDictionary<TKey, TValue> items)
+        public async Task ReplaceAllByAsync(ICollection<TValue> items)
         {
             await dataStore.ReplaceAllByAsync(items);
             await WriteArchiveAsync();

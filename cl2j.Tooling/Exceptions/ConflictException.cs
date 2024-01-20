@@ -1,4 +1,4 @@
-﻿namespace cl2j.DataStore
+﻿namespace cl2j.Tooling.Exceptions
 {
     public class ConflictException : Exception
     {
