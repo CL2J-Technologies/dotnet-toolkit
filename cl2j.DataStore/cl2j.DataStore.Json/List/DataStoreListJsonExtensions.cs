@@ -27,6 +27,13 @@ namespace cl2j.DataStore.Json.List
             return dataStoreCache;
         }
 
+        public static void CreateAndAddDataStoreListCommandAndQueryJsonWithCache<TKey, TValue>(this IServiceProvider builder, string name, string fileStorageName, string dataStoreFileName, TimeSpan refreshInterval) where TValue : IEntity<TKey>
+        {
+            var factory = builder.GetRequiredService<IDataStoreListFactory>();
+            var dataStore = builder.CreateDataStoreListCommandAndQueryJsonWithCache<TKey, TValue>(name, fileStorageName, dataStoreFileName, refreshInterval);
+            factory.AddDataStoreListCommandAndQuery(name, dataStore);
+        }
+
         public static IDataStoreListCommandAndQuery<TKey, TValue> CreateDataStoreListCommandAndQueryJson<TKey, TValue>(this IServiceProvider builder, string fileStorageName, string dataStoreFileName) where TValue : IEntity<TKey>
         {
             return builder.CreateDataStoreListCommandAndQueryJson<TKey, TValue>(fileStorageName, dataStoreFileName, r => r.Id);
