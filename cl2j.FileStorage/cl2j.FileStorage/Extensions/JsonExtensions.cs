@@ -8,6 +8,8 @@ namespace cl2j.FileStorage.Extensions
 {
     public static class JsonExtensions
     {
+        private static readonly string byteOrderMarkUtf8 = Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble());
+
         public static async Task<T> ReadJsonObjectAsync<T>(this IFileStorageProvider fileStorageProvider, string fileName, Encoding? encoding = null) where T : new()
         {
             var decompress = fileName.EndsWith(".json.gz");
@@ -30,6 +32,9 @@ namespace cl2j.FileStorage.Extensions
                 return new T();
 
             var options = CreateSerializerOptions();
+
+            if (data.StartsWith(byteOrderMarkUtf8, StringComparison.Ordinal))
+                data = data.Remove(0, byteOrderMarkUtf8.Length);
 
             var value = JsonConvert.DeserializeObject<T>(data, options);
             return value == null ? throw new JsonException($"Unable to deserialize {typeof(T).Name} from value '{data}'") : value;
