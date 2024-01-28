@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using cl2j.Tooling;
 using cl2j.Tooling.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -18,7 +19,7 @@ namespace cl2j.DataStore
         {
             if (!dict.TryAdd(name, dataStore))
                 throw new ConflictException($"Data store '{name}' already added.");
-            logger.LogInformation($"Added DataStore {name} [{dataStore.GetType().FullName}]");
+            logger.LogInformation($"Added DataStore {name} [{dataStore.GetType().GetPrettyName()}]");
         }
 
         protected T Get<T>(string name) where T : class
