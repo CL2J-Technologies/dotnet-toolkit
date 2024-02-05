@@ -69,7 +69,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
 
             var list = new List<string>();
 
-            var blobs = container.GetBlobs();
+            var blobs = container.GetBlobs(prefix: path);
             if (path != null && path.Length > 0)
             {
                 foreach (var blob in blobs)
@@ -77,7 +77,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                     var name = blob.Name;
                     if (name.StartsWith(path))
                     {
-                        name = name[(path.Length + 1)..];
+                        name = name[(path.Length)..];
                         if (name.IndexOf("/") < 0)
                             list.Add(name);
                     }
