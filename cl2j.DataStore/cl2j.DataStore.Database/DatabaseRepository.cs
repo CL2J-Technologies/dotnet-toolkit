@@ -64,6 +64,20 @@ namespace cl2j.DataStore.Database
             }
         }
 
+        public async Task Update<T>(T t) where T : class
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                await connection.UpdateAsync(t);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, $"DatabaseRepository.Update<{typeof(T).Name}> - Exception thrown");
+                throw;
+            }
+        }
+
         public async Task<int> Execute(string sql, object? param = null)
         {
             try
