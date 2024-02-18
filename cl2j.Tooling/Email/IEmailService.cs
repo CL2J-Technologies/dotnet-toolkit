@@ -2,6 +2,9 @@
 {
     public interface IEmailService
     {
+        Task<bool> SendEmailAsync(string subject, string body, string to, bool isBodyHtml = false);
         Task<bool> SendEmailAsync(string from, string subject, string body, string to, bool isBodyHtml = false);
+
+        Task<bool> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false);
     }
 }

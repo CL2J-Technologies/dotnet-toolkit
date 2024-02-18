@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using cl2j.Tooling.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -14,6 +15,14 @@ namespace cl2j.Tooling.Email
         {
             this.logger = logger;
             this.smtpSettings = smtpSettings.Value;
+        }
+
+        public async Task<bool> SendEmailAsync(string subject, string body, string to, bool isBodyHtml = false)
+        {
+            if (smtpSettings.From == null)
+                throw new ValidationException("'From' Smtp configuration is missing");
+
+            return await SendEmailAsync(smtpSettings.From, subject, body, to, isBodyHtml);
         }
 
         public async Task<bool> SendEmailAsync(string from, string subject, string body, string to, bool isBodyHtml = false)
@@ -32,6 +41,17 @@ namespace cl2j.Tooling.Email
                 logger.LogError(ex, $"Unexpected error while sending email to '{to}'");
                 return false;
             }
+        }
+
+        public async Task<bool> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false)
+        {
+            if (smtpSettings.From == null)
+                throw new ValidationException("'From' Smtp configuration is missing");
+            if (smtpSettings.ErrorTo == null)
+                throw new ValidationException("'ErrorTo' Smtp configuration is missing");
+
+            logger.LogError(ex, $"{subject} : {details}");
+            return await SendEmailAsync(smtpSettings.From, subject, details + Environment.NewLine + ex.Message, smtpSettings.ErrorTo, isBodyHtml);
         }
 
         private static SmtpClient CreateSmtpClient(SmtpSettings smtpSettings)
