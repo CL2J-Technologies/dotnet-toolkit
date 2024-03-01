@@ -44,6 +44,11 @@ namespace cl2j.Tooling
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(key, value);
         }
 
+        public void SetTimeout(TimeSpan timeout)
+        {
+            client.Timeout = timeout;
+        }
+
         public async Task<TOut?> PostAsync<TIn, TOut>(string url, TIn? data) where TOut : new()
         {
             var body = PrepareRequestBody(data);
