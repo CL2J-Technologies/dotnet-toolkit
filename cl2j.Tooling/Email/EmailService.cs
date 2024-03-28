@@ -43,6 +43,16 @@ namespace cl2j.Tooling.Email
             }
         }
 
+        public async Task<bool> SendSystemAsync(string subject, string details, bool isBodyHtml = false)
+        {
+            if (smtpSettings.From == null)
+                throw new ValidationException("'From' Smtp configuration is missing");
+            if (smtpSettings.SystemTo == null)
+                throw new ValidationException("'SystemTo' Smtp configuration is missing");
+
+            return await SendEmailAsync(smtpSettings.From, subject, details, smtpSettings.SystemTo, isBodyHtml);
+        }
+
         public async Task<bool> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false)
         {
             if (smtpSettings.From == null)
