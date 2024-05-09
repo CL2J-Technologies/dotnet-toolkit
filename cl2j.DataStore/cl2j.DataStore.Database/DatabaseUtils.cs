@@ -2,7 +2,7 @@
 {
     public static class DatabaseUtils
     {
-        private static readonly Random random = new Random();
+        private static readonly Random random = new();
 
         public static string CreateGuid()
         {

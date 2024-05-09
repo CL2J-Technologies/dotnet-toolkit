@@ -17,28 +17,28 @@ namespace cl2j.Tooling.Email
             this.smtpSettings = smtpSettings.Value;
         }
 
-        public async Task<bool> SendEmailAsync(string subject, string body, string to, bool isBodyHtml = false)
+        public async Task<bool> SendEmailAsync(string subject, string body, string toEmail, bool isBodyHtml = false)
         {
             if (smtpSettings.From == null)
                 throw new ValidationException("'From' Smtp configuration is missing");
 
-            return await SendEmailAsync(smtpSettings.From, subject, body, to, isBodyHtml);
+            return await SendEmailAsync(smtpSettings.From, subject, body, toEmail, isBodyHtml);
         }
 
-        public async Task<bool> SendEmailAsync(string from, string subject, string body, string to, bool isBodyHtml = false)
+        public async Task<bool> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false)
         {
             try
             {
-                var message = CreateMailMessage(from, subject, body, to, isBodyHtml);
+                var message = CreateMailMessage(from, subject, body, toEmail, isBodyHtml);
                 var client = CreateSmtpClient(smtpSettings);
                 await client.SendMailAsync(message);
 
-                logger.LogInformation($"Sent email sent to '{to}' (from={from})");
+                logger.LogInformation($"Sent email sent to '{toEmail}' (from={from})");
                 return true;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Unexpected error while sending email to '{to}'");
+                logger.LogError(ex, $"Unexpected error while sending email to '{toEmail}'");
                 return false;
             }
         }
