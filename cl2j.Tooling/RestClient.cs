@@ -80,6 +80,17 @@ namespace cl2j.Tooling
             return await ParseResponseAsync<TOut>(response);
         }
 
+        public async Task<TOut?> PostFiles<TOut>(string url, List<(string, byte[])> files)
+        {
+            using var content = new MultipartFormDataContent();
+            foreach (var file in files)
+                content.Add(new ByteArrayContent(file.Item2), "file", file.Item1);
+
+            using HttpResponseMessage response = await client.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
+            return await ParseResponseAsync<TOut>(response);
+        }
+
         public async Task<T?> GetAsync<T>(string url) where T : new()
         {
             using HttpResponseMessage response = await client.GetAsync(url);
