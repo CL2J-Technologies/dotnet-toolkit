@@ -1,10 +1,9 @@
-﻿using cl2j.DataStore.Json;
+﻿using System.IO;
+using System.Threading.Tasks;
 using cl2j.FileStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace cl2j.DataStore.TestApp
 {
@@ -32,16 +31,18 @@ namespace cl2j.DataStore.TestApp
             //This will allow accessing IFileStorageProviderFactory instance
             services.AddFileStorage();
 
-            //Configure the JSON DataStore.
+            //Configure the DataStore.
+            services.AddDataStore();
+
+            services.AddSingleton<DataStoreSample>();
+
+            var serviceProvider = services.BuildServiceProvider();
+
             //The store will use the FileStorageProvider to access the file color.json.
             //The field Id represent the key for the Color class
             services.AddDataStoreJson<string, Color>("DataStore", "colors.json", (color) => color.Id);
             //or add the store with a cache
             //services.AddDataStoreJsonWithCache<string, Color>("DataStore", "colors.json", (color) => color.Id, TimeSpan.FromSeconds(5));
-
-            services.AddSingleton<DataStoreSample>();
-
-            var serviceProvider = services.BuildServiceProvider();
 
             return serviceProvider;
         }

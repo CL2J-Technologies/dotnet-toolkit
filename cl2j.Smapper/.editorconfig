@@ -1,0 +1,24 @@
+# Remove the line below if you want to inherit .editorconfig settings from higher directories
+root = true
+
+# C# files
+[*.cs]
+
+# Template should be a static expression
+dotnet_diagnostic.CA2254.severity = none
+
+# Use the LoggerMessage delegates
+dotnet_diagnostic.CA1848.severity = none
+
+# Do not declare static members on generic types
+dotnet_diagnostic.CA1000.severity = none
+# CA1051: Do not declare visible instance fields
+dotnet_diagnostic.CA1051.severity = silent
+
+# CA1304: The behavior of 'char.ToLower(char)' could vary based on the current user's locale settings. Replace this call in 'string.NormalizeForUri()' with a call to 'char.ToLower(char, CultureInfo)'.
+dotnet_diagnostic.CA1304.severity = none
+# CA1305: The behavior of 'StringBuilder.Append(ref StringBuilder.AppendInterpolatedStringHandler)' could vary based on the current user's locale settings. Replace this call in 'Localized<T>.ToString()' with a call to 'StringBuilder.Append(IFormatProvider, ref StringBuilder.AppendInterpolatedStringHandler)'.
+dotnet_diagnostic.CA1305.severity = none
+# CA1310: The behavior of 'string.StartsWith(string)' could vary based on the current user's locale settings. Replace this call in 'cl2j.Tooling.StringUtils.RemoveIfStartWith(string, string)' with a call to 'string.StartsWith(string, System.StringComparison)'.
+dotnet_diagnostic.CA1310.severity = none
+

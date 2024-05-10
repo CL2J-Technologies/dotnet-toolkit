@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<AssemblyName>cl2j.Smapper</AssemblyName>
+		<RootNamespace>cl2j.Smapper</RootNamespace>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AnalysisMode>Recommended</AnalysisMode>
+	</PropertyGroup>
+</Project>

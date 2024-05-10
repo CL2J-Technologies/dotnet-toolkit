@@ -1,13 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Threading.Tasks;
+using cl2j.DataStore.List;
 
 namespace cl2j.DataStore.TestApp
 {
     internal class DataStoreSample
     {
-        private readonly IDataStore<string, Color> dataStoreColorRead;
+        private readonly IDataStoreListCommandAndQuery<string, Color> dataStoreColorRead;
 
-        public DataStoreSample(IDataStore<string, Color> dataStoreColorRead)
+        public DataStoreSample(IDataStoreListCommandAndQuery<string, Color> dataStoreColorRead)
         {
             this.dataStoreColorRead = dataStoreColorRead;
         }
