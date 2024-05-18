@@ -51,6 +51,15 @@ namespace cl2j.Tooling
             return ((IDictionary<string, T>)data).Remove(key);
         }
 
+        public T Get(string language, T defaultValue)
+        {
+            if (TryGetValue(language, out var value))
+                return value;
+            if (Count > 0)
+                return Values.First();
+            return defaultValue;
+        }
+
         public bool TryGetValue(string key, [MaybeNullWhen(false)] out T value)
         {
             //Return the value for the requested language
