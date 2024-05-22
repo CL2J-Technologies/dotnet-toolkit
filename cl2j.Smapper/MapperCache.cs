@@ -1,8 +1,10 @@
-﻿namespace cl2j.Smapper
+﻿using System.Collections.Concurrent;
+
+namespace cl2j.Smapper
 {
     internal class MapperCache
     {
-        private static readonly Dictionary<string, TypeMapper> cache = new();
+        private static readonly ConcurrentDictionary<string, TypeMapper> cache = new();
 
         public static TypeMapper GetOrCreateMapper<TSource, TDestination>()
         {
@@ -16,8 +18,7 @@
                 return mapper;
 
             mapper = TypeMapper.Create(source, destination);
-            cache.Add(key, mapper);
-            return mapper;
+            return cache.GetOrAdd(key, mapper);
         }
     }
 }
