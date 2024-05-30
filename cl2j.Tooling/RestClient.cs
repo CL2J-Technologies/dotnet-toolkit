@@ -1,8 +1,8 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace cl2j.Tooling
 {
@@ -62,6 +62,13 @@ namespace cl2j.Tooling
             var body = PrepareRequestBody(data);
             using HttpResponseMessage response = await client.PostAsync(url, body);
             response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<TOut?> PostAsync<TOut>(string url, HttpContent content)
+        {
+            using HttpResponseMessage response = await client.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
+            return await ParseResponseAsync<TOut>(response);
         }
 
         public async Task<TOut?> PostFiles<TOut>(string url, IFormFileCollection files)
