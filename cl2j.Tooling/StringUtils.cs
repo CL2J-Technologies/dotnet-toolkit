@@ -243,5 +243,15 @@ namespace cl2j.Tooling
                 return content[startWith.Length..];
             return content;
         }
+
+        public static string GenerateNormalizedKey(params string[] keys)
+        {
+            var temp = new string[keys.Length];
+            for (var i = 0; i < temp.Length; i++)
+                temp[i] = NormalizeComponentForUri(keys[i]);
+
+            return GenerateKeyFromArray(temp);
+        }
+        public static string GenerateKeyFromArray(params string[] keys) => string.Join(".", keys);
     }
 }
