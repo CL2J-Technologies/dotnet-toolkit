@@ -2,19 +2,19 @@
 {
     public static class Smapper
     {
-        public static TDestination Map<TDestination>(this object source)
+        public static TDestination Map<TDestination>(this object source, TDestination? input = null)
             where TDestination : class
         {
             var sourceType = source.GetType();
             var mapper = MapperCache.GetOrCreateMapper(sourceType, typeof(TDestination));
 
-            var destination = Map<TDestination>(source, mapper);
+            var destination = Map(source, mapper, input);
             return destination;
         }
 
-        private static TDestination Map<TDestination>(object source, TypeMapper mapper)
+        private static TDestination Map<TDestination>(object source, TypeMapper mapper, TDestination? input)
         {
-            var destination = Activator.CreateInstance<TDestination>();
+            var destination = input ?? Activator.CreateInstance<TDestination>();
 
             foreach (var propertyMapping in mapper.PropertyMaps)
             {
