@@ -43,9 +43,7 @@ namespace cl2j.Logging
 
         public IDisposable BeginScope<TState>(TState state)
         {
-#pragma warning disable CS8603 // Possible null reference return.
-            return null;
-#pragma warning restore CS8603 // Possible null reference return.
+            return null!;
         }
 
         public bool IsEnabled(LogLevel logLevel)

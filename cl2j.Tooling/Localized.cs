@@ -27,10 +27,9 @@ namespace cl2j.Tooling
         {
             get
             {
-                TryGetValue(key, out var value);
-#pragma warning disable CS8603 // Possible null reference return.
+                if (!TryGetValue(key, out var value))
+                    throw new KeyNotFoundException();
                 return value;
-#pragma warning restore CS8603 // Possible null reference return.
             }
 
             set => ((IDictionary<string, T>)data)[key] = value;

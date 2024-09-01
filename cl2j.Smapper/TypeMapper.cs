@@ -24,6 +24,8 @@ namespace cl2j.Smapper
                             var sourceType = sourceProperty.PropertyType;
                             if (sourceType.IsValueType || sourceType == typeof(string))
                                 mapper.PropertyMaps.Add(new PropertyMap { SourceProperty = sourceProperty, DestinationProperty = destinationProperty });
+                            else if (sourceType.IsClass)
+                                mapper.PropertyMaps.Add(new PropertyMap { SourceProperty = sourceProperty, DestinationProperty = destinationProperty });
                             else
                                 Debug.WriteLine($"{sourceProperty.Name} not mapped because it's not a ValueType ({sourceType})");
                         }
