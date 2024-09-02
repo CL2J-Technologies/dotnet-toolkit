@@ -6,7 +6,7 @@ namespace cl2j.Tooling
     public abstract class CacheableObject<T>
     {
         private readonly CacheLoader cacheLoader;
-        private IEnumerable<T> cache = new List<T>();
+        private List<T> cache = new List<T>();
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
         {
@@ -16,7 +16,7 @@ namespace cl2j.Tooling
                 {
                     var sw = Stopwatch.StartNew();
                     cache = await LoadCache();
-                    logger.LogDebug($"{name} --> {cache.Count()} in {sw.ElapsedMilliseconds}ms");
+                    logger.LogDebug($"{name} --> {cache.Count} in {sw.ElapsedMilliseconds}ms");
                 }
                 catch (Exception ex)
                 {
@@ -25,9 +25,9 @@ namespace cl2j.Tooling
             }, logger);
         }
 
-        protected abstract Task<IEnumerable<T>> LoadCache();
+        protected abstract Task<List<T>> LoadCache();
 
-        protected async Task<IEnumerable<T>> GetCache()
+        protected async Task<List<T>> GetCache()
         {
             await cacheLoader.WaitAsync();
             return cache;
