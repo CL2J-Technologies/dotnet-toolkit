@@ -6,7 +6,7 @@ namespace cl2j.Tooling
     public abstract class CacheableObject<T>
     {
         private readonly CacheLoader cacheLoader;
-        private List<T> cache = new List<T>();
+        private List<T> cache = new();
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
         {
