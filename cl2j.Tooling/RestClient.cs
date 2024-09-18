@@ -117,7 +117,7 @@ namespace cl2j.Tooling
                 try
                 {
 #endif
-                    return JsonConvert.DeserializeObject<TResponse>(value);
+                return JsonConvert.DeserializeObject<TResponse>(value);
 #if DEBUG
                 }
                 catch (Exception ex)
@@ -128,8 +128,8 @@ namespace cl2j.Tooling
                     var obj = JsonConvert.DeserializeObject(value);
                     value = JsonConvert.SerializeObject(obj, Formatting.Indented);
                     return JsonConvert.DeserializeObject<TResponse>(value);
-#endif
                 }
+#endif
             }
 
             return default;
