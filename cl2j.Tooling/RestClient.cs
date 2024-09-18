@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Net.Http.Headers;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System.Net.Http.Headers;
-using System.Text;
 
 namespace cl2j.Tooling
 {
@@ -112,7 +112,25 @@ namespace cl2j.Tooling
         {
             var value = await response.Content.ReadAsStringAsync();
             if (!string.IsNullOrEmpty(value))
-                return JsonConvert.DeserializeObject<TResponse>(value);
+            {
+#if DEBUG
+                try
+                {
+#endif
+                    return JsonConvert.DeserializeObject<TResponse>(value);
+#if DEBUG
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+
+                    //Get the real line to debug more easily
+                    var obj = JsonConvert.DeserializeObject(value);
+                    value = JsonConvert.SerializeObject(obj, Formatting.Indented);
+                    return JsonConvert.DeserializeObject<TResponse>(value);
+#endif
+                }
+            }
 
             return default;
         }
