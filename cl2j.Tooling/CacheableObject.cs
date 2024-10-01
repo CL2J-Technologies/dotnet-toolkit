@@ -10,6 +10,7 @@ namespace cl2j.Tooling
 
         private readonly CacheLoader cacheLoader;
         private List<T> cache = new();
+        protected static readonly SemaphoreSlim semaphore = new(1, 1);
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
         {
@@ -20,12 +21,26 @@ namespace cl2j.Tooling
 
         protected abstract Task<List<T>> LoadCache();
 
+        protected async Task<List<T>> GetCache()
+        {
+            await cacheLoader.WaitAsync();
+            return cache;
+        }
+
         protected async Task RefreshCache()
         {
             try
             {
                 var sw = Stopwatch.StartNew();
-                cache = await LoadCache();
+                await semaphore.WaitAsync();
+                try
+                {
+                    cache = await LoadCache();
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
                 logger.LogDebug($"{name} --> {cache.Count} in {sw.ElapsedMilliseconds}ms");
             }
             catch (Exception ex)
@@ -34,9 +49,38 @@ namespace cl2j.Tooling
             }
         }
 
-        protected async Task<List<T>> GetCache()
+        protected async Task<List<T>> AddCacheObject(T o)
         {
             await cacheLoader.WaitAsync();
+
+            await semaphore.WaitAsync();
+            try
+            {
+                cache.Add(o);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+
+            return cache;
+        }
+
+        protected async Task<List<T>> UpdateCacheObject(T oldObject, T newObject)
+        {
+            await cacheLoader.WaitAsync();
+
+            await semaphore.WaitAsync();
+            try
+            {
+                cache.Remove(oldObject);
+                cache.Add(newObject);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+
             return cache;
         }
     }
