@@ -98,26 +98,29 @@ namespace cl2j.Tooling
             return await ParseResponseAsync<TOut>(response);
         }
 
-        public async Task<T?> GetAsync<T>(string url) where T : new()
+        public async Task<T?> GetAsync<T>(string url, string? outputFileName = null) where T : new()
         {
             using HttpResponseMessage response = await client.GetAsync(url);
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 return default;
             response.EnsureSuccessStatusCode();
-            return await ParseResponseAsync<T>(response);
+            return await ParseResponseAsync<T>(response, outputFileName);
 
         }
 
-        private static async Task<TResponse?> ParseResponseAsync<TResponse>(HttpResponseMessage response)
+        private static async Task<TResponse?> ParseResponseAsync<TResponse>(HttpResponseMessage response, string? outputFileName = null)
         {
             var value = await response.Content.ReadAsStringAsync();
             if (!string.IsNullOrEmpty(value))
             {
 #if DEBUG
+                if (!string.IsNullOrEmpty(outputFileName))
+                    File.WriteAllText(outputFileName, value);
+
                 try
                 {
 #endif
-                return JsonConvert.DeserializeObject<TResponse>(value);
+                    return JsonConvert.DeserializeObject<TResponse>(value);
 #if DEBUG
                 }
                 catch (Exception ex)
