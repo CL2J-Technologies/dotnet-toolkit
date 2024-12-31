@@ -79,7 +79,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                     {
                         name = name[(path.Length)..];
                         if (name.StartsWith('/'))
-                            name = name.Substring(1);
+                            name = name[1..];
                         if (name.IndexOf("/") < 0)
                             list.Add(name);
                     }
