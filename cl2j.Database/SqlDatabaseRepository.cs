@@ -3,7 +3,7 @@ using Dapper.Contrib.Extensions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
-namespace cl2j.DataStore.Database
+namespace cl2j.Database
 {
     public class SqlDatabaseRepository(string connectionString, ILogger logger) : DatabaseRepository(logger)
     {

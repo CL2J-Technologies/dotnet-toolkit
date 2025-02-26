@@ -1,8 +1,8 @@
 ﻿using Dapper.Contrib.Extensions;
 
-namespace cl2j.DataStore.Database
+namespace cl2j.Database
 {
-    public class EntityExplicitKey<TKey> : IEntity<TKey>
+    public class EntityExplicitKey<TKey>
     {
         [ExplicitKey]
         public TKey Id { get; set; } = default!;

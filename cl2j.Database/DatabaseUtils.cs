@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace cl2j.DataStore.Database
+namespace cl2j.Database
 {
     public static class DatabaseUtils
     {
