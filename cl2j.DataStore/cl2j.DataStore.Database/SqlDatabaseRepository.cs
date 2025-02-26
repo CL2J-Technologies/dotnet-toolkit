@@ -1,26 +1,18 @@
 ﻿using System.Data;
-using System.Data.SqlClient;
 using Dapper.Contrib.Extensions;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Database
 {
-    public class SqlDatabaseRepository : DatabaseRepository
+    public class SqlDatabaseRepository(string connectionString, ILogger logger) : DatabaseRepository(logger)
     {
-        private readonly string connectionString;
-
         static SqlDatabaseRepository()
         {
             SqlMapperExtensions.TableNameMapper = (type) =>
             {
                 return $"[{type.Name}]";
             };
-        }
-
-        public SqlDatabaseRepository(string connectionString, ILogger logger)
-            : base(logger)
-        {
-            this.connectionString = connectionString;
         }
 
         protected override async Task<IDbConnection> CreateConnection()

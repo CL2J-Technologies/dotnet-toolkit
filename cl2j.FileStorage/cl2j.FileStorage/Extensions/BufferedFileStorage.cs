@@ -1,6 +1,6 @@
-﻿using cl2j.FileStorage.Core;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
+using cl2j.FileStorage.Core;
 
 namespace cl2j.FileStorage.Extensions
 {
@@ -135,7 +135,7 @@ namespace cl2j.FileStorage.Extensions
             var lastNumber = 1;
             while (true)
             {
-                var fileName = string.Format(fileNamePattern, DateTime.UtcNow, lastNumber).ToLower();
+                var fileName = string.Format(fileNamePattern, DateTime.UtcNow, lastNumber).ToLowerInvariant();
                 var fileInfo = await fileStorageProvider.GetInfoAsync(fileName);
 
                 var size = fileInfo?.Size ?? 0;

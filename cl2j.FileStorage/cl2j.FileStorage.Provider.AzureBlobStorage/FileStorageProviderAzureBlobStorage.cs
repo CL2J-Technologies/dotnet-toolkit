@@ -80,7 +80,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                         name = name[(path.Length)..];
                         if (name.StartsWith('/'))
                             name = name[1..];
-                        if (name.IndexOf("/") < 0)
+                        if (name.IndexOf('/') < 0)
                             list.Add(name);
                     }
                 }
@@ -90,7 +90,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                 foreach (var blob in blobs)
                 {
                     var name = blob.Name;
-                    if (name.IndexOf("/") < 0)
+                    if (name.IndexOf('/') < 0)
                         list.Add(name);
                 }
             }
@@ -115,7 +115,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
                 {
                     name = name[(path.Length + 1)..];
 
-                    var n = name.IndexOf("/");
+                    var n = name.IndexOf('/');
                     if (n > 0)
                     {
                         name = name[..n];

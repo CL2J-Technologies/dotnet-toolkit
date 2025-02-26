@@ -60,11 +60,8 @@ namespace cl2j.DataStore.Dictionary
             {
                 await dataStore.DeleteAsync(key);
 
-                if (cache.ContainsKey(key))
-                {
-                    cache.Remove(key);
+                if (cache.Remove(key))
                     await NotifyAsync(cache);
-                }
             }
             finally
             {

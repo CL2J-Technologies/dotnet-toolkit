@@ -1,5 +1,5 @@
-﻿using cl2j.FileStorage.Core;
-using System.Text;
+﻿using System.Text;
+using cl2j.FileStorage.Core;
 
 namespace cl2j.FileStorage.Extensions
 {
@@ -29,7 +29,7 @@ namespace cl2j.FileStorage.Extensions
 
         #region Private
 
-        private static Stream ToStream(this string text, Encoding encoding)
+        private static MemoryStream ToStream(this string text, Encoding encoding)
         {
             if (text == null)
                 return new MemoryStream();

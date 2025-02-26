@@ -1,6 +1,6 @@
 ﻿namespace cl2j.Logging
 {
-    internal class DateTimeProvider : IDateTimeProvider
+    internal sealed class DateTimeProvider : IDateTimeProvider
     {
         private readonly TimeZoneInfo? tzi;
 
@@ -11,8 +11,7 @@
 
         public static DateTimeProvider Create(string timeZone)
         {
-            if (timeZone == null)
-                throw new ArgumentNullException(nameof(timeZone));
+            ArgumentNullException.ThrowIfNull(timeZone);
 
             TimeZoneInfo? tzi = null;
             try

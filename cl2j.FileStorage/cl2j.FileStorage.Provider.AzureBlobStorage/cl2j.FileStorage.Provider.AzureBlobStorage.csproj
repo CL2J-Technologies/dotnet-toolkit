@@ -1,10 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
-
 
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Version>1.0.8</Version>
@@ -19,13 +18,13 @@
 		<PackageProjectUrl>https://github.com/jfblier/cl2j.FileStorage</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/jfblier/cl2j.FileStorage</RepositoryUrl>
 		<RepositoryType>GitHub</RepositoryType>
-		<PackageReadmeFile>readme.md</PackageReadmeFile>	
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
 	</PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
-    </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage.csproj" />
+	<ItemGroup>
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage.csproj" />
 
 		<None Include="..\readme.md" Pack="true" PackagePath="\" />
 		<None Include=".editorconfig" />

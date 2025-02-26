@@ -99,8 +99,7 @@ namespace cl2j.Tooling
 
         public static string Crop(this string text, int maxLength)
         {
-            if (text == null)
-                throw new ArgumentNullException(nameof(text));
+            ArgumentNullException.ThrowIfNull(text);
 
             if (text.Length > maxLength)
                 return text[..maxLength];
@@ -109,8 +108,7 @@ namespace cl2j.Tooling
 
         public static string NormalizeForUri(this string text)
         {
-            if (text == null)
-                throw new ArgumentNullException(nameof(text));
+            ArgumentNullException.ThrowIfNull(text);
 
             var dashInserted = false;
             var sb = new StringBuilder(text.Length);
@@ -153,8 +151,7 @@ namespace cl2j.Tooling
 
         public static string NormalizeComponentForUri(this string text)
         {
-            if (text == null)
-                throw new ArgumentNullException(nameof(text));
+            ArgumentNullException.ThrowIfNull(text);
 
             var dashInserted = false;
             var sb = new StringBuilder(text.Length);
@@ -207,10 +204,9 @@ namespace cl2j.Tooling
 
         public static string ToInvariant(string? text)
         {
-            if (text == null)
-                throw new ArgumentNullException(nameof(text));
+            ArgumentNullException.ThrowIfNull(text);
 
-            return text.ToLower().RemoveDiacritics();
+            return text.ToLowerInvariant().RemoveDiacritics();
         }
 
         public static HashSet<string> ComputeInvariantValues<T>(Func<T, string> valueResolver, IList<T> list)
