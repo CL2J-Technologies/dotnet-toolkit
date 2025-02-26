@@ -27,6 +27,5 @@
 		<ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage.csproj" />
 
 		<None Include="..\readme.md" Pack="true" PackagePath="\" />
-		<None Include=".editorconfig" />
 	</ItemGroup>
 </Project>

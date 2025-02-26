@@ -13,10 +13,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include=".editorconfig" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />
 	</ItemGroup>
 </Project>

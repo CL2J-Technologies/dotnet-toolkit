@@ -30,7 +30,6 @@
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Include=".editorconfig" />
 		<EditorConfigFiles Remove=".editorconfig" />
 	</ItemGroup>
 	<ItemGroup>
