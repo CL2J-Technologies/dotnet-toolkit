@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35806.99 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSample", "DatabaseSample.csproj", "{19E2CB30-2926-4375-B205-17F311F139F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.Database", "..\..\cl2j.Database\cl2j.Database.csproj", "{E4400A5A-2D69-EFAB-91F1-005E4C05BC8B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libs", "Libs", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.Tooling", "..\..\cl2j.Tooling\cl2j.Tooling.csproj", "{BC93D82C-74B6-970D-9E13-366BED9C3914}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.Logging", "..\..\cl2j.Logging\cl2j.Logging\cl2j.Logging.csproj", "{12B01F68-D8CF-1FC6-5A5E-37B9F4064462}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.FileStorage", "..\..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj", "{26667101-DE88-705F-5FF6-BBEFBA956527}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{19E2CB30-2926-4375-B205-17F311F139F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19E2CB30-2926-4375-B205-17F311F139F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19E2CB30-2926-4375-B205-17F311F139F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19E2CB30-2926-4375-B205-17F311F139F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4400A5A-2D69-EFAB-91F1-005E4C05BC8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4400A5A-2D69-EFAB-91F1-005E4C05BC8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4400A5A-2D69-EFAB-91F1-005E4C05BC8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4400A5A-2D69-EFAB-91F1-005E4C05BC8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC93D82C-74B6-970D-9E13-366BED9C3914}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC93D82C-74B6-970D-9E13-366BED9C3914}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC93D82C-74B6-970D-9E13-366BED9C3914}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC93D82C-74B6-970D-9E13-366BED9C3914}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12B01F68-D8CF-1FC6-5A5E-37B9F4064462}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12B01F68-D8CF-1FC6-5A5E-37B9F4064462}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12B01F68-D8CF-1FC6-5A5E-37B9F4064462}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12B01F68-D8CF-1FC6-5A5E-37B9F4064462}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26667101-DE88-705F-5FF6-BBEFBA956527}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26667101-DE88-705F-5FF6-BBEFBA956527}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26667101-DE88-705F-5FF6-BBEFBA956527}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26667101-DE88-705F-5FF6-BBEFBA956527}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E4400A5A-2D69-EFAB-91F1-005E4C05BC8B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{BC93D82C-74B6-970D-9E13-366BED9C3914} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{12B01F68-D8CF-1FC6-5A5E-37B9F4064462} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{26667101-DE88-705F-5FF6-BBEFBA956527} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DD9B6D3A-0EFD-4565-9478-CBE1DBAC0237}
+	EndGlobalSection
+EndGlobal

@@ -1,13 +1,14 @@
-﻿using System.Data;
+﻿using System.Data.Common;
+using cl2j.Database.Databases;
 using Dapper.Contrib.Extensions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
-namespace cl2j.Database
+namespace cl2j.Database.DatabaseProviders
 {
-    public class SqlDatabaseRepository(string connectionString, ILogger logger) : DatabaseRepository(logger)
+    public class SqlServerDatabase(string connectionString, DatabaseOptions options, ILogger logger) : BaseDatabase(options, logger)
     {
-        static SqlDatabaseRepository()
+        static SqlServerDatabase()
         {
             SqlMapperExtensions.TableNameMapper = (type) =>
             {
@@ -15,7 +16,7 @@ namespace cl2j.Database
             };
         }
 
-        protected override async Task<IDbConnection> CreateConnection()
+        protected override async Task<DbConnection> CreateConnection()
         {
             var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
