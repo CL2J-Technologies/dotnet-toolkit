@@ -1,18 +1,25 @@
-﻿using System.Reflection;
+﻿using System.Data.Common;
+using System.Reflection;
+using cl2j.Database.CommandBuilders.Models;
 
 namespace cl2j.Database.CommandBuilders
 {
     public interface ICommandBuilder
     {
-        string GetCreateTableStatement(Type type);
+        bool Support(DbConnection connection);
 
-        string GetTableName(Type type);
+        TextStatement GetTableExistsStatement(Type type);
+        TextStatement GetDropTableIfExistsStatement(Type type);
+        TextStatement GetCreateTableStatement(Type type);
+        InsertStatement GetInsertStatement(Type type);
+
+        string GetTableName(Type type, bool formatted = true);
         string FormatTableName(string table, string? schema = null);
-        string GetColumnName(PropertyInfo propertyInfo);
+        string GetColumnName(PropertyInfo propertyInfo, bool formatted = true);
         string FormatColumnName(string column);
+        string GetValueParameterName(string column);
 
-        IEnumerable<PropertyInfo> GetTableProperties(Type type);
-        string GetColumnDataType(PropertyInfo propertyInfo);
-        PropertyInfo? GetKeyProperty(IEnumerable<PropertyInfo> properties);
+        TableDescriptor CreateTableDescriptor(Type type);
+        string GetColumnDataType(ColumnDescriptor column);
     }
 }

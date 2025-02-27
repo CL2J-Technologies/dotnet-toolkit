@@ -1,4 +1,4 @@
-﻿namespace cl2j.Database.Helpers
+﻿namespace cl2j.Database.Exceptions
 {
     public class DatabaseException : Exception
     {

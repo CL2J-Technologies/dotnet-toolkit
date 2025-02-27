@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using cl2j.Database.DataAnnotations;
-using cl2j.Tooling;
+﻿using cl2j.Database.DataAnnotations;
 
 namespace DatabaseSample.Models
 {
@@ -8,28 +6,23 @@ namespace DatabaseSample.Models
     {
         public int Id { get; set; }
 
-        [Required]
+        [Column(Length = 50, Required = true)]
         public string Name { get; set; } = null!;
 
-        [Required]
-        [JsonDataType()]
-        public Localized<string> Display { get; set; } = [];
+        [Column(Length = 500, Required = true, Json = true)]
+        public Dictionary<string, string> Display { get; set; } = [];
 
-        [Required]
-        [ForeignKey("FK_Product_CategoryId", "Category", "CategoryId")]
-        [MaxLength(36)]
+        [Column(Length = 36, Required = true)]
+        [ForeignKey("FK_Product_CategoryId", "Cat", "CategoryId")]
         public string CategoryId { get; set; } = null!;
 
-        [Required]
-        [Precision(8, 2)]
+        [Column(Length = 8, Decimals = 2, Required = true)]
         public decimal Price { get; set; }
 
-        [Required]
+        [Column(Required = true)]
         public bool Active { get; set; }
 
+        [Column(Default = null)]
         public DateTimeOffset CreatedOn { get; set; }
-
-        [MaxLength(50)]
-        public string? CreatedBy { get; set; }
     }
 }

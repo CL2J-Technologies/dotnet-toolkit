@@ -1,8 +1,10 @@
-﻿namespace cl2j.Database.CommandBuilders
+﻿namespace cl2j.Database.Helpers
 {
     public static class Types
     {
 #pragma warning disable CA2211 // Non-constant fields should not be visible
+        public static Type TypeBool = typeof(bool);
+
         public static Type TypeShort = typeof(short);
         public static Type TypeInt = typeof(int);
         public static Type TypeLong = typeof(long);

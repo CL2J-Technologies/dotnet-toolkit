@@ -1,21 +1,30 @@
 ﻿using cl2j.Database.CommandBuilders;
 using cl2j.Database.Databases;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace cl2j.Database
 {
     public static class DatabaseExtensions
     {
-        public static IServiceCollection AddDatabase(this IServiceCollection services, Action<IServiceCollection>? configure = null)
+        public static IServiceCollection AddDatabase(this IServiceCollection services)
         {
             services.AddOptions<DatabaseOptions>();
 
-            services.TryAddSingleton<ICommandBuilderFactory, CommandBuilderFactory>();
-
-            configure?.Invoke(services);
+            CommandBuilderFactory.Register(new SqlServerCommandBuilder());
 
             return services;
+        }
+
+        public static void UseDatabase(this ServiceProvider app)
+        {
+            //ConnectionExtensions.Logger = app.GetService<ILoggr<ConnectionExtensions>>();
+            ConnectionExtensions.Logger = app.GetService<ILogger>();
+
+            var options = app.GetService<IOptions<DatabaseOptions>>();
+            if (options is not null)
+                ConnectionExtensions.DatabaseOptions = options.Value;
         }
     }
 }
