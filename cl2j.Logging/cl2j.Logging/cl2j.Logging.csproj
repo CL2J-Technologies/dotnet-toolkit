@@ -4,18 +4,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
-
-		<AssemblyName>cl2j.Logging</AssemblyName>
-		<RootNamespace>cl2j.Logging</RootNamespace>
-		<Company>cl2j</Company>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/jfblier/cl2j.Logging</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jfblier/cl2j.Logging</RepositoryUrl>
-		<RepositoryType>GitHub</RepositoryType>
-		<PackageTags />
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>1.0.8</Version>
 	</PropertyGroup>
 
 	<ItemGroup>

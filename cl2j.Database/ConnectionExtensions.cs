@@ -4,6 +4,7 @@ using System.Text.Json;
 using cl2j.Database.CommandBuilders;
 using cl2j.Database.CommandBuilders.Models;
 using cl2j.Database.Databases;
+using cl2j.Database.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace cl2j.Database
@@ -16,9 +17,7 @@ namespace cl2j.Database
         #region DDL
 
         public static async Task<bool> TableExists<T>(this DbConnection connection)
-        {
-            return await TableExists(connection, typeof(T), CancellationToken.None);
-        }
+            => await TableExists(connection, typeof(T), CancellationToken.None);
 
         public static async Task<bool> TableExists(this DbConnection connection, Type type, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
@@ -40,8 +39,12 @@ namespace cl2j.Database
         }
 
         public static async Task CreateTable<T>(this DbConnection connection)
+            => await CreateTable(connection, typeof(T), CancellationToken.None);
+
+        public static async Task CreateTableIfRequired<T>(this DbConnection connection)
         {
-            await CreateTable(connection, typeof(T), CancellationToken.None);
+            if (!await connection.TableExists<T>())
+                await CreateTable(connection, typeof(T), CancellationToken.None);
         }
 
         public static async Task CreateTable(this DbConnection connection, Type type, CancellationToken cancellationToken, DbTransaction? transaction = null)
@@ -57,10 +60,7 @@ namespace cl2j.Database
         }
 
 
-        public static async Task DropTableIfExists<T>(this DbConnection connection)
-        {
-            await DropTableIfExists(connection, typeof(T), CancellationToken.None);
-        }
+        public static async Task DropTableIfExists<T>(this DbConnection connection) => await DropTableIfExists(connection, typeof(T), CancellationToken.None);
 
         public static async Task DropTableIfExists(this DbConnection connection, Type type, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
@@ -70,8 +70,14 @@ namespace cl2j.Database
             var statement = commandBuilder.GetDropTableIfExistsStatement(type);
             Trace(statement.Text);
 
-            var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            try
+            {
+                var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch
+            {
+            }
         }
 
         #endregion DDL
@@ -79,9 +85,7 @@ namespace cl2j.Database
         #region Commands
 
         public static async Task Insert<TIn>(this DbConnection connection, TIn item)
-        {
-            await Insert(connection, item, CancellationToken.None);
-        }
+            => await Insert(connection, item, CancellationToken.None);
 
         public static async Task<TOut?> Insert<TIn, TOut>(this DbConnection connection, TIn item)
         {
@@ -116,6 +120,53 @@ namespace cl2j.Database
 
         #endregion Commands
 
+        #region Query
+
+        public static async Task<List<T>> Query<T>(this DbConnection connection)
+            => await Query<T>(connection, CancellationToken.None);
+
+        public static async Task<List<T>> Query<T>(this DbConnection connection, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetQueryStatement(typeof(T));
+            return await Query<T>(connection, statement.Text, cancellationToken, transaction);
+        }
+
+        public static async Task<List<T>> Query<T>(this DbConnection connection, string sql)
+            => await Query<T>(connection, sql, CancellationToken.None);
+
+        public static async Task<List<T>> Query<T>(this DbConnection connection, string sql, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var tableDescriptor = commandBuilder.GetTableDescriptor(typeof(T));
+
+            var cmd = CreateExecuteCommand(connection, sql, transaction);
+            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
+
+            var results = await reader.Read<T>(tableDescriptor, cancellationToken);
+            return results;
+        }
+
+        public static async Task<T?> QuerySingle<T>(this DbConnection connection, string sql)
+            => await QuerySingle<T>(connection, sql, CancellationToken.None);
+
+        public static async Task<T?> QuerySingle<T>(this DbConnection connection, string sql, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var tableDescriptor = commandBuilder.GetTableDescriptor(typeof(T));
+
+            var cmd = CreateExecuteCommand(connection, sql, transaction);
+            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+
+            return await reader.ReadSingle<T>(tableDescriptor, cancellationToken);
+        }
+
+        #endregion
+
         #region Private
 
         private static async Task EnsureConnectionOpen(DbConnection connection, CancellationToken cancellationToken)
@@ -141,6 +192,8 @@ namespace cl2j.Database
 
                 if (column.ColumnAtribute.Json)
                     value = JsonSerializer.Serialize(value);
+                else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
+                    value = DateTimeOffset.UtcNow;
 
                 var parameter = command.CreateParameter();
                 parameter.ParameterName = column.Name;
@@ -149,10 +202,7 @@ namespace cl2j.Database
             }
         }
 
-        private static void Trace(string text)
-        {
-            Logger?.Log(DatabaseOptions.TraceLevel, text);
-        }
+        private static void Trace(string text) => Logger?.Log(DatabaseOptions.TraceLevel, text);
 
         #endregion
     }

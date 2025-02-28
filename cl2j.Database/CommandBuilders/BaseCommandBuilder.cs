@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Text;
 using cl2j.Database.CommandBuilders.Models;
 using cl2j.Database.DataAnnotations;
-using cl2j.Database.Exceptions;
 using cl2j.Database.Helpers;
 
 namespace cl2j.Database.CommandBuilders
@@ -16,6 +15,8 @@ namespace cl2j.Database.CommandBuilders
         public abstract string FormatTableName(string table, string? schema = null);
         public abstract string FormatColumnName(string column);
         public abstract string GetValueParameterName(string column);
+        public abstract string GetColumnDataType(ColumnDescriptor column);
+        public abstract string GetColumnKeyType(ColumnDescriptor column);
 
         public abstract TextStatement GetTableExistsStatement(Type type);
         public abstract TextStatement GetDropTableIfExistsStatement(Type type);
@@ -38,22 +39,7 @@ namespace cl2j.Database.CommandBuilders
 
                 //Primary Key
                 if (isKey)
-                {
-                    if (column.Property.PropertyType == Types.TypeInt)
-                        //TODO Envoyer dans SqlServer
-                        //TODO Envoyer dans SqlServer
-                        //TODO Envoyer dans SqlServer
-                        sbLine.Append(" IDENTITY(1,1) PRIMARY KEY");
-                    else if (column.Property.PropertyType == Types.TypeString)
-                        sbLine.Append(" NOT NULL");
-                    else if (column.Property.PropertyType == Types.TypeGuid)
-                        //TODO Envoyer dans SqlServer
-                        //TODO Envoyer dans SqlServer
-                        //TODO Envoyer dans SqlServer
-                        sbLine.Append(" UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY");
-                    else
-                        throw new DatabaseException($"Unsupported key type '{column.Property.PropertyType.Name}'");
-                }
+                    sbLine.Append(GetColumnKeyType(column));
 
                 //Required
                 if (column.ColumnAtribute.Required)
@@ -104,6 +90,18 @@ namespace cl2j.Database.CommandBuilders
             };
         }
 
+        public TextStatement GetQueryStatement(Type type)
+        {
+            var tableDescriptor = GetTableDescriptor(type);
+            var fields = tableDescriptor.Columns.Select(c => c.NameFormatted);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"SELECT {string.Join(',', fields)} FROM {tableDescriptor.NameFormatted}"
+            };
+        }
+
         public virtual string GetTableName(Type type, bool formatted = true)
         {
             var attr = type.GetAttribute<TableAttribute>();
@@ -128,60 +126,6 @@ namespace cl2j.Database.CommandBuilders
                 name = propertyInfo.Name;
 
             return formatted ? FormatColumnName(name) : name;
-        }
-
-        public virtual string GetColumnDataType(ColumnDescriptor column)
-        {
-            var columnAttr = column.ColumnAtribute;
-            var propertyInfo = column.Property;
-
-            string propertyTypeDesc;
-
-            if (!string.IsNullOrEmpty(columnAttr.TypeName))
-                propertyTypeDesc = columnAttr.TypeName;
-            else if (columnAttr.Json)
-            {
-                var length = columnAttr.Length <= 0 ? "max" : columnAttr.Length.ToString();
-                propertyTypeDesc = $"varchar({length})";
-            }
-            else
-            {
-                if (propertyInfo.PropertyType == Types.TypeBool)
-                    propertyTypeDesc = "bit";
-                else if (propertyInfo.PropertyType == Types.TypeShort)
-                    propertyTypeDesc = "smallint";
-                else if (propertyInfo.PropertyType == Types.TypeInt || propertyInfo.PropertyType == Types.TypeLong)
-                    propertyTypeDesc = "int";
-                else if (propertyInfo.PropertyType == Types.TypeDecimal || propertyInfo.PropertyType == Types.TypeFloat || propertyInfo.PropertyType == Types.TypeDouble)
-                {
-                    if (columnAttr.Length > 0)
-                        propertyTypeDesc = $"decimal({columnAttr.Length},{columnAttr.Decimals})";
-                    else
-                        propertyTypeDesc = "decimal";
-                }
-                else if (propertyInfo.PropertyType == Types.TypeString)
-                {
-                    if (columnAttr.Length > 0)
-                        propertyTypeDesc = $"varchar({columnAttr.Length})";
-                    else
-                        propertyTypeDesc = $"varchar(max)";
-                }
-                else if (propertyInfo.PropertyType == Types.TypeDateTimeOffset)
-                {
-                    propertyTypeDesc = "datetimeoffset";
-                    if (!string.IsNullOrEmpty(columnAttr.Default))
-                        propertyTypeDesc += " DEFAULT SYSDATETIMEOFFSET()";
-                }
-                else if (propertyInfo.PropertyType == Types.TypeDateTime)
-                    propertyTypeDesc = "datetime2";
-                else
-                    propertyTypeDesc = "varchar(MAX)";
-            }
-
-            if (!string.IsNullOrEmpty(columnAttr.Default))
-                propertyTypeDesc += $" DEFAULT {columnAttr.Default}";
-
-            return propertyTypeDesc;
         }
 
         public virtual TableDescriptor GetTableDescriptor(Type type)
@@ -248,7 +192,18 @@ namespace cl2j.Database.CommandBuilders
                 var column = columns.FirstOrDefault(c => c.Name == "Id");
                 if (column is not null)
                 {
-                    column.ColumnAtribute.Key = KeyType.Key;
+                    var attr = new ColumnAttribute
+                    {
+                        Name = column.ColumnAtribute.Name,
+                        TypeName = column.ColumnAtribute.TypeName,
+                        Length = column.ColumnAtribute.Length,
+                        Decimals = column.ColumnAtribute.Decimals,
+                        Default = column.ColumnAtribute.Default,
+                        Required = column.ColumnAtribute.Required,
+                        Json = column.ColumnAtribute.Json,
+                        Key = KeyType.Key
+                    };
+                    column.ColumnAtribute = attr;
                     list.Add(column);
                 }
             }

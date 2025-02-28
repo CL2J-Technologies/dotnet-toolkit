@@ -8,9 +8,12 @@ namespace cl2j.Database
 {
     public static class DatabaseExtensions
     {
-        public static IServiceCollection AddDatabase(this IServiceCollection services)
+        public static IServiceCollection AddDatabase(this IServiceCollection services, Action<DatabaseOptions>? databaseOptions = null)
         {
-            services.AddOptions<DatabaseOptions>();
+            if (databaseOptions is null)
+                services.AddOptions<DatabaseOptions>();
+            else
+                services.Configure(databaseOptions);
 
             CommandBuilderFactory.Register(new SqlServerCommandBuilder());
 
@@ -19,7 +22,6 @@ namespace cl2j.Database
 
         public static void UseDatabase(this ServiceProvider app)
         {
-            //ConnectionExtensions.Logger = app.GetService<ILoggr<ConnectionExtensions>>();
             ConnectionExtensions.Logger = app.GetService<ILogger>();
 
             var options = app.GetService<IOptions<DatabaseOptions>>();

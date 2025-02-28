@@ -12,13 +12,16 @@ namespace cl2j.Database.CommandBuilders
         TextStatement GetDropTableIfExistsStatement(Type type);
         TextStatement GetCreateTableStatement(Type type);
         InsertStatement GetInsertStatement(Type type);
+        TextStatement GetQueryStatement(Type type);
 
         string GetTableName(Type type, bool formatted = true);
         string FormatTableName(string table, string? schema = null);
         string GetColumnName(PropertyInfo propertyInfo, bool formatted = true);
         string FormatColumnName(string column);
         string GetValueParameterName(string column);
+        string GetColumnKeyType(ColumnDescriptor column);
 
+        TableDescriptor GetTableDescriptor(Type type);
         TableDescriptor CreateTableDescriptor(Type type);
         string GetColumnDataType(ColumnDescriptor column);
     }

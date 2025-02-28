@@ -2,7 +2,7 @@
 
 namespace DatabaseSample.Models
 {
-    internal class Product
+    public class Product
     {
         public int Id { get; set; }
 
@@ -24,5 +24,10 @@ namespace DatabaseSample.Models
 
         [Column(Default = null)]
         public DateTimeOffset CreatedOn { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Id} [Name={Name}, Display={Display}, CategoryId={CategoryId}, Price={Price}, Active={Active}, CreatedOn={CreatedOn}]";
+        }
     }
 }

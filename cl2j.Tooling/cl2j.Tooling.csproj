@@ -4,22 +4,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
-		
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<AssemblyName>cl2j.Tooling</AssemblyName>
-		<RootNamespace>cl2j.Tooling</RootNamespace>
-		<Company>cl2j</Company>
-		<Description>Utilities for bootstrapping .NET projects</Description>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/jfblier/cl2j.Tooling</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jfblier/cl2j.Tooling</RepositoryUrl>
-		<RepositoryType>GitHub</RepositoryType>
-		<PackageTags />
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<AssemblyVersion>1.0.8.0</AssemblyVersion>
-		<FileVersion>1.0.8.0</FileVersion>
-		<Version>1.0.8</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
