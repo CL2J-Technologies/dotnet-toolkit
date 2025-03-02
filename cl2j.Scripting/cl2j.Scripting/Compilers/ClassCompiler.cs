@@ -9,14 +9,14 @@ namespace cl2j.Scripting.Compilers
 {
     public class ClassCompiler
     {
-        public static CompilationResult CompileAssembly(ClassSource source, IEnumerable<PortableExecutableReference> references, bool compileWithDebug = false)
+        public static CompilationResult CompileAssembly(ClassSource source, ScriptOptions options)
         {
             var tree = SyntaxFactory.ParseSyntaxTree(source.Source);
 
-            var optimizationLevel = compileWithDebug ? OptimizationLevel.Debug : OptimizationLevel.Release;
+            var optimizationLevel = options.CompileWithDebug ? OptimizationLevel.Debug : OptimizationLevel.Release;
             var compilation = CSharpCompilation.Create(source.ClassName)
                 .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: optimizationLevel))
-                .AddReferences(references)
+                .AddReferences(options.Assemblies)
                 .AddSyntaxTrees(tree);
 
             var result = new CompilationResult
@@ -28,7 +28,7 @@ namespace cl2j.Scripting.Compilers
             using (compilationStream)
             {
                 EmitResult compilationResult;
-                if (compileWithDebug)
+                if (options.CompileWithDebug)
                     compilationResult = compilation.Emit(compilationStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded));
                 else
                     compilationResult = compilation.Emit(compilationStream);

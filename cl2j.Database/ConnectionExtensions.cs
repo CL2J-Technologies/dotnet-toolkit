@@ -145,7 +145,7 @@ namespace cl2j.Database
             var cmd = CreateExecuteCommand(connection, sql, transaction);
             var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
 
-            var results = await reader.Read<T>(tableDescriptor, cancellationToken);
+            var results = await reader.Read<T>(tableDescriptor);
             return results;
         }
 
@@ -162,7 +162,7 @@ namespace cl2j.Database
             var cmd = CreateExecuteCommand(connection, sql, transaction);
             var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
 
-            return await reader.ReadSingle<T>(tableDescriptor, cancellationToken);
+            return await reader.ReadSingle<T>(tableDescriptor);
         }
 
         #endregion

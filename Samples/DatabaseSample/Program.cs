@@ -1,7 +1,5 @@
-﻿using System.Diagnostics;
-using cl2j.Database;
+﻿using cl2j.Database;
 using cl2j.Logging;
-using Dapper;
 using DatabaseSample;
 using DatabaseSample.Models;
 using Microsoft.Data.SqlClient;
@@ -20,12 +18,9 @@ serviceProvider.UseDatabase();
 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
 var connectionString = "Data Source=.;Initial Catalog=DatabaseSample;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=15;encrypt=true;trustServerCertificate=true";
-
-// ---------------------------------------------------------------------------------------------
 using var connection = new SqlConnection(connectionString);
 
 var executePrepare = false;
-
 if (executePrepare)
 {
     await connection.DropTableIfExists<Product>();
@@ -34,61 +29,50 @@ if (executePrepare)
     await connection.CreateTableIfRequired<Category>();
     await connection.CreateTableIfRequired<Product>();
 
-    var categories = DataGenerator.GenerateCategories();
-    foreach (var category in categories)
+    var generatedCategories = DataGenerator.GenerateCategories();
+    foreach (var category in generatedCategories)
         await connection.Insert(category);
-    var products = DataGenerator.GenerateProducts(categories);
-    foreach (var product in products)
+    var generatedProducts = DataGenerator.GenerateProducts(generatedCategories);
+    foreach (var product in generatedProducts)
         await connection.Insert(product);
-
 
     await connection.DropTableIfExists<Client>();
     await connection.CreateTableIfRequired<Client>();
-    var clients = DataGenerator.GenerateClients();
-    foreach (var c in clients)
+    var generatedClients = DataGenerator.GenerateClients();
+    foreach (var c in generatedClients)
         await connection.Insert(c);
 }
 
+#if DEBUG
+
 //Query from SQL
-if (true)
-{
-    var results = await connection.Query<Client>("SELECT * FROM [Client] ORDER BY Id ASC");
-    logger.LogTrace($"{results.Count}");
-    results = await connection.Query<Client>();
-    logger.LogTrace($"{results.Count}");
+var client = await connection.QuerySingle<Client>("SELECT * FROM [Client] WHERE [Id]=100");
+logger.LogTrace(client != null ? "Client retreived" : "No client retreived");
 
-    var client = await connection.QuerySingle<Client>("SELECT * FROM [Client] WHERE [Id]=100");
+var clients = await connection.Query<Client>("SELECT [Id], [Name], [Balance], [Active], [CreatedOn] FROM [Client]");
+logger.LogTrace($"{clients.Count} clients");
+
+var products = await connection.Query<Product>("SELECT * FROM [Product] ORDER BY Id ASC");
+logger.LogTrace($"{products.Count} products");
+
+//Update a record
+if (client is not null)
+{
+    client.Balance = -10;
+    //await connection.Update(client);
 }
 
-//Dapper
-await Benchmark("Query Clients", async () =>
+//Delete a record
+if (client is not null)
 {
-    var results = await connection.QueryAsync<Client>("SELECT * FROM [Client] ORDER BY Id ASC");
-    //logger.LogTrace($"{results.Count()}");
-}, logger);
-
-
-await Benchmark("Query Clients", async () =>
-{
-    var results = await connection.Query<Client>("SELECT * FROM [Client] ORDER BY Id ASC");
-    //logger.LogTrace($"{results.Count}");
-}, logger);
-
-//var productsFromQuery = await connection.Query<Product>("SELECT * FROM [Product] ORDER BY Id ASC");
-//foreach (var p in productsFromQuery)
-//    logger.LogTrace(p.ToString());
-
-//var productsFromQuery = await connection.QueryByKey<Product>(1);
-
-static async Task Benchmark(string name, Func<Task> a, ILogger logger)
-{
-    var swTotal = Stopwatch.StartNew();
-    var loops = 20;
-    for (int i = 0; i < loops; ++i)
-    {
-        var sw = Stopwatch.StartNew();
-        await a();
-        //logger.LogInformation($"{name}: {sw.ElapsedMilliseconds}ms");
-    }
-    logger.LogInformation($"AVG {name}: {swTotal.ElapsedMilliseconds / loops}ms");
+    //await connection.Delete(client);
+    //await connection.Delete<Client>(13);
 }
+
+Console.ReadLine();
+
+#else
+
+var summary = BenchmarkDotNet.Running.BenchmarkRunner.Run(typeof(Program).Assembly);
+
+#endif

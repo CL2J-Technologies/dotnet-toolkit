@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using System.Collections.Concurrent;
+using System.Data.Common;
 using System.Reflection;
 using System.Text;
 using cl2j.Database.CommandBuilders.Models;
@@ -10,6 +11,7 @@ namespace cl2j.Database.CommandBuilders
     public abstract class BaseCommandBuilder : ICommandBuilder
     {
         private static readonly ColumnAttribute DefaultColumnAttribute = new();
+        private static readonly ConcurrentDictionary<Type, TableDescriptor> TableDescriptors = [];
 
         public abstract bool Support(DbConnection connection);
         public abstract string FormatTableName(string table, string? schema = null);
@@ -130,7 +132,7 @@ namespace cl2j.Database.CommandBuilders
 
         public virtual TableDescriptor GetTableDescriptor(Type type)
         {
-            return CreateTableDescriptor(type);
+            return TableDescriptors.GetOrAdd(type, CreateTableDescriptor);
         }
 
         public virtual TableDescriptor CreateTableDescriptor(Type type)

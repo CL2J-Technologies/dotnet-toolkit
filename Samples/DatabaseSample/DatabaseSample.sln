@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35806.99 d17.13
+VisualStudioVersion = 17.13.35806.99
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseSample", "DatabaseSample.csproj", "{19E2CB30-2926-4375-B205-17F311F139F8}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.Logging", "..\..\cl2j.Logging\cl2j.Logging\cl2j.Logging.csproj", "{12B01F68-D8CF-1FC6-5A5E-37B9F4064462}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.FileStorage", "..\..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj", "{26667101-DE88-705F-5FF6-BBEFBA956527}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl2j.Scripting", "..\..\cl2j.Scripting\cl2j.Scripting\cl2j.Scripting.csproj", "{07126BB5-5A27-45F8-2C03-77052DDD96D9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,10 @@ Global
 		{26667101-DE88-705F-5FF6-BBEFBA956527}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{26667101-DE88-705F-5FF6-BBEFBA956527}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{26667101-DE88-705F-5FF6-BBEFBA956527}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07126BB5-5A27-45F8-2C03-77052DDD96D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07126BB5-5A27-45F8-2C03-77052DDD96D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07126BB5-5A27-45F8-2C03-77052DDD96D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07126BB5-5A27-45F8-2C03-77052DDD96D9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,6 +56,7 @@ Global
 		{BC93D82C-74B6-970D-9E13-366BED9C3914} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{12B01F68-D8CF-1FC6-5A5E-37B9F4064462} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{26667101-DE88-705F-5FF6-BBEFBA956527} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{07126BB5-5A27-45F8-2C03-77052DDD96D9} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD9B6D3A-0EFD-4565-9478-CBE1DBAC0237}
