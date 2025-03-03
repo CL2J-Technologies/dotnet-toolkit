@@ -8,17 +8,6 @@
         public List<ColumnDescriptor> Columns { get; set; } = [];
         public List<ColumnDescriptor> Keys { get; set; } = [];
 
-        public List<ColumnDescriptor> GetColumnsWithoutKey()
-        {
-            var list = new List<ColumnDescriptor>(Columns.Count);
-            foreach (var c in Columns)
-            {
-                if (c.ColumnAtribute.Key != DataAnnotations.KeyType.Key)
-                    list.Add(c);
-            }
-            return list;
-        }
-
         public bool IsKey(ColumnDescriptor column)
         {
             return Keys.Any(c => c == column);

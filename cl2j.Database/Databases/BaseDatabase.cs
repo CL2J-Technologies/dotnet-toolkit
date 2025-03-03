@@ -1,7 +1,5 @@
 ﻿using System.Data.Common;
 using System.Diagnostics;
-using Dapper;
-using Dapper.Contrib.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace cl2j.Database.Databases
@@ -12,13 +10,13 @@ namespace cl2j.Database.Databases
 
         protected abstract Task<DbConnection> CreateConnection();
 
-        public async Task<List<T>> GetAll<T>(string sql, object? param = null)
+        public async Task<List<T>> Query<T>(string sql, object? param = null)
         {
             try
             {
                 var sw = Stopwatch.StartNew();
                 using var connection = await CreateConnection();
-                var list = (await connection.QueryAsync<T>(sql, param)).ToList();
+                var list = (await connection.Query<T>(sql, param)).ToList();
                 logger.Log(options.TraceLevel, $"GetAll<{typeof(T).Name}>({param}) -> {list.Count} [{sw.ElapsedMilliseconds}ms]");
 
                 return list;
@@ -30,12 +28,12 @@ namespace cl2j.Database.Databases
             }
         }
 
-        public async Task<T?> Get<T>(string sql, object? param = null)
+        public async Task<T?> QuerySingle<T>(string sql, object? param = null)
         {
             try
             {
                 using var connection = await CreateConnection();
-                var t = await connection.QueryFirstOrDefaultAsync<T>(sql, param);
+                var t = await connection.QuerySingle<T>(sql, param);
                 return t;
             }
             catch (Exception ex)
@@ -50,7 +48,7 @@ namespace cl2j.Database.Databases
             try
             {
                 using var connection = await CreateConnection();
-                await connection.InsertAsync(t);
+                await connection.Insert(t);
             }
             catch (Exception ex)
             {
@@ -64,7 +62,7 @@ namespace cl2j.Database.Databases
             try
             {
                 using var connection = await CreateConnection();
-                await connection.UpdateAsync(t);
+                await connection.Update(t);
             }
             catch (Exception ex)
             {
@@ -78,7 +76,7 @@ namespace cl2j.Database.Databases
             try
             {
                 using var connection = await CreateConnection();
-                return await connection.ExecuteAsync(sql, param);
+                return await connection.Execute(sql, param);
             }
             catch (Exception ex)
             {

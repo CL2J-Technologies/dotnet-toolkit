@@ -4,6 +4,7 @@ using System.Text.Json;
 using cl2j.Database.CommandBuilders;
 using cl2j.Database.CommandBuilders.Models;
 using cl2j.Database.Databases;
+using cl2j.Database.Exceptions;
 using cl2j.Database.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +29,7 @@ namespace cl2j.Database
 
             try
             {
-                var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
                 return true;
             }
@@ -55,7 +56,7 @@ namespace cl2j.Database
             var statement = commandBuilder.GetCreateTableStatement(type);
             Trace(statement.Text);
 
-            var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
@@ -72,7 +73,7 @@ namespace cl2j.Database
 
             try
             {
-                var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
             }
             catch
@@ -109,7 +110,7 @@ namespace cl2j.Database
                     key.Property.SetValue(item, Guid.NewGuid().ToString());
             }
 
-            var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
             cmd.CreateParameters(item, statement.TableDescriptor);
             var result = await cmd.ExecuteScalarAsync(cancellationToken);
 
@@ -118,49 +119,126 @@ namespace cl2j.Database
             return result;
         }
 
+        public static async Task Update<TIn>(this DbConnection connection, TIn item)
+            => await Update(connection, item, CancellationToken.None);
+
+        public static async Task<object?> Update<TIn>(this DbConnection connection, TIn item, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetUpdateStatement(typeof(TIn));
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateParameters(item, statement.TableDescriptor);
+            var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            Trace($"{statement.Text} --> '{result}'");
+
+            return result;
+        }
+
+        public static async Task Delete<TIn>(this DbConnection connection, TIn item)
+           => await Delete(connection, item, CancellationToken.None);
+
+        public static async Task<object?> Delete<TIn>(this DbConnection connection, TIn item, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetDeleteStatement(typeof(TIn));
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateKeyParameters(item, statement.TableDescriptor);
+            var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            Trace($"{statement.Text} --> '{result}'");
+
+            return result;
+        }
+
+        public static async Task DeleteKey<TIn>(this DbConnection connection, object key)
+           => await DeleteKey<TIn>(connection, key, CancellationToken.None);
+
+        public static async Task<object?> DeleteKey<TIn>(this DbConnection connection, object key, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetDeleteStatement(typeof(TIn));
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateKeyParameter<TIn>(key, statement.TableDescriptor);
+            var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            Trace($"{statement.Text} --> '{result}'");
+
+            return result;
+        }
+
+        public static async Task<int> Execute(this DbConnection connection, string sql, object? param = null)
+            => await Execute(connection, sql, param, CancellationToken.None);
+
+        public static async Task<int> Execute(this DbConnection connection, string sql, object? param, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+
+            await using var cmd = CreateExecuteCommand(connection, sql, transaction);
+            if (param is not null)
+                cmd.CreateObjectParameters(param, commandBuilder);
+            var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
+            return result;
+        }
+
         #endregion Commands
 
         #region Query
 
-        public static async Task<List<T>> Query<T>(this DbConnection connection)
-            => await Query<T>(connection, CancellationToken.None);
+        public static async Task<List<T>> Query<T>(this DbConnection connection, object? param = null)
+            => await Query<T>(connection, param, CancellationToken.None);
 
-        public static async Task<List<T>> Query<T>(this DbConnection connection, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        public static async Task<List<T>> Query<T>(this DbConnection connection, object? param, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
             var statement = commandBuilder.GetQueryStatement(typeof(T));
-            return await Query<T>(connection, statement.Text, cancellationToken, transaction);
+            return await Query<T>(connection, statement.Text, param, cancellationToken, transaction);
         }
 
-        public static async Task<List<T>> Query<T>(this DbConnection connection, string sql)
-            => await Query<T>(connection, sql, CancellationToken.None);
+        public static async Task<List<T>> Query<T>(this DbConnection connection, string sql, object? param = null)
+            => await Query<T>(connection, sql, param, CancellationToken.None);
 
-        public static async Task<List<T>> Query<T>(this DbConnection connection, string sql, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        public static async Task<List<T>> Query<T>(this DbConnection connection, string sql, object? param, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             await EnsureConnectionOpen(connection, cancellationToken);
 
             var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
             var tableDescriptor = commandBuilder.GetTableDescriptor(typeof(T));
 
-            var cmd = CreateExecuteCommand(connection, sql, transaction);
-            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
+            await using var cmd = CreateExecuteCommand(connection, sql, transaction);
+            if (param is not null)
+                cmd.CreateObjectParameters(param, commandBuilder);
+            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
 
             var results = await reader.Read<T>(tableDescriptor);
             return results;
         }
 
-        public static async Task<T?> QuerySingle<T>(this DbConnection connection, string sql)
-            => await QuerySingle<T>(connection, sql, CancellationToken.None);
+        public static async Task<T?> QuerySingle<T>(this DbConnection connection, string sql, object? param = null)
+            => await QuerySingle<T>(connection, sql, param, CancellationToken.None);
 
-        public static async Task<T?> QuerySingle<T>(this DbConnection connection, string sql, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        public static async Task<T?> QuerySingle<T>(this DbConnection connection, string sql, object? param, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             await EnsureConnectionOpen(connection, cancellationToken);
 
             var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
             var tableDescriptor = commandBuilder.GetTableDescriptor(typeof(T));
 
-            var cmd = CreateExecuteCommand(connection, sql, transaction);
-            var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+            await using var cmd = CreateExecuteCommand(connection, sql, transaction);
+            if (param is not null)
+                cmd.CreateObjectParameters(param, commandBuilder);
+            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
 
             return await reader.ReadSingle<T>(tableDescriptor);
         }
@@ -186,7 +264,39 @@ namespace cl2j.Database
 
         private static void CreateParameters<T>(this DbCommand command, T t, TableDescriptor tableDescriptor)
         {
-            foreach (var column in tableDescriptor.Columns)
+            CreateParameters(command, t!, tableDescriptor.Columns);
+        }
+
+        private static void CreateObjectParameters(this DbCommand command, object param, ICommandBuilder commandBuilder)
+        {
+            var type = param.GetType();
+            var tableDescriptor = commandBuilder.GetTableDescriptor(type);
+            command.CreateParameters(param, tableDescriptor.Columns);
+        }
+
+        private static void CreateKeyParameters<T>(this DbCommand command, T t, TableDescriptor tableDescriptor)
+        {
+            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != DataAnnotations.KeyType.None);
+            CreateParameters(command, t!, columns);
+        }
+
+        private static void CreateKeyParameter<T>(this DbCommand command, object key, TableDescriptor tableDescriptor)
+        {
+            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != DataAnnotations.KeyType.None);
+            if (columns.Count() != 1)
+                throw new DatabaseException($"{tableDescriptor.Name} : Must have exactly one key, found {columns.Count()}");
+
+            var column = columns.First();
+
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = column.Name;
+            parameter.Value = key;
+            command.Parameters.Add(parameter);
+        }
+
+        private static void CreateParameters(this DbCommand command, object t, IEnumerable<ColumnDescriptor> columns)
+        {
+            foreach (var column in columns)
             {
                 var value = column.Property.GetValue(t, null);
 

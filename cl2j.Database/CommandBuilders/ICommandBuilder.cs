@@ -11,7 +11,9 @@ namespace cl2j.Database.CommandBuilders
         TextStatement GetTableExistsStatement(Type type);
         TextStatement GetDropTableIfExistsStatement(Type type);
         TextStatement GetCreateTableStatement(Type type);
-        InsertStatement GetInsertStatement(Type type);
+        TextStatement GetInsertStatement(Type type);
+        TextStatement GetUpdateStatement(Type type);
+        TextStatement GetDeleteStatement(Type type);
         TextStatement GetQueryStatement(Type type);
 
         string GetTableName(Type type, bool formatted = true);

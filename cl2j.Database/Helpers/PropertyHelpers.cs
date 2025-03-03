@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using cl2j.Database.DataAnnotations;
 
 namespace cl2j.Database.Helpers
 {
@@ -6,7 +7,8 @@ namespace cl2j.Database.Helpers
     {
         public static IEnumerable<PropertyInfo> GetTableProperties(Type type)
         {
-            return type.GetProperties().Where(x => x.CanRead && x.CanWrite);
+            var properties = type.GetProperties().Where(x => x.CanRead && !x.HasAttribute<IgnoreAttribute>());
+            return properties;
         }
     }
 }

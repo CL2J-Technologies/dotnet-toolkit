@@ -77,18 +77,52 @@ namespace cl2j.Database.CommandBuilders
             };
         }
 
-        public InsertStatement GetInsertStatement(Type type)
+        public TextStatement GetInsertStatement(Type type)
         {
             var tableDescriptor = GetTableDescriptor(type);
 
-            var columns = tableDescriptor.GetColumnsWithoutKey();
+            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.Key);
             var fields = columns.Select(c => c.NameFormatted);
             var parameters = columns.Select(c => GetValueParameterName(c.Name));
 
-            return new InsertStatement
+            return new TextStatement
             {
                 TableDescriptor = tableDescriptor,
                 Text = $"INSERT INTO {tableDescriptor.NameFormatted} ({string.Join(',', fields)}) VALUES ({string.Join(',', parameters)})"
+            };
+        }
+
+        public TextStatement GetUpdateStatement(Type type)
+        {
+            var tableDescriptor = GetTableDescriptor(type);
+
+            var sbSet = new StringBuilder();
+            var columnsUpdate = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key == KeyType.None);
+            foreach (var column in columnsUpdate)
+            {
+                if (sbSet.Length > 0)
+                    sbSet.Append(", ");
+                sbSet.Append($"{column.NameFormatted}={GetValueParameterName(column.Name)}");
+            }
+
+            var where = GetTableKeysWhereClause(tableDescriptor);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"UPDATE {tableDescriptor.NameFormatted} SET {sbSet} WHERE {where}"
+            };
+        }
+
+        public TextStatement GetDeleteStatement(Type type)
+        {
+            var tableDescriptor = GetTableDescriptor(type);
+            var where = GetTableKeysWhereClause(tableDescriptor);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"DELETE FROM {tableDescriptor.NameFormatted} WHERE {where}"
             };
         }
 
@@ -161,24 +195,6 @@ namespace cl2j.Database.CommandBuilders
             return tableDescriptor;
         }
 
-        public virtual List<ColumnDescriptor> GetColumnDescriptors(Type type)
-        {
-            var properties = PropertyHelpers.GetTableProperties(type);
-
-            var list = new List<ColumnDescriptor>();
-            foreach (var property in properties)
-            {
-                list.Add(new ColumnDescriptor
-                {
-                    Name = GetColumnName(property, false),
-                    NameFormatted = GetColumnName(property, true),
-                    Property = property,
-                    ColumnAtribute = property.GetAttribute<ColumnAttribute>() ?? DefaultColumnAttribute
-                });
-            }
-            return list;
-        }
-
         public static List<ColumnDescriptor> GetKeys(List<ColumnDescriptor> columns)
         {
             var list = new List<ColumnDescriptor>();
@@ -211,6 +227,19 @@ namespace cl2j.Database.CommandBuilders
             }
 
             return list;
+        }
+
+        private string GetTableKeysWhereClause(TableDescriptor tableDescriptor)
+        {
+            var sb = new StringBuilder();
+            foreach (var column in tableDescriptor.Keys)
+            {
+                if (sb.Length > 0)
+                    sb.Append(" AND ");
+                sb.Append($"{column.NameFormatted}={GetValueParameterName(column.Name)}");
+            }
+
+            return sb.ToString();
         }
     }
 }

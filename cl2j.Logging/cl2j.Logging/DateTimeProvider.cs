@@ -1,14 +1,7 @@
 ﻿namespace cl2j.Logging
 {
-    internal sealed class DateTimeProvider : IDateTimeProvider
+    internal sealed class DateTimeProvider(TimeZoneInfo? tzi) : IDateTimeProvider
     {
-        private readonly TimeZoneInfo? tzi;
-
-        public DateTimeProvider(TimeZoneInfo? tzi)
-        {
-            this.tzi = tzi;
-        }
-
         public static DateTimeProvider Create(string timeZone)
         {
             ArgumentNullException.ThrowIfNull(timeZone);
