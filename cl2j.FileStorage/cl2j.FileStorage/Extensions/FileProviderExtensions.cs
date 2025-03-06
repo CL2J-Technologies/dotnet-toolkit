@@ -10,7 +10,7 @@ namespace cl2j.FileStorage.Extensions
             {
                 var files = await fileStorageProvider.ListFilesAsync(path);
                 foreach (var file in files)
-                    await fileStorageProvider.DeleteAsync(file);
+                    await fileStorageProvider.DeleteAsync(Path.Combine(path, file));
                 return files.Count();
             }
             catch
