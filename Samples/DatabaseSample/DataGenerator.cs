@@ -29,15 +29,15 @@ namespace DatabaseSample
             return products;
         }
 
-        internal static List<Client> GenerateClients()
+        internal static List<Client> GenerateClients(int count)
         {
             var clients = new List<Client>();
-            for (var i = 1; i <= 100000; ++i)
+            for (var i = 1; i <= count; ++i)
             {
                 clients.Add(new Client
                 {
                     Name = $"Product{i}",
-                    Balance = i * 10,
+                    Balance = i,
                     Active = i % 3 != 0,
                     CreatedOn = DateTimeOffset.UtcNow
                 });

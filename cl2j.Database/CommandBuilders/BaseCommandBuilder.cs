@@ -21,7 +21,9 @@ namespace cl2j.Database.CommandBuilders
         public abstract string GetColumnKeyType(ColumnDescriptor column);
 
         public abstract TextStatement GetTableExistsStatement(Type type);
-        public abstract TextStatement GetDropTableIfExistsStatement(Type type);
+        public abstract TextStatement GetDropTableStatement(Type type);
+
+        public abstract Task InsertBatch<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null);
 
         public TextStatement GetCreateTableStatement(Type type)
         {

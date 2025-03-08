@@ -67,17 +67,21 @@ namespace cl2j.Database
         {
             await EnsureConnectionOpen(connection, cancellationToken);
 
-            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
-            var statement = commandBuilder.GetDropTableIfExistsStatement(type);
-            Trace(statement.Text);
+            if (await connection.TableExists(type, cancellationToken, transaction))
+            {
+                var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
 
-            try
-            {
-                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-            }
-            catch
-            {
+                var statement = commandBuilder.GetDropTableStatement(type);
+                Trace(statement.Text);
+
+                try
+                {
+                    await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+                    await cmd.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch
+                {
+                }
             }
         }
 
@@ -117,6 +121,18 @@ namespace cl2j.Database
             Trace($"{statement.Text} --> '{result}'");
 
             return result;
+        }
+
+        public static Task InsertBatch<TIn>(this DbConnection connection, IEnumerable<TIn> items)
+            => InsertBatch(connection, items, CancellationToken.None, null);
+
+        public static async Task InsertBatch<TIn>(this DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+
+            await commandBuilder.InsertBatch(connection, items, cancellationToken, transaction);
         }
 
         public static async Task Update<TIn>(this DbConnection connection, TIn item)

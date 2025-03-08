@@ -9,7 +9,7 @@ namespace DatabaseSample.Models
         [Column(Length = 50, Required = true)]
         public string Name { get; set; } = null!;
 
-        [Column(Length = 8, Decimals = 2, Required = true)]
+        [Column(Length = 12, Decimals = 2, Required = true)]
         public decimal Balance { get; set; }
 
         [Column(Required = true)]
