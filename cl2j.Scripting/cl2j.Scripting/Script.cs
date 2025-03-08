@@ -4,21 +4,24 @@ namespace cl2j.Scripting
 {
     public class Script(object instance, ScriptOptions options)
     {
+        private readonly Type instanceType = instance.GetType();
+        private readonly string methodName = options.MethodName;
+
         public void Execute()
         {
-            instance.GetType().InvokeMember(options.MethodName, BindingFlags.InvokeMethod, null, instance, []);
+            instanceType.InvokeMember(methodName, BindingFlags.InvokeMethod, null, instance, []);
         }
 
         public TOut? Execute<TOut>()
         {
-            var result = instance.GetType().InvokeMember(options.MethodName, BindingFlags.InvokeMethod, null, instance, []);
+            var result = instanceType.InvokeMember(methodName, BindingFlags.InvokeMethod, null, instance, []);
             return result is null ? default : (TOut)result;
         }
 
         public TOut? Execute<TIn, TOut>(TIn? context)
         {
             var parameters = context is null ? [] : new List<object> { context };
-            var result = instance.GetType().InvokeMember(options.MethodName, BindingFlags.InvokeMethod, null, instance, [.. parameters]);
+            var result = instanceType.InvokeMember(methodName, BindingFlags.InvokeMethod, null, instance, [.. parameters]);
             return result is null ? default : (TOut)result;
         }
 

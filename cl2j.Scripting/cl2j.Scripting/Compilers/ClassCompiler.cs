@@ -14,8 +14,10 @@ namespace cl2j.Scripting.Compilers
             var tree = SyntaxFactory.ParseSyntaxTree(source.Source);
 
             var optimizationLevel = options.CompileWithDebug ? OptimizationLevel.Debug : OptimizationLevel.Release;
+            var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: optimizationLevel);
+
             var compilation = CSharpCompilation.Create(source.ClassName)
-                .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: optimizationLevel))
+                .WithOptions(compilationOptions)
                 .AddReferences(options.Assemblies)
                 .AddSyntaxTrees(tree);
 

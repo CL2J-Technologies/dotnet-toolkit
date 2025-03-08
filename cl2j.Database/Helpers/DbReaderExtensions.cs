@@ -67,7 +67,8 @@ namespace cl2j.Database.Helpers
             sb.AppendLine("while (context.Read())");
             sb.AppendLine("{");
             AddReadObjectCode<T>(sb, typeName!, tableDescriptor);
-            sb.AppendLine("list.Add(t);");
+            sb.AppendLine();
+            sb.AppendLine("\tlist.Add(t);");
             sb.AppendLine("}");
             sb.AppendLine("return list;");
             return sb.ToString();
@@ -86,44 +87,60 @@ namespace cl2j.Database.Helpers
 
         private static void AddReadObjectCode<T>(StringBuilder sb, string typeName, TableDescriptor tableDescriptor)
         {
-            sb.AppendLine($"var t = new {typeName}();");
+            sb.AppendLine($"\tvar t = new {typeName}();");
+            sb.AppendLine();
             for (var i = 0; i < tableDescriptor.Columns.Count; ++i)
             {
                 var c = tableDescriptor.Columns[i];
                 var propType = c.Property.PropertyType;
+                var propSetter = $"t.{c.Name}";
 
-                var v = $"t.{c.Name}";
+                if (c.ColumnAtribute.Required)
+                {
+                    if (c.ColumnAtribute.Json)
+                    {
+                        var vi = $"v{i}";
+                        var propTypeName = TypeUtils.GetTypeName(propType);
 
-                if (c.ColumnAtribute.Json)
+                        sb.AppendLine($"\tvar {vi}=context.GetString({i});");
+                        sb.AppendLine($"\t{propSetter}=JsonSerializer.Deserialize<{propTypeName}>({vi});");
+                    }
+                    else if (propType == Types.TypeBool)
+                        sb.AppendLine($"\t{propSetter}=context.GetBoolean({i});");
+                    else if (propType == Types.TypeShort)
+                        sb.AppendLine($"\t{propSetter}=context.GetInt16({i});");
+                    else if (propType == Types.TypeInt)
+                        sb.AppendLine($"\t{propSetter}=context.GetInt32({i});");
+                    else if (propType == Types.TypeLong)
+                        sb.AppendLine($"\t{propSetter}=context.GetInt64({i});");
+                    else if (propType == Types.TypeDecimal)
+                        sb.AppendLine($"\t{propSetter}=context.GetDecimal({i});");
+                    else if (propType == Types.TypeFloat)
+                        sb.AppendLine($"\t{propSetter}=context.GetFloat({i});");
+                    else if (propType == Types.TypeDouble)
+                        sb.AppendLine($"\t {propSetter}=context.GetDouble({i});");
+                    else if (propType == Types.TypeGuid)
+                        sb.AppendLine($"\t {propSetter}=context.GetGuid({i});");
+                    else if (propType == Types.TypeString)
+                        sb.AppendLine($"\t {propSetter}=context.GetString({i});");
+                    else if (propType == Types.TypeDateTime)
+                        sb.AppendLine($"\t {propSetter}=context.GetDateTime({i});");
+                    else
+                        sb.AppendLine($"\t{propSetter}=({propType.Name})context.GetValue({i});");
+                }
+                else
                 {
                     var vi = $"v{i}";
-                    var propTypeName = TypeUtils.GetTypeName(propType);
-
-                    sb.AppendLine($"var {vi}=context.GetString({i});");
-                    sb.AppendLine($"{v}=JsonSerializer.Deserialize<{propTypeName}>({vi});");
+                    sb.AppendLine($"\tvar {vi} = context.GetValue({i});");
+                    sb.Append($"\tif({vi} != DBNull.Value) ");
+                    if (c.ColumnAtribute.Json)
+                    {
+                        var propTypeName = TypeUtils.GetTypeName(propType);
+                        sb.AppendLine($"{propSetter}=JsonSerializer.Deserialize<{propTypeName}>((string){vi});");
+                    }
+                    else
+                        sb.AppendLine($"{propSetter}=({propType.Name}){vi};");
                 }
-                else if (propType == Types.TypeBool)
-                    sb.AppendLine($"{v}=context.GetBoolean({i});");
-                else if (propType == Types.TypeShort)
-                    sb.AppendLine($"{v}=context.GetInt16({i});");
-                else if (propType == Types.TypeInt)
-                    sb.AppendLine($"{v}=context.GetInt32({i});");
-                else if (propType == Types.TypeLong)
-                    sb.AppendLine($"{v}=context.GetInt64({i});");
-                else if (propType == Types.TypeDecimal)
-                    sb.AppendLine($"{v}=context.GetDecimal({i});");
-                else if (propType == Types.TypeFloat)
-                    sb.AppendLine($"{v}=context.GetFloat({i});");
-                else if (propType == Types.TypeDouble)
-                    sb.AppendLine($"{v}=context.GetDouble({i});");
-                else if (propType == Types.TypeGuid)
-                    sb.AppendLine($"{v}=context.GetGuid({i});");
-                else if (propType == Types.TypeString)
-                    sb.AppendLine($"{v}=context.GetString({i});");
-                else if (propType == Types.TypeDateTime)
-                    sb.AppendLine($"{v}=context.GetDateTime({i});");
-                else
-                    sb.AppendLine($"{v}=({propType.Name})context.GetValue({i});");
             }
         }
 

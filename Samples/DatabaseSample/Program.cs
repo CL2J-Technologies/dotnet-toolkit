@@ -23,7 +23,9 @@ using var connection = new SqlConnection(connectionString);
 
 var sw = Stopwatch.StartNew();
 
-var executePrepare = true;
+#if DEBUG
+
+var executePrepare = false;
 if (executePrepare)
 {
     await connection.DropTableIfExists<Product>();
@@ -54,8 +56,6 @@ if (executePrepare)
     await connection.InsertBatch(generatedClients);
     logger.LogTrace($"Inserted Batch Client --> {sw.ElapsedMilliseconds}ms");
 }
-
-#if DEBUG
 
 //Query from SQL
 var clients = await connection.Query<Client>("SELECT [Id], [Name], [Balance], [Active], [CreatedOn] FROM [Client]");

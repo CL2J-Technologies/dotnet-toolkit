@@ -25,6 +25,9 @@ namespace DatabaseSample.Models
         [Column(Default = null)]
         public DateTimeOffset CreatedOn { get; set; }
 
+        [Column(Length = 200)]
+        public string? Tips { get; set; }
+
         public override string ToString()
         {
             return $"{Id} [Name={Name}, Display={Display}, CategoryId={CategoryId}, Price={Price}, Active={Active}, CreatedOn={CreatedOn}]";

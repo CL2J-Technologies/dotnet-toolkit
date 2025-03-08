@@ -23,7 +23,8 @@ namespace DatabaseSample
                     Display = new Dictionary<string, string> { { "fr", $"Nom du produit {i}" }, { "en", $"Product {i} name" } },
                     CategoryId = categories[(i - 1) % categories.Count].CategoryId,
                     Price = i * 10,
-                    Active = i % 3 != 0
+                    Active = i % 3 != 0,
+                    Tips = i % 3 == 0 ? $"Tips {i}" : null
                 });
             }
             return products;
