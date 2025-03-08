@@ -1,37 +1,110 @@
 ﻿using System.Data.Common;
-using cl2j.Database.CommandBuilders.Models;
 using cl2j.Database.DataAnnotations;
+using cl2j.Database.Descriptors;
 using cl2j.Database.Exceptions;
 using cl2j.Database.Helpers;
 using Microsoft.Data.SqlClient;
 
 namespace cl2j.Database.CommandBuilders
 {
-    public class SqlServerCommandBuilder : BaseCommandBuilder, ICommandBuilder
+    public class SqlServerCommandBuilder : ICommandBuilder, IDatabaseFormatter
     {
-        public override bool Support(DbConnection connection)
+        public bool Support(DbConnection connection)
         {
             return connection is SqlConnection;
         }
 
-        public override string FormatTableName(string table, string? schema = null)
+        public IDatabaseFormatter DatabaseFormatter => this;
+
+        public TextStatement GetTableExistsStatement(Type type)
+        {
+            var tableDescriptor = TableDescriptorFactory.Create(type, this);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"SELECT TOP 1 * FROM {tableDescriptor.NameFormatted}"
+            };
+        }
+
+        public TextStatement GetDropTableStatement(Type type)
+        {
+            var tableDescriptor = TableDescriptorFactory.Create(type, this);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"DROP TABLE {tableDescriptor.NameFormatted}"
+            };
+        }
+
+        public TextStatement GetCreateTableStatement(Type type)
+        {
+            return CommandBuilderHelpers.GetCreateTableStatement(type, this);
+        }
+
+        public TextStatement GetInsertStatement(Type type)
+        {
+            return CommandBuilderHelpers.GetInsertStatement(type, this);
+        }
+
+        public TextStatement GetUpdateStatement(Type type)
+        {
+            return CommandBuilderHelpers.GetUpdateStatement(type, this);
+        }
+
+        public TextStatement GetDeleteStatement(Type type)
+        {
+            return CommandBuilderHelpers.GetDeleteStatement(type, this);
+        }
+
+        public TextStatement GetQueryStatement(Type type)
+        {
+            return CommandBuilderHelpers.GetQueryStatement(type, this);
+        }
+
+        public async Task InsertBatch<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection is required. '{connection.GetType().Name}' received.");
+
+            var type = typeof(TIn);
+            var tableDescriptor = TableDescriptorFactory.Create(type, this);
+            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.Key);
+
+            using (var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction as SqlTransaction))
+            {
+                var dataTable = DataTableHelpers.CreateDataTable(items, tableDescriptor.NameFormatted, columns);
+
+                bulkCopy.DestinationTableName = tableDescriptor.NameFormatted;
+
+                foreach (var column in dataTable.Columns)
+                    bulkCopy.ColumnMappings.Add(column.ToString(), column.ToString());
+
+                bulkCopy.BulkCopyTimeout = connection.ConnectionTimeout;
+                await bulkCopy.WriteToServerAsync(dataTable);
+            }
+        }
+
+        #region IDatabaseFormatter
+
+        public string FormatTableName(TableMetaData tableMetaData)
+        {
+            return FormatTableName(tableMetaData.Table, tableMetaData.Schema);
+        }
+
+        public string FormatTableName(string table, string? schema = null)
         {
             if (schema is null)
                 return "[" + table + "]";
             return $"[{schema}].[{table}]";
         }
 
-        public override string FormatColumnName(string column)
+        public string FormatColumnName(string column)
         {
             return "[" + column + "]";
         }
 
-        public override string GetValueParameterName(string column)
-        {
-            return "@" + column;
-        }
-
-        public override string GetColumnDataType(ColumnDescriptor column)
+        public string GetColumnDataType(ColumnDescriptor column)
         {
             var columnAttr = column.ColumnAtribute;
             var propertyInfo = column.Property;
@@ -81,7 +154,7 @@ namespace cl2j.Database.CommandBuilders
             return propertyTypeDesc;
         }
 
-        public override string GetColumnKeyType(ColumnDescriptor column)
+        public string GetColumnKeyType(ColumnDescriptor column)
         {
             if (column.Property.PropertyType == Types.TypeInt)
                 return " IDENTITY(1,1) PRIMARY KEY";
@@ -93,60 +166,11 @@ namespace cl2j.Database.CommandBuilders
             throw new DatabaseException($"Unsupported key type '{column.Property.PropertyType.Name}'");
         }
 
-        public override TextStatement GetTableExistsStatement(Type type)
+        public string FormatParameterName(string column)
         {
-            var tableDescriptor = GetTableDescriptor(type);
-
-            return new TextStatement
-            {
-                TableDescriptor = tableDescriptor,
-                Text = $"SELECT TOP 1 * FROM {tableDescriptor.NameFormatted}"
-            };
+            return "@" + column;
         }
 
-        public override TextStatement GetDropTableStatement(Type type)
-        {
-            var tableDescriptor = GetTableDescriptor(type);
-
-            return new TextStatement
-            {
-                TableDescriptor = tableDescriptor,
-                Text = $"DROP TABLE {tableDescriptor.NameFormatted}"
-            };
-        }
-
-        public override async Task InsertBatch<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
-        {
-            var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection is required. '{connection.GetType().Name}' received.");
-
-            var type = typeof(TIn);
-            var tableDescriptor = GetTableDescriptor(type);
-            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.Key);
-
-            //Generate key value that requires auto-generation
-            var autoGeneratedColumns = columns.Where(c => c.ColumnAtribute.Key == DataAnnotations.KeyType.AutoGeneratedKey);
-            if (autoGeneratedColumns.Any())
-            {
-                foreach (var item in items)
-                {
-                    foreach (var column in autoGeneratedColumns)
-                        column.Property.SetValue(item, Guid.NewGuid().ToString());
-                }
-            }
-
-            //Execute the inserts
-            using (var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction as SqlTransaction))
-            {
-                var dataTable = DataTableHelpers.CreateDataTable(items, tableDescriptor.NameFormatted, columns);
-
-                bulkCopy.DestinationTableName = tableDescriptor.NameFormatted;
-
-                foreach (var column in dataTable.Columns)
-                    bulkCopy.ColumnMappings.Add(column.ToString(), column.ToString());
-
-                bulkCopy.BulkCopyTimeout = connection.ConnectionTimeout;
-                await bulkCopy.WriteToServerAsync(dataTable);
-            }
-        }
+        #endregion
     }
 }

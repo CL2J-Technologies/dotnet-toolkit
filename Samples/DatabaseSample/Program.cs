@@ -25,7 +25,7 @@ var sw = Stopwatch.StartNew();
 
 #if DEBUG
 
-var executePrepare = false;
+var executePrepare = true;
 if (executePrepare)
 {
     await connection.DropTableIfExists<Product>();

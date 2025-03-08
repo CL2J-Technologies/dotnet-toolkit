@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Text;
-using cl2j.Database.CommandBuilders.Models;
+using cl2j.Database.Descriptors;
 using cl2j.Scripting;
 using cl2j.Tooling;
 

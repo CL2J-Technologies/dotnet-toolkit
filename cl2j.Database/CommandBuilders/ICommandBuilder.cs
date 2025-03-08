@@ -1,12 +1,13 @@
 ﻿using System.Data.Common;
-using System.Reflection;
-using cl2j.Database.CommandBuilders.Models;
+using cl2j.Database.Descriptors;
 
 namespace cl2j.Database.CommandBuilders
 {
     public interface ICommandBuilder
     {
         bool Support(DbConnection connection);
+
+        IDatabaseFormatter DatabaseFormatter { get; }
 
         TextStatement GetTableExistsStatement(Type type);
         TextStatement GetDropTableStatement(Type type);
@@ -17,16 +18,5 @@ namespace cl2j.Database.CommandBuilders
         TextStatement GetQueryStatement(Type type);
 
         Task InsertBatch<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null);
-
-        string GetTableName(Type type, bool formatted = true);
-        string FormatTableName(string table, string? schema = null);
-        string GetColumnName(PropertyInfo propertyInfo, bool formatted = true);
-        string FormatColumnName(string column);
-        string GetValueParameterName(string column);
-        string GetColumnKeyType(ColumnDescriptor column);
-
-        TableDescriptor GetTableDescriptor(Type type);
-        TableDescriptor CreateTableDescriptor(Type type);
-        string GetColumnDataType(ColumnDescriptor column);
     }
 }

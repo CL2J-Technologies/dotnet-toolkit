@@ -1,4 +1,6 @@
-﻿namespace cl2j.Database.CommandBuilders.Models
+﻿using cl2j.Database.Descriptors;
+
+namespace cl2j.Database.CommandBuilders
 {
     public class TextStatement
     {

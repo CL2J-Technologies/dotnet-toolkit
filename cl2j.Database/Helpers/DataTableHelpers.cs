@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
-using cl2j.Database.CommandBuilders.Models;
+using cl2j.Database.Descriptors;
 
 namespace cl2j.Database.Helpers
 {

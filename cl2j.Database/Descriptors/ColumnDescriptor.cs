@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using cl2j.Database.DataAnnotations;
 
-namespace cl2j.Database.CommandBuilders.Models
+namespace cl2j.Database.Descriptors
 {
     public class ColumnDescriptor
     {

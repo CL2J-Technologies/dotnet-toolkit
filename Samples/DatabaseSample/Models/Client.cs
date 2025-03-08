@@ -16,5 +16,10 @@ namespace DatabaseSample.Models
         public bool Active { get; set; }
 
         public DateTimeOffset CreatedOn { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Id} [Name={Name}, Balance={Balance}, Active={Active}, CreatedOn={CreatedOn}]";
+        }
     }
 }
