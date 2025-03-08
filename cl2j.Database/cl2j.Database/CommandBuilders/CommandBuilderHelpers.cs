@@ -61,6 +61,17 @@ namespace cl2j.Database.CommandBuilders
             };
         }
 
+        public static TextStatement GetDropTableStatement(Type type, IDatabaseFormatter formatter)
+        {
+            var tableDescriptor = TableDescriptorFactory.Create(type, formatter);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"DROP TABLE {tableDescriptor.NameFormatted}"
+            };
+        }
+
         public static TextStatement GetInsertStatement(Type type, IDatabaseFormatter formatter)
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, formatter);

@@ -17,6 +17,6 @@ namespace cl2j.Database.CommandBuilders
         TextStatement GetDeleteStatement(Type type);
         TextStatement GetQueryStatement(Type type);
 
-        Task InsertBatch<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null);
+        Task BulkInsert<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null);
     }
 }

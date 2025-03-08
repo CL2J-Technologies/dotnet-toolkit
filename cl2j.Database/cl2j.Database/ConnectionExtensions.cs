@@ -26,6 +26,7 @@ namespace cl2j.Database
 
             var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
             var statement = commandBuilder.GetTableExistsStatement(type);
+            Trace(statement.Text);
 
             try
             {
@@ -42,12 +43,6 @@ namespace cl2j.Database
         public static async Task CreateTable<T>(this DbConnection connection)
             => await CreateTable(connection, typeof(T), CancellationToken.None);
 
-        public static async Task CreateTableIfRequired<T>(this DbConnection connection)
-        {
-            if (!await connection.TableExists<T>())
-                await CreateTable(connection, typeof(T), CancellationToken.None);
-        }
-
         public static async Task CreateTable(this DbConnection connection, Type type, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             await EnsureConnectionOpen(connection, cancellationToken);
@@ -60,29 +55,42 @@ namespace cl2j.Database
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        public static async Task CreateTableIfRequired<T>(this DbConnection connection)
+        {
+            if (!await connection.TableExists<T>())
+                await CreateTable(connection, typeof(T), CancellationToken.None);
+        }
 
-        public static async Task DropTableIfExists<T>(this DbConnection connection) => await DropTableIfExists(connection, typeof(T), CancellationToken.None);
+        public static async Task DropTable<T>(this DbConnection connection)
+            => await DropTable(connection, typeof(T), CancellationToken.None);
+
+        public static async Task DropTable(this DbConnection connection, Type type, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetDropTableStatement(type);
+            Trace(statement.Text);
+
+            try
+            {
+                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch
+            {
+            }
+        }
+
+        public static async Task DropTableIfExists<T>(this DbConnection connection)
+            => await DropTableIfExists(connection, typeof(T), CancellationToken.None);
 
         public static async Task DropTableIfExists(this DbConnection connection, Type type, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             await EnsureConnectionOpen(connection, cancellationToken);
 
             if (await connection.TableExists(type, cancellationToken, transaction))
-            {
-                var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
-
-                var statement = commandBuilder.GetDropTableStatement(type);
-                Trace(statement.Text);
-
-                try
-                {
-                    await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-                    await cmd.ExecuteNonQueryAsync(cancellationToken);
-                }
-                catch
-                {
-                }
-            }
+                await DropTable(connection, type, cancellationToken, transaction);
         }
 
         #endregion DDL
@@ -123,10 +131,10 @@ namespace cl2j.Database
             return result;
         }
 
-        public static Task InsertBatch<TIn>(this DbConnection connection, IEnumerable<TIn> items)
-            => InsertBatch(connection, items, CancellationToken.None, null);
+        public static Task BulkInsert<TIn>(this DbConnection connection, IEnumerable<TIn> items)
+            => BulkInsert(connection, items, CancellationToken.None, null);
 
-        public static async Task InsertBatch<TIn>(this DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        public static async Task BulkInsert<TIn>(this DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             await EnsureConnectionOpen(connection, cancellationToken);
 
@@ -144,7 +152,7 @@ namespace cl2j.Database
                 }
             }
 
-            await commandBuilder.InsertBatch(connection, items, cancellationToken, transaction);
+            await commandBuilder.BulkInsert(connection, items, cancellationToken, transaction);
         }
 
         public static async Task Update<TIn>(this DbConnection connection, TIn item)

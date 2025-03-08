@@ -3,7 +3,7 @@ using cl2j.Database.Databases;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
-namespace cl2j.Database.DatabaseProviders
+namespace cl2j.Database.SqlServer
 {
     public class SqlServerDatabase(string connectionString, DatabaseOptions options, ILogger logger) : BaseDatabase(options, logger)
     {

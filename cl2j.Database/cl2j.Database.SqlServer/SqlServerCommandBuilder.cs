@@ -1,13 +1,14 @@
 ﻿using System.Data.Common;
+using cl2j.Database.CommandBuilders;
 using cl2j.Database.DataAnnotations;
 using cl2j.Database.Descriptors;
 using cl2j.Database.Exceptions;
 using cl2j.Database.Helpers;
 using Microsoft.Data.SqlClient;
 
-namespace cl2j.Database.CommandBuilders
+namespace cl2j.Database.SqlServer
 {
-    public class SqlServerCommandBuilder : ICommandBuilder, IDatabaseFormatter
+    internal class SqlServerCommandBuilder : ICommandBuilder, IDatabaseFormatter
     {
         public bool Support(DbConnection connection)
         {
@@ -29,13 +30,7 @@ namespace cl2j.Database.CommandBuilders
 
         public TextStatement GetDropTableStatement(Type type)
         {
-            var tableDescriptor = TableDescriptorFactory.Create(type, this);
-
-            return new TextStatement
-            {
-                TableDescriptor = tableDescriptor,
-                Text = $"DROP TABLE {tableDescriptor.NameFormatted}"
-            };
+            return CommandBuilderHelpers.GetDropTableStatement(type, this);
         }
 
         public TextStatement GetCreateTableStatement(Type type)
@@ -63,34 +58,26 @@ namespace cl2j.Database.CommandBuilders
             return CommandBuilderHelpers.GetQueryStatement(type, this);
         }
 
-        public async Task InsertBatch<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        public async Task BulkInsert<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
-            var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection is required. '{connection.GetType().Name}' received.");
+            var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection required. '{connection.GetType().Name}' received.");
 
-            var type = typeof(TIn);
-            var tableDescriptor = TableDescriptorFactory.Create(type, this);
+            var tableDescriptor = TableDescriptorFactory.Create(typeof(TIn), this);
             var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.Key);
 
-            using (var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction as SqlTransaction))
-            {
-                var dataTable = DataTableHelpers.CreateDataTable(items, tableDescriptor.NameFormatted, columns);
+            using var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction as SqlTransaction);
+            var dataTable = DataTableHelpers.CreateDataTable(items, tableDescriptor.NameFormatted, columns);
 
-                bulkCopy.DestinationTableName = tableDescriptor.NameFormatted;
+            bulkCopy.DestinationTableName = tableDescriptor.NameFormatted;
 
-                foreach (var column in dataTable.Columns)
-                    bulkCopy.ColumnMappings.Add(column.ToString(), column.ToString());
+            foreach (var column in dataTable.Columns)
+                bulkCopy.ColumnMappings.Add(column.ToString(), column.ToString());
 
-                bulkCopy.BulkCopyTimeout = connection.ConnectionTimeout;
-                await bulkCopy.WriteToServerAsync(dataTable);
-            }
+            bulkCopy.BulkCopyTimeout = ConnectionExtensions.DatabaseOptions.BulkInsertTimeout?.Seconds ?? connection.ConnectionTimeout;
+            await bulkCopy.WriteToServerAsync(dataTable);
         }
 
         #region IDatabaseFormatter
-
-        public string FormatTableName(TableMetaData tableMetaData)
-        {
-            return FormatTableName(tableMetaData.Table, tableMetaData.Schema);
-        }
 
         public string FormatTableName(string table, string? schema = null)
         {
@@ -99,9 +86,9 @@ namespace cl2j.Database.CommandBuilders
             return $"[{schema}].[{table}]";
         }
 
-        public string FormatColumnName(string column)
+        public string FormatColumnName(string name)
         {
-            return "[" + column + "]";
+            return "[" + name + "]";
         }
 
         public string GetColumnDataType(ColumnDescriptor column)
@@ -166,9 +153,9 @@ namespace cl2j.Database.CommandBuilders
             throw new DatabaseException($"Unsupported key type '{column.Property.PropertyType.Name}'");
         }
 
-        public string FormatParameterName(string column)
+        public string FormatParameterName(string name)
         {
-            return "@" + column;
+            return "@" + name;
         }
 
         #endregion

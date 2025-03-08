@@ -1,14 +1,14 @@
 ﻿using System.Data;
 using BenchmarkDotNet.Attributes;
 using cl2j.Database;
-using cl2j.Database.CommandBuilders;
+using cl2j.Database.SqlServer;
 using Dapper;
 using DatabaseSample.Models;
 using Microsoft.Data.SqlClient;
 
 namespace DatabaseSample.Scenarios
 {
-    public class TestQueryStatic
+    public class PerfomanceQueryStatic
     {
         public static string ConnectionString = "Data Source=.;Initial Catalog=DatabaseSample;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=15;encrypt=true;trustServerCertificate=true";
         public static string SelectClients = "SELECT [Id], [Name], [Balance], [Active], [CreatedOn] FROM [Client]";
@@ -17,7 +17,7 @@ namespace DatabaseSample.Scenarios
         [GlobalSetup]
         public void GlobalSetup()
         {
-            CommandBuilderFactory.Register(new SqlServerCommandBuilder());
+            SqlServer.Register();
 
             Connection = new SqlConnection(ConnectionString);
             Connection.Open();

@@ -36,7 +36,7 @@ namespace cl2j.Database.Descriptors
             var tableDescriptor = new TableDescriptor
             {
                 Name = tableMetaData.Table,
-                NameFormatted = formatter.FormatTableName(tableMetaData),
+                NameFormatted = formatter.FormatTableName(tableMetaData.Table, tableMetaData.Schema),
                 Keys = columnsDescriptors.GetKeys(),
                 Columns = columnsDescriptors
             };
