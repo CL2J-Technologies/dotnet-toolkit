@@ -95,7 +95,7 @@ namespace cl2j.Database.Helpers
                 var propType = c.Property.PropertyType;
                 var propSetter = $"t.{c.Name}";
 
-                if (c.ColumnAtribute.Required)
+                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required)
                 {
                     if (c.ColumnAtribute.Json)
                     {

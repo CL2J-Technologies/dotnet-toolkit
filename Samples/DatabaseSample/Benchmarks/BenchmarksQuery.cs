@@ -5,14 +5,17 @@ using cl2j.Database.SqlServer;
 using Dapper;
 using DatabaseSample.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
-namespace DatabaseSample.Scenarios
+namespace DatabaseSample.Benchmarks
 {
-    public class PerfomanceQueryStatic
+    public class BenchmarksQuery
     {
         public static string ConnectionString = "Data Source=.;Initial Catalog=DatabaseSample;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=15;encrypt=true;trustServerCertificate=true";
         public static string SelectClients = "SELECT [Id], [Name], [Balance], [Active], [CreatedOn] FROM [Client]";
+
         private SqlConnection Connection = null!;
+        private DbContext dbcontext = default!;
 
         [GlobalSetup]
         public void GlobalSetup()
@@ -21,18 +24,14 @@ namespace DatabaseSample.Scenarios
 
             Connection = new SqlConnection(ConnectionString);
             Connection.Open();
+
+            dbcontext = new DbContext(new DbContextOptionsBuilder().UseSqlServer(ConnectionString).Options);
         }
 
         [GlobalCleanup]
         public void GlobalCleanup()
         {
             Connection?.Dispose();
-        }
-
-        [Benchmark]
-        public async Task QueryClientCl2j()
-        {
-            _ = await Connection.Query<Client>(SelectClients);
         }
 
         //[Benchmark]
@@ -113,9 +112,22 @@ namespace DatabaseSample.Scenarios
         }
 
         [Benchmark]
+        public async Task QueryClientCl2j()
+        {
+            _ = await Connection.Query<Client>(SelectClients);
+        }
+
+        [Benchmark]
         public async Task QueryClientDapper()
         {
             _ = await Connection.QueryAsync<Client>(SelectClients);
+        }
+
+        [Benchmark]
+        public async Task QueryClientEF8()
+        {
+            _ = dbcontext.Database.SqlQueryRaw<Client>(SelectClients).ToList(); //ToList to ensure enumeration
+            await Task.CompletedTask;
         }
     }
 }
