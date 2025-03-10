@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.Database.Databases
 {
-    public abstract class BaseDatabase(DatabaseOptions options, ILogger logger)
+    public abstract class BaseDatabase(DatabaseOptions options, ILogger logger) : IDatabase
     {
         protected readonly ILogger logger = logger;
 
-        protected abstract Task<DbConnection> CreateConnection();
+        public abstract Task<DbConnection> CreateConnection();
 
         public async Task<List<T>> Query<T>(string sql, object? param = null)
         {
@@ -43,12 +43,35 @@ namespace cl2j.Database.Databases
             }
         }
 
-        public async Task Insert<T>(T t) where T : class
+        public async Task<T?> QuerySingle<T>(object param)
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                var t = await connection.QuerySingle<T>(param);
+                return t;
+            }
+            catch (Exception ex)
+            {
+                logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tparameters={param}\n\tException={ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<bool> Exists<T>(object param)
+        {
+            var t = await QuerySingle<T>(param);
+            return t is not null;
+        }
+
+
+        public async Task<T> Insert<T>(T t) where T : class
         {
             try
             {
                 using var connection = await CreateConnection();
                 await connection.Insert(t);
+                return t;
             }
             catch (Exception ex)
             {
@@ -57,12 +80,13 @@ namespace cl2j.Database.Databases
             }
         }
 
-        public async Task Update<T>(T t) where T : class
+        public async Task<T> Update<T>(T t) where T : class
         {
             try
             {
                 using var connection = await CreateConnection();
                 await connection.Update(t);
+                return t;
             }
             catch (Exception ex)
             {

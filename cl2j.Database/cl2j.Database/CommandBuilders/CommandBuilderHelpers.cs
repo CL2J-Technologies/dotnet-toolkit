@@ -100,7 +100,7 @@ namespace cl2j.Database.CommandBuilders
                 sbSet.Append($"{column.NameFormatted}={formatter.FormatParameterName(column.Name)}");
             }
 
-            var where = GetTableKeysWhereClause(tableDescriptor, formatter);
+            var where = GetColumnWhereClause(tableDescriptor.Keys, formatter);
 
             return new TextStatement
             {
@@ -112,7 +112,7 @@ namespace cl2j.Database.CommandBuilders
         public static TextStatement GetDeleteStatement(Type type, IDatabaseFormatter formatter)
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, formatter);
-            var where = GetTableKeysWhereClause(tableDescriptor, formatter);
+            var where = GetColumnWhereClause(tableDescriptor.Keys, formatter);
 
             return new TextStatement
             {
@@ -133,10 +133,22 @@ namespace cl2j.Database.CommandBuilders
             };
         }
 
-        private static string GetTableKeysWhereClause(TableDescriptor tableDescriptor, IDatabaseFormatter formatter)
+        public static TextStatement GetQueryStatement(Type type, Type paramType, IDatabaseFormatter formatter)
+        {
+            var statement = GetQueryStatement(type, formatter);
+
+            var tableDescriptorParam = TableDescriptorFactory.Create(paramType, formatter);
+            var where = GetColumnWhereClause(tableDescriptorParam.Columns, formatter);
+            if (where.Length > 0)
+                statement.Text += " WHERE " + where;
+
+            return statement;
+        }
+
+        private static string GetColumnWhereClause(List<ColumnDescriptor> columns, IDatabaseFormatter formatter)
         {
             var sb = new StringBuilder();
-            foreach (var column in tableDescriptor.Keys)
+            foreach (var column in columns)
             {
                 if (sb.Length > 0)
                     sb.Append(" AND ");

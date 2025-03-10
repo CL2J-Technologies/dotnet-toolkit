@@ -10,7 +10,7 @@ namespace cl2j.Scripting.InstanceCreators
         public object CreateInstance(ScriptOptions options)
         {
             //Generate the class source
-            var source = ClassGenerator.GenerateSource(options.MethodDeclaration, options.Code, options.Namespaces);
+            var source = ClassGenerator.GenerateSource(options.MethodDeclaration, options.Code, options.Namespaces, options.ClassNamespace);
 
             //Compile the class source into an assembly
             var compilationResult = ClassCompiler.CompileAssembly(source, options);

@@ -2,6 +2,7 @@
 using System.Data.Common;
 using System.Text;
 using cl2j.Database.Descriptors;
+using cl2j.Database.Exceptions;
 using cl2j.Scripting;
 using cl2j.Tooling;
 
@@ -20,12 +21,28 @@ namespace cl2j.Database.Helpers
             try
             {
                 var type = typeof(T);
+                if (!type.IsVisible)
+                    throw new DatabaseException($"Type {type.Name} must be public");
+
                 var script = CacheRead.GetOrAdd(type, type =>
                 {
                     var code = GenerateReadCode<T>(tableDescriptor);
-                    var options = ScriptOptions.Create<DbDataReader, List<T>>(code);
-                    ConfigureScriptOptions<T>(options, tableDescriptor);
-                    return Script.Create(options);
+#if DEBUG
+                    try
+                    {
+#endif
+                        var options = ScriptOptions.Create<DbDataReader, List<T>>(code);
+                        ConfigureScriptOptions<T>(options, tableDescriptor);
+                        return Script.Create(options);
+#if DEBUG
+                    }
+#pragma warning disable CS0168 // Variable is declared but never used
+                    catch (Exception ex)
+#pragma warning restore CS0168 // Variable is declared but never used
+                    {
+                        throw;
+                    }
+#endif
                 });
                 return script.Execute<DbDataReader, List<T>>(reader) ?? [];
             }
@@ -60,7 +77,7 @@ namespace cl2j.Database.Helpers
 
         private static string GenerateReadCode<T>(TableDescriptor tableDescriptor)
         {
-            var typeName = typeof(T).FullName;
+            var typeName = TypeUtils.GetTypeName<T>();
 
             var sb = new StringBuilder();
             sb.AppendLine($"List<{typeName}> list = [];");
@@ -76,7 +93,7 @@ namespace cl2j.Database.Helpers
 
         private static string GenerateReadSingleCode<T>(TableDescriptor tableDescriptor)
         {
-            var typeName = typeof(T).FullName;
+            var typeName = TypeUtils.GetTypeName<T>();
 
             var sb = new StringBuilder();
             sb.AppendLine("context.Read();");
@@ -87,61 +104,61 @@ namespace cl2j.Database.Helpers
 
         private static void AddReadObjectCode<T>(StringBuilder sb, string typeName, TableDescriptor tableDescriptor)
         {
-            sb.AppendLine($"\tvar t = new {typeName}();");
-            sb.AppendLine();
             for (var i = 0; i < tableDescriptor.Columns.Count; ++i)
             {
                 var c = tableDescriptor.Columns[i];
                 var propType = c.Property.PropertyType;
                 var propSetter = $"t.{c.Name}";
+                var propTypeName = TypeUtils.GetTypeName(propType);
 
-                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required)
+                var vi = $"v{i}";
+
+                sb.Append($"\tvar {vi}=");
+                if (c.ColumnAtribute.Json)
+                    sb.AppendLine($"JsonSerializer.Deserialize<{propTypeName}>(context.GetString({i}));");
+                else if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required)
                 {
-                    if (c.ColumnAtribute.Json)
-                    {
-                        var vi = $"v{i}";
-                        var propTypeName = TypeUtils.GetTypeName(propType);
-
-                        sb.AppendLine($"\tvar {vi}=context.GetString({i});");
-                        sb.AppendLine($"\t{propSetter}=JsonSerializer.Deserialize<{propTypeName}>({vi});");
-                    }
-                    else if (propType == Types.TypeBool)
-                        sb.AppendLine($"\t{propSetter}=context.GetBoolean({i});");
+                    if (propType == Types.TypeBool)
+                        sb.AppendLine($"context.GetBoolean({i});");
                     else if (propType == Types.TypeShort)
-                        sb.AppendLine($"\t{propSetter}=context.GetInt16({i});");
+                        sb.AppendLine($"context.GetInt16({i});");
                     else if (propType == Types.TypeInt)
-                        sb.AppendLine($"\t{propSetter}=context.GetInt32({i});");
+                        sb.AppendLine($"context.GetInt32({i});");
                     else if (propType == Types.TypeLong)
-                        sb.AppendLine($"\t{propSetter}=context.GetInt64({i});");
+                        sb.AppendLine($"context.GetInt64({i});");
                     else if (propType == Types.TypeDecimal)
-                        sb.AppendLine($"\t{propSetter}=context.GetDecimal({i});");
+                        sb.AppendLine($"context.GetDecimal({i});");
                     else if (propType == Types.TypeFloat)
-                        sb.AppendLine($"\t{propSetter}=context.GetFloat({i});");
+                        sb.AppendLine($"context.GetFloat({i});");
                     else if (propType == Types.TypeDouble)
-                        sb.AppendLine($"\t {propSetter}=context.GetDouble({i});");
+                        sb.AppendLine($"context.GetDouble({i});");
                     else if (propType == Types.TypeGuid)
-                        sb.AppendLine($"\t {propSetter}=context.GetGuid({i});");
+                        sb.AppendLine($"context.GetGuid({i});");
                     else if (propType == Types.TypeString)
-                        sb.AppendLine($"\t {propSetter}=context.GetString({i});");
+                        sb.AppendLine($"context.GetString({i});");
                     else if (propType == Types.TypeDateTime)
-                        sb.AppendLine($"\t {propSetter}=context.GetDateTime({i});");
+                        sb.AppendLine($"context.GetDateTime({i});");
                     else
-                        sb.AppendLine($"\t{propSetter}=({propType.Name})context.GetValue({i});");
+                        sb.AppendLine($"({propTypeName})context.GetValue({i});");
                 }
                 else
-                {
-                    var vi = $"v{i}";
-                    sb.AppendLine($"\tvar {vi} = context.GetValue({i});");
-                    sb.Append($"\tif({vi} != DBNull.Value) ");
-                    if (c.ColumnAtribute.Json)
-                    {
-                        var propTypeName = TypeUtils.GetTypeName(propType);
-                        sb.AppendLine($"{propSetter}=JsonSerializer.Deserialize<{propTypeName}>((string){vi});");
-                    }
-                    else
-                        sb.AppendLine($"{propSetter}=({propType.Name}){vi};");
-                }
+                    sb.AppendLine($"context.GetValue({i});");
             }
+            sb.AppendLine();
+            sb.AppendLine($"\tvar t = new {typeName} {{");
+            for (var i = 0; i < tableDescriptor.Columns.Count; ++i)
+            {
+                var c = tableDescriptor.Columns[i];
+                var propTypeName = TypeUtils.GetTypeName(c.Property.PropertyType);
+                var vi = $"v{i}";
+                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json)
+                    sb.Append($"\t\t{c.Name}={vi}");
+                else
+                    sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName}){vi}");
+                if (i < tableDescriptor.Columns.Count - 1) sb.Append(",");
+                sb.AppendLine();
+            }
+            sb.AppendLine("\t};");
         }
 
         private static void ConfigureScriptOptions<T>(ScriptOptions options, TableDescriptor tableDescriptor)
@@ -157,19 +174,6 @@ namespace cl2j.Database.Helpers
             ]);
             if (type.Namespace is not null)
                 options.AddNamespaces(type.Namespace);
-
-            options.AddAssembly(typeof(Script));
-            options.AddAssembly(typeof(DbDataReader));
-            options.AddAssembly(typeof(decimal));
-            options.AddAssembly(typeof(T));
-
-            options.AddAssemblies([
-                "System.Runtime.dll",
-                "System.Private.CoreLib.dll",
-                "System.Data.dll",
-                "System.Collections.dll",
-                "cl2j.Database.dll"
-            ]);
 
             if (tableDescriptor.Columns.Any(c => c.ColumnAtribute.Json))
             {

@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using System.Text;
 using cl2j.Database.CommandBuilders;
 using cl2j.Database.DataAnnotations;
 using cl2j.Database.Descriptors;
@@ -58,6 +59,28 @@ namespace cl2j.Database.SqlServer
             return CommandBuilderHelpers.GetQueryStatement(type, this);
         }
 
+        public TextStatement GetQueryStatement(Type type, Type paramType)
+        {
+            return CommandBuilderHelpers.GetQueryStatement(type, paramType, this);
+        }
+
+        public TextStatement GetQueryByKeyStatement(Type type)
+        {
+            var statement = CommandBuilderHelpers.GetQueryStatement(type, this);
+
+            var columnKeys = statement.TableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.None);
+            var sb = new StringBuilder();
+            foreach (var column in columnKeys)
+            {
+                if (sb.Length > 0)
+                    sb.Append($"{column.NameFormatted}={FormatParameterName(column.Name)}");
+            }
+            if (sb.Length > 0)
+                statement.Text += " WHERE " + sb.ToString();
+
+            return statement;
+        }
+
         public async Task BulkInsert<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection required. '{connection.GetType().Name}' received.");
@@ -107,7 +130,9 @@ namespace cl2j.Database.SqlServer
             }
             else
             {
-                if (propertyInfo.PropertyType == Types.TypeBool)
+                if (propertyInfo.PropertyType.IsEnum)
+                    propertyTypeDesc = "int";
+                else if (propertyInfo.PropertyType == Types.TypeBool)
                     propertyTypeDesc = "bit";
                 else if (propertyInfo.PropertyType == Types.TypeShort)
                     propertyTypeDesc = "smallint";

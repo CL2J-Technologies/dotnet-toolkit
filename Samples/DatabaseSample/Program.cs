@@ -4,17 +4,19 @@ using cl2j.Database.SqlServer;
 using DatabaseSample;
 using DatabaseSample.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #if DEBUG
 
-#if false
+#if true
 var services = new ServiceCollection();
 services.AddLogging(builder =>
 {
     builder.AddDebug().SetMinimumLevel(LogLevel.Trace);
     builder.AddConsole().SetMinimumLevel(LogLevel.Trace);
 });
-services.AddDatabase(register: SqlServer.Register);
+services.AddDatabase(register: o => SqlServer.Register());
 var serviceProvider = services.BuildServiceProvider();
 serviceProvider.UseDatabase();
 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();

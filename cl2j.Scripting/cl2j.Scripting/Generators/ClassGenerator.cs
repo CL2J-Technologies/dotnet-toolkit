@@ -4,8 +4,12 @@ namespace cl2j.Scripting.Generators
 {
     public class ClassGenerator
     {
-        public static ClassSource GenerateSource(string methodDeclaration, string code, IEnumerable<string> usings, string classNamespace = "cl2j.Scripting.GeneratedCode")
+        private const string DefaultClassNamespace = "cl2j.Scripting.GeneratedCode";
+
+        public static ClassSource GenerateSource(string methodDeclaration, string code, IEnumerable<string> usings, string? classNamespace = null)
         {
+            classNamespace ??= DefaultClassNamespace;
+
             var className = $"Class_{Guid.NewGuid():N}";
 
             var sb = new StringBuilder();

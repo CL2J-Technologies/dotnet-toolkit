@@ -1,4 +1,6 @@
-﻿using cl2j.Scripting.InstanceCreators;
+﻿using System.Diagnostics;
+using System.Reflection;
+using cl2j.Scripting.InstanceCreators;
 using cl2j.Tooling;
 using Microsoft.CodeAnalysis;
 
@@ -9,7 +11,10 @@ namespace cl2j.Scripting
         private const string DefaultMethodName = "Execute";
         private const string DefaultInputName = "context";
 
-        public List<string> Namespaces { get; set; } = [];
+        private int assemblyLoadCount;
+        private int assemblyLoadCountDuplicates;
+
+        public HashSet<string> Namespaces { get; set; } = [];
         public HashSet<PortableExecutableReference> Assemblies { get; set; } = [];
 
         public bool CompileWithDebug { get; set; }
@@ -26,38 +31,66 @@ namespace cl2j.Scripting
 
             AddAssembly(typeof(Script)); // This Library :-)
 
-            AddAssemblies([
-                "System.Private.CoreLib.dll",
-                "System.Linq.dll"
-            ]);
+            var sw = Stopwatch.StartNew();
+            AddExecutableAssemblies();
+            Debug.WriteLine($"ScriptOptions.AddDefault: {assemblyLoadCount} Load, {assemblyLoadCountDuplicates} duplicates in {sw.ElapsedMilliseconds}ms");
         }
 
         public void AddNamespaces(params string[] nameSpaces)
         {
             var list = nameSpaces.Where(ns => !string.IsNullOrEmpty(ns));
-            Namespaces.AddRange(list);
+            foreach (var l in list)
+                Namespaces.Add(l);
         }
 
-        public bool AddAssemblies(params string[] assemblies)
+        public void AddExecutableAssemblies()
+        {
+            var rootAsembly = Assembly.GetEntryAssembly();
+            if (rootAsembly is not null)
+            {
+                var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                AddAssemblies(domainAssemblies, true);
+            }
+        }
+
+        public bool AddAssemblies(IEnumerable<Assembly> assemblies, bool recursive = false)
         {
             bool res = true;
-            foreach (var file in assemblies)
-                res &= AddAssembly(file);
+            foreach (var assembly in assemblies)
+            {
+                res &= AddAssembly(assembly);
+
+                if (recursive)
+                {
+                    var referencedAssemblies = assembly.GetReferencedAssemblies();
+                    foreach (var reference in referencedAssemblies)
+                    {
+                        var refAssembly = Assembly.Load(reference);
+                        AddAssembly(refAssembly);
+                    }
+                }
+            }
             return res;
         }
 
         public bool AddAssembly(Type type)
         {
-            if (string.IsNullOrEmpty(type.Assembly.Location))
-                return false;
+            return AddAssembly(type.Assembly);
+        }
 
+        public bool AddAssembly(Assembly assembly)
+        {
+            var location = assembly.Location;
             try
             {
-                if (!Assemblies.Any(r => r.FilePath == type.Assembly.Location))
+                if (!Assemblies.Any(a => a.FilePath == location))
                 {
-                    var systemReference = MetadataReference.CreateFromFile(type.Assembly.Location);
-                    Assemblies.Add(systemReference);
+                    ++assemblyLoadCount;
+                    var reference = MetadataReference.CreateFromFile(location);
+                    Assemblies.Add(reference);
                 }
+                else
+                    ++assemblyLoadCountDuplicates;
 
                 return true;
             }
@@ -67,40 +100,13 @@ namespace cl2j.Scripting
             }
         }
 
-        private bool AddAssembly(string assemblyDll)
-        {
-            if (string.IsNullOrEmpty(assemblyDll))
-                return true;
-
-            //Check if dll exits in the current execution folder
-            var file = Path.GetFullPath(assemblyDll);
-            if (!File.Exists(file))
-            {
-                //Check if dll exists in the .NET runtime folder
-                var path = Path.GetDirectoryName(typeof(object).Assembly.Location);
-                if (!string.IsNullOrEmpty(path))
-                {
-                    file = Path.Combine(path, assemblyDll);
-                    if (!File.Exists(file))
-                        return false;
-                }
-            }
-
-            if (!Assemblies.Any(r => r.FilePath == file))
-            {
-                var reference = MetadataReference.CreateFromFile(file);
-                Assemblies.Add(reference);
-            }
-
-            return true;
-        }
-
         public string Code { get; set; } = string.Empty;
 
         public string MethodDeclaration { get; set; } = string.Empty;
 
         public IInstanceCreator InstanceCreator { get; set; } = new InstanceCreator();
 
+        public string? ClassNamespace { get; set; }
         public string MethodName { get; set; } = "Execute";
         public string InputName { get; set; } = "context";
 

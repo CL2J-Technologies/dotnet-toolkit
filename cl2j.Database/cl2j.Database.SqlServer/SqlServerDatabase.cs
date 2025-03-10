@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.Database.SqlServer
 {
-    public class SqlServerDatabase(string connectionString, DatabaseOptions options, ILogger logger) : BaseDatabase(options, logger)
+    public class SqlServerDatabase(string connectionString, DatabaseOptions options, ILogger logger)
+        : BaseDatabase(options, logger)
     {
-        protected override async Task<DbConnection> CreateConnection()
+        public override async Task<DbConnection> CreateConnection()
         {
             var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();

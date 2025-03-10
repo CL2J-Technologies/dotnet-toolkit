@@ -279,6 +279,39 @@ namespace cl2j.Database
             return await reader.ReadSingle<T>(tableDescriptor);
         }
 
+        public static async Task<T?> QuerySingle<T>(this DbConnection connection, object param)
+            => await QuerySingle<T>(connection, param, CancellationToken.None);
+
+        public static async Task<T?> QuerySingle<T>(this DbConnection connection, object param, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetQueryStatement(typeof(T), param.GetType());
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateObjectParameters(param, commandBuilder);
+
+            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+
+            return await reader.ReadSingle<T>(statement.TableDescriptor);
+        }
+
+        public static async Task<T?> QueryKey<T>(this DbConnection connection, object key)
+            => await QueryKey<T>(connection, key, CancellationToken.None);
+
+        public static async Task<T?> QueryKey<T>(this DbConnection connection, object key, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetQueryByKeyStatement(typeof(T));
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateKeyParameter<T>(key, statement.TableDescriptor);
+            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+
+            return await reader.ReadSingle<T>(statement.TableDescriptor);
+        }
+
         #endregion
 
         #region Private

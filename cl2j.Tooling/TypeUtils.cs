@@ -31,16 +31,27 @@ namespace cl2j.Tooling
 
             if (type.ReflectedType is not null)
                 return $"{type.ReflectedType!.FullName}.{typeName}";
+
+            return GetTypeNameWithNamespace(typeName, type.Namespace);
+        }
+
+        private static string GetTypeNameWithNamespace(string typeName, string? nameSpace)
+        {
+            if (nameSpace?.Length > 0)
+                return $"{nameSpace}.{typeName}";
             return typeName;
         }
 
-        private static string GetCSharpRepresentation(Type t, bool trimArgCount = true)
+        private static string GetCSharpRepresentation(Type t, bool trimArgCount = true, bool addNamespace = false)
         {
             if (t.IsGenericType)
             {
                 var genericArgs = t.GetGenericArguments().ToList();
                 return GetCSharpRepresentation(t, trimArgCount, genericArgs);
             }
+
+            if (addNamespace)
+                return GetTypeNameWithNamespace(t.Name, t.Namespace);
 
             return t.Name;
         }
@@ -64,7 +75,7 @@ namespace cl2j.Tooling
                 {
                     if (i != 0) argString += ", ";
 
-                    argString += GetCSharpRepresentation(availableArguments[0], trimArgCount);
+                    argString += GetCSharpRepresentation(availableArguments[0], trimArgCount, true);
                     availableArguments.RemoveAt(0);
                 }
 
