@@ -37,7 +37,7 @@ namespace cl2j.Database.Helpers
                     else
                     {
                         if (column.ColumnAtribute.Json)
-                            values[i] = JsonSerializer.Serialize(v);
+                            values[i] = JsonSerializer.Serialize(v, ConnectionExtensions.JsonSerializeOptions);
                         else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
                             values[i] = DateTimeOffset.UtcNow;
                         else

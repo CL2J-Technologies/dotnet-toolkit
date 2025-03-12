@@ -9,14 +9,18 @@ using Microsoft.Data.SqlClient;
 
 namespace cl2j.Database.SqlServer
 {
-    internal class SqlServerCommandBuilder : ICommandBuilder, IDatabaseFormatter
+    internal class SqlServerCommandBuilder(IIdentifierGenerator? identifierGenerator) : ICommandBuilder, IDatabaseFormatter
     {
+        private readonly IIdentifierGenerator identifierGenerator = identifierGenerator ?? GuidIdentifierGenerator.Default;
+
         public bool Support(DbConnection connection)
         {
             return connection is SqlConnection;
         }
 
         public IDatabaseFormatter DatabaseFormatter => this;
+
+        public IIdentifierGenerator IdentifierGenerator => identifierGenerator;
 
         public TextStatement GetTableExistsStatement(Type type)
         {

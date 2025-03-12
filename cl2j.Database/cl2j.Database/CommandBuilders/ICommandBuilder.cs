@@ -8,6 +8,7 @@ namespace cl2j.Database.CommandBuilders
         bool Support(DbConnection connection);
 
         IDatabaseFormatter DatabaseFormatter { get; }
+        IIdentifierGenerator IdentifierGenerator { get; }
 
         TextStatement GetTableExistsStatement(Type type);
         TextStatement GetDropTableStatement(Type type);

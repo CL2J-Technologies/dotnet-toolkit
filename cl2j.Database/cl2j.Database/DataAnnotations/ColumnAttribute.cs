@@ -46,5 +46,11 @@
         ///     The property default value
         /// </summary>
         public string? Default { get; set; } = "";
+
+
+        /// <summary>
+        ///     The prefix to prepend to the generated key
+        /// </summary>
+        public string? KeyPrefix { get; set; }
     }
 }
