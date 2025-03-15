@@ -138,11 +138,18 @@ namespace cl2j.Database.Helpers
                         sb.AppendLine($"context.GetString({i});");
                     else if (propType == Types.TypeDateTime)
                         sb.AppendLine($"context.GetDateTime({i});");
+                    else if (propType.IsEnum)
+                        sb.AppendLine($"({propTypeName})context.GetInt32({i});");
                     else
                         sb.AppendLine($"({propTypeName})context.GetValue({i});");
                 }
                 else
-                    sb.AppendLine($"context.GetValue({i});");
+                {
+                    if (propType.IsEnum)
+                        sb.AppendLine($"({propTypeName})context.GetInt32({i});");
+                    else
+                        sb.AppendLine($"context.GetValue({i});");
+                }
             }
             sb.AppendLine();
             sb.AppendLine($"\tvar t = new {typeName} {{");
