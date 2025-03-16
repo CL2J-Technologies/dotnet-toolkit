@@ -28,6 +28,21 @@ namespace cl2j.Database.Databases
             }
         }
 
+        public async Task<List<T>> Query<T>(object? param)
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                var result = await connection.Query<T>(param);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tparameters={param}\n\tException={ex.Message}");
+                throw;
+            }
+        }
+
         public async Task<T?> QuerySingle<T>(string sql, object? param = null)
         {
             try
