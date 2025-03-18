@@ -235,7 +235,7 @@ namespace cl2j.Database
         public static async Task<List<T>> Query<T>(this DbConnection connection, object? param, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
-            var statement = commandBuilder.GetQueryStatement(typeof(T));
+            var statement = param is null ? commandBuilder.GetQueryStatement(typeof(T)) : commandBuilder.GetQueryStatement(typeof(T), param.GetType());
             return await Query<T>(connection, statement.Text, param, cancellationToken, transaction);
         }
 
