@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Data.Common;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using cl2j.Database.CommandBuilders;
@@ -16,7 +17,11 @@ namespace cl2j.Database
         public static ILogger? Logger { get; set; }
         public static DatabaseOptions DatabaseOptions { get; set; } = new();
 
-        public static readonly JsonSerializerOptions JsonSerializeOptions = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull | JsonIgnoreCondition.WhenWritingDefault };
+        public static readonly JsonSerializerOptions JsonSerializeOptions = new()
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull | JsonIgnoreCondition.WhenWritingDefault,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
 
         #region DDL
 
@@ -364,16 +369,20 @@ namespace cl2j.Database
         {
             foreach (var column in columns)
             {
-                var value = column.Property.GetValue(t, null);
-
-                if (column.ColumnAtribute.Json)
-                    value = JsonSerializer.Serialize(value, JsonSerializeOptions);
-                else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
-                    value = DateTimeOffset.UtcNow;
-
                 var parameter = command.CreateParameter();
                 parameter.ParameterName = column.Name;
-                parameter.Value = value ?? DBNull.Value;
+
+                var value = column.Property.GetValue(t, null);
+                if (column.ColumnAtribute.Json)
+                {
+                    parameter.Value = JsonSerializer.Serialize(value, JsonSerializeOptions);
+                    parameter.DbType = DbType.String;
+                }
+                else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
+                    parameter.Value = DateTimeOffset.UtcNow;
+                else
+                    parameter.Value = value ?? DBNull.Value;
+
                 command.Parameters.Add(parameter);
             }
         }
