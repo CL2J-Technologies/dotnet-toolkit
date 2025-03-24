@@ -158,7 +158,7 @@ namespace cl2j.Database.Helpers
                 var c = tableDescriptor.Columns[i];
                 var propTypeName = TypeUtils.GetTypeName(c.Property.PropertyType);
                 var vi = $"v{i}";
-                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json)
+                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json || c.Property.PropertyType.IsEnum)
                     sb.Append($"\t\t{c.Name}={vi}");
                 else
                     sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName}){vi}");

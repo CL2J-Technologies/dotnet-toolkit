@@ -28,7 +28,7 @@ namespace cl2j.Database.CommandBuilders
                     sbLine.Append(formatter.GetColumnKeyType(column));
 
                 //Required
-                if (column.ColumnAtribute.Required)
+                if (column.ColumnAtribute.Required || column.Property.PropertyType.IsEnum)
                     sbLine.Append(" NOT NULL");
 
                 lines.Add(sbLine.ToString());
