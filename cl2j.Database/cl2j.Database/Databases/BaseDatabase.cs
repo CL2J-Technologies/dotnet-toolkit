@@ -80,6 +80,21 @@ namespace cl2j.Database.Databases
         }
 
 
+        public async Task<string> NewKey<T>()
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                return await connection.NewKey<T>();
+            }
+            catch (Exception ex)
+            {
+                logger.Log(options.ExceptionLevel, ex, $"Database.Insert<{typeof(T).Name}> - Exception thrown");
+                throw;
+            }
+        }
+
+
         public async Task<T> Insert<T>(T t) where T : class
         {
             try
@@ -106,6 +121,20 @@ namespace cl2j.Database.Databases
             catch (Exception ex)
             {
                 logger.Log(options.ExceptionLevel, ex, $"Database.Update<{typeof(T).Name}> - Exception thrown");
+                throw;
+            }
+        }
+
+        public async Task DeleteKey<T>(object key) where T : class
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                await connection.DeleteKey<T>(key);
+            }
+            catch (Exception ex)
+            {
+                logger.Log(options.ExceptionLevel, ex, $"Database.DeleteKey<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }

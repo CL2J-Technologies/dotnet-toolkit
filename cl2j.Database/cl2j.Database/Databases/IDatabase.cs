@@ -9,8 +9,10 @@ namespace cl2j.Database.Databases
 
         Task<int> Execute(string sql, object? param = null);
 
+        Task<string> NewKey<T>();
         Task<T> Insert<T>(T t) where T : class;
         Task<T> Update<T>(T t) where T : class;
+        Task DeleteKey<T>(object key) where T : class;
 
         Task<List<T>> Query<T>(string sql, object? param = null);
         Task<List<T>> Query<T>(object? param);
