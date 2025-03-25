@@ -6,7 +6,15 @@ namespace cl2j.Image
 {
     public static class ImageUtils
     {
-        public static void OptimizeImage(ref byte[] bytes, int max = 1280, long quality = 75L)
+        public class OptimizeReasult
+        {
+            public int Width { get; set; }
+            public int Height { get; set; }
+
+            public bool Modified { get; set; }
+        }
+
+        public static OptimizeReasult? OptimizeImage(ref byte[] bytes, int max = 1280, long quality = 75L)
         {
             var image = ReadImage(bytes);
             if (image != null)
@@ -22,7 +30,16 @@ namespace cl2j.Image
 
                 if (modified)
                     bytes = ImageSerialization.SaveJpegToBytes(image, quality);
+
+                return new OptimizeReasult
+                {
+                    Modified = modified,
+                    Width = image.Width,
+                    Height = image.Height
+                };
             }
+
+            return null;
         }
 
         public static Bitmap CreateThumbnailCropped(Bitmap image, int w, int h)
