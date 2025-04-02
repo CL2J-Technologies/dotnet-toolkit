@@ -14,7 +14,7 @@ namespace cl2j.Tooling
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
         {
-            cacheLoader = new CacheLoader(name, refreshInterval, async () => { await RefreshCache(); }, logger);
+            cacheLoader = new CacheLoader(name, refreshInterval, RefreshCache, logger);
             this.name = name;
             this.logger = logger;
         }
@@ -27,6 +27,11 @@ namespace cl2j.Tooling
             return cache;
         }
 
+        protected async Task WaitForCache()
+        {
+            await cacheLoader.WaitAsync();
+        }
+
         protected async Task RefreshCache()
         {
             try
@@ -36,6 +41,10 @@ namespace cl2j.Tooling
                 try
                 {
                     cache = await LoadCache();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"{name}: Unexzpect error", ex);
                 }
                 finally
                 {
