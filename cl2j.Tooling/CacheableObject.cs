@@ -44,7 +44,7 @@ namespace cl2j.Tooling
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"{name}: Unexzpect error", ex);
+                    logger.LogError($"{name}: Unexpected error", ex);
                 }
                 finally
                 {
