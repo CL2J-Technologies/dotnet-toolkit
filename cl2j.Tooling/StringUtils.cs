@@ -249,5 +249,26 @@ namespace cl2j.Tooling
             return GenerateKeyFromArray(temp);
         }
         public static string GenerateKeyFromArray(params string[] keys) => string.Join(".", keys);
+
+        public static string SimpleRemoveHtml(string html)
+        {
+            if (string.IsNullOrEmpty(html))
+                return string.Empty;
+
+            var result = new StringBuilder();
+
+            bool isInsideTag = false;
+            foreach (char currentChar in html)
+            {
+                if (currentChar == '<')
+                    isInsideTag = true;
+                else if (currentChar == '>')
+                    isInsideTag = false;
+                else if (!isInsideTag)
+                    result.Append(currentChar);
+            }
+
+            return result.ToString();
+        }
     }
 }
