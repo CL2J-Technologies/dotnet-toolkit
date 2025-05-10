@@ -88,8 +88,19 @@ namespace cl2j.Image
                 g.DrawImage(image, new RectangleF(x, y, newW, newH), new RectangleF(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
             }
 
-            //image.Save(@"C:\Dev\Alertogo\Alertogo\orig.jpg");
-            //target.Save(@"C:\Dev\Alertogo\Alertogo\thumb.jpg");
+            return target;
+        }
+
+        public static Bitmap CreateThumbnailWithRatio(Bitmap image, int w)
+        {
+            var ratio = Math.Round((decimal)image.Width / image.Height, 2);
+            int h = (int)Math.Round(w / ratio, 0);
+
+            var target = new Bitmap(w, h);
+            using (var g = Graphics.FromImage(target))
+            {
+                g.DrawImage(image, new RectangleF(0, 0, w, h), new RectangleF(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
+            }
 
             return target;
         }
