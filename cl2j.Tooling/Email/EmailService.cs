@@ -70,7 +70,8 @@ namespace cl2j.Tooling.Email
             {
                 UseDefaultCredentials = false,
                 Credentials = new NetworkCredential(smtpSettings.User, smtpSettings.Password),
-                Port = smtpSettings.Port
+                Port = smtpSettings.Port,
+                EnableSsl = smtpSettings.EnableSsl
             };
         }
 

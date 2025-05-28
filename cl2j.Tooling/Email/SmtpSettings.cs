@@ -10,5 +10,7 @@
         public string? From { get; set; }
         public string? ErrorTo { get; set; }
         public string? SystemTo { get; set; }
+
+        public bool EnableSsl { get; set; }
     }
 }
