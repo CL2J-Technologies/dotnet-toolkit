@@ -67,5 +67,12 @@ namespace cl2j.DataStore.Json.List
             logger.LogTrace($"GetListValues<{filename}>() -> {list.Count} in {sw.ElapsedMilliseconds}ms");
             return list;
         }
+
+        public static async Task WriteListValuesAsync<TValue>(this IFileStorageProvider fileStorageProvider, string filename, List<TValue> values, ILogger logger)
+        {
+            var sw = Stopwatch.StartNew();
+            await fileStorageProvider.WriteJsonObjectAsync(filename, values);
+            logger.LogTrace($"WriteListValuesAsync<{filename}>() -> {values.Count} in {sw.ElapsedMilliseconds}ms");
+        }
     }
 }
