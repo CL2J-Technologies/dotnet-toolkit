@@ -42,6 +42,12 @@ namespace cl2j.Image
             return null;
         }
 
+        public static Bitmap CreateThumbnailCropped(byte[] bytes, int w, int h)
+        {
+            var image = ReadImage(bytes) ?? throw new ValidationException("Imavlid image");
+            return CreateThumbnailCropped(image, w, h);
+        }
+
         public static Bitmap CreateThumbnailCropped(Bitmap image, int w, int h)
         {
             var currentRatio = Math.Round((decimal)image.Width / image.Height, 2);

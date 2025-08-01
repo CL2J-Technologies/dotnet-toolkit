@@ -10,6 +10,12 @@ namespace cl2j.Database.Databases
 
         public abstract Task<DbConnection> CreateConnection();
 
+        public async Task<string> BuildSelectStatement<T>(string? where = null)
+        {
+            using var connection = await CreateConnection();
+            return connection.BuildSelectStatement<T>(where);
+        }
+
         public async Task<List<T>> Query<T>(string sql, object? param = null)
         {
             try

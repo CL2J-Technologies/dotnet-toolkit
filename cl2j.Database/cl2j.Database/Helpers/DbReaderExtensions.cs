@@ -67,7 +67,15 @@ namespace cl2j.Database.Helpers
                     ConfigureScriptOptions<T>(options, tableDescriptor);
                     return Script.Create(options);
                 });
-                return script.Execute<DbDataReader, T>(reader);
+
+                try
+                {
+                    return script.Execute<DbDataReader, T>(reader);
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
             }
             finally
             {

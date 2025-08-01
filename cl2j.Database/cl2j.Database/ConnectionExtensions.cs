@@ -247,6 +247,16 @@ namespace cl2j.Database
 
         #region Query
 
+        public static string BuildSelectStatement<T>(this DbConnection connection, string? where = null)
+        {
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetQueryStatement(typeof(T));
+            if (where is null)
+                return statement.Text;
+
+            return statement.Text + " WHERE " + where;
+        }
+
         public static async Task<List<T>> Query<T>(this DbConnection connection, object? param = null)
             => await Query<T>(connection, param, CancellationToken.None);
 
