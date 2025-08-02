@@ -79,6 +79,21 @@ namespace cl2j.Database.Databases
             }
         }
 
+        public async Task<List<T>> QueryKeys<T>(IEnumerable<string> keys)
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                var result = await connection.QueryKeys<T>(keys);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                logger.Log(options.ExceptionLevel, ex, $"Database.QueryKeys<{typeof(T).Name}> - Exception thrown\n\tException={ex.Message}");
+                throw;
+            }
+        }
+
         public async Task<bool> Exists<T>(object param)
         {
             var t = await QuerySingle<T>(param);

@@ -337,6 +337,26 @@ namespace cl2j.Database
             return await reader.ReadSingle<T>(statement.TableDescriptor);
         }
 
+        public static async Task<List<T>> QueryKeys<T>(this DbConnection connection, IEnumerable<object> keys)
+            => await QueryKeys<T>(connection, keys, CancellationToken.None);
+
+        public static async Task<List<T>> QueryKeys<T>(this DbConnection connection, IEnumerable<object> keys, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var tableDescriptor = TableDescriptorFactory.Create(typeof(T), commandBuilder.DatabaseFormatter);
+            var statement = commandBuilder.GetQueryByKeysStatement(typeof(T), keys);
+
+            //TODO - Split in batches
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
+
+            var results = await reader.Read<T>(tableDescriptor);
+            return results;
+        }
+
         #endregion
 
         #region Private

@@ -85,6 +85,35 @@ namespace cl2j.Database.SqlServer
             return statement;
         }
 
+        public TextStatement GetQueryByKeysStatement(Type type, IEnumerable<object> values)
+        {
+            var statement = CommandBuilderHelpers.GetQueryStatement(type, this);
+
+            var columnKeys = statement.TableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.None);
+            if (columnKeys.Count() != 1)
+                throw new DatabaseException("Only one Key must be defined for QueryByKeys");
+
+            var key = columnKeys.First();
+            var inClause = GenerateInClause(values);
+            statement.Text += $" WHERE {key.NameFormatted} IN ({inClause}) ";
+
+            return statement;
+        }
+
+        private string GenerateInClause(IEnumerable<object> values)
+        {
+            var sb = new StringBuilder();
+            foreach (var value in values)
+            {
+                if (sb.Length > 0) sb.Append(',');
+
+                var formattedValue = DatabaseFormatter.FormatParameterValue(value);
+                sb.Append(formattedValue);
+            }
+            return sb.ToString();
+        }
+
+
         public async Task BulkInsert<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null)
         {
             var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection required. '{connection.GetType().Name}' received.");
@@ -185,6 +214,13 @@ namespace cl2j.Database.SqlServer
         public string FormatParameterName(string name)
         {
             return "@" + name;
+        }
+
+        public string FormatParameterValue(object value)
+        {
+            if (value.GetType() == typeof(string))
+                return $"'{value}'";
+            return value.ToString();
         }
 
         #endregion

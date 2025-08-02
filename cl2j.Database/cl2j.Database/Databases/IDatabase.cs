@@ -22,6 +22,8 @@ namespace cl2j.Database.Databases
         Task<T?> QuerySingle<T>(string sql, object? param = null);
         Task<T?> QuerySingle<T>(object param);
 
+        Task<List<T>> QueryKeys<T>(IEnumerable<string> keys);
+
         Task<bool> Exists<T>(object param);
     }
 }

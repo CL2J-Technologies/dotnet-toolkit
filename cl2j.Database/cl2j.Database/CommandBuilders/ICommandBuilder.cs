@@ -21,6 +21,7 @@ namespace cl2j.Database.CommandBuilders
         TextStatement GetQueryStatement(Type type);
         TextStatement GetQueryStatement(Type type, Type paramType);
         TextStatement GetQueryByKeyStatement(Type type);
+        TextStatement GetQueryByKeysStatement(Type type, IEnumerable<object> values);
 
         Task BulkInsert<TIn>(DbConnection connection, IEnumerable<TIn> items, CancellationToken cancellationToken, DbTransaction? transaction = null);
     }
