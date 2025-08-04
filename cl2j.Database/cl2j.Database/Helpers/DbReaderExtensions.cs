@@ -68,6 +68,7 @@ namespace cl2j.Database.Helpers
                     return Script.Create(options);
                 });
 
+#pragma warning disable CS0168 // Variable is declared but never used
                 try
                 {
                     return script.Execute<DbDataReader, T>(reader);
@@ -76,6 +77,7 @@ namespace cl2j.Database.Helpers
                 {
                     throw;
                 }
+#pragma warning restore CS0168 // Variable is declared but never used
             }
             finally
             {
@@ -170,7 +172,7 @@ namespace cl2j.Database.Helpers
                     sb.Append($"\t\t{c.Name}={vi}");
                 else
                     sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName}){vi}");
-                if (i < tableDescriptor.Columns.Count - 1) sb.Append(",");
+                if (i < tableDescriptor.Columns.Count - 1) sb.Append(',');
                 sb.AppendLine();
             }
             sb.AppendLine("\t};");
