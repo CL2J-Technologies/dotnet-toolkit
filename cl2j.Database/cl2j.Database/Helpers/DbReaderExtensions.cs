@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Text;
 using cl2j.Database.Descriptors;
 using cl2j.Database.Exceptions;
@@ -18,13 +19,15 @@ namespace cl2j.Database.Helpers
             if (!reader.HasRows)
                 return [];
 
+            var type = typeof(T);
+            Script? script = null;
+
             try
             {
-                var type = typeof(T);
                 if (!type.IsVisible)
                     throw new DatabaseException($"Type {type.Name} must be public");
 
-                var script = CacheRead.GetOrAdd(type, type =>
+                script = CacheRead.GetOrAdd(type, type =>
                 {
                     var code = GenerateReadCode<T>(tableDescriptor);
 #if DEBUG
@@ -44,7 +47,16 @@ namespace cl2j.Database.Helpers
                     }
 #endif
                 });
+
+
                 return script.Execute<DbDataReader, List<T>>(reader) ?? [];
+            }
+            catch
+            {
+                Debug.WriteLine($"DbReaderExtensions.Read<{type.Name}> : GENERATED CODE");
+                if (script is not null)
+                    Debug.WriteLine(script.Options.Code);
+                throw;
             }
             finally
             {

@@ -7,6 +7,8 @@ namespace cl2j.Scripting
         private readonly Type instanceType = instance.GetType();
         private readonly string methodName = options.MethodName;
 
+        public ScriptOptions Options => options;
+
         public void Execute()
         {
             instanceType.InvokeMember(methodName, BindingFlags.InvokeMethod, null, instance, []);
