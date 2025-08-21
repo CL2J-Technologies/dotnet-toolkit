@@ -16,6 +16,7 @@ namespace cl2j.Database.Databases
 
         Task<string> BuildSelectStatement<T>(string? where = null);
 
+        Task<List<T>> Query<T>();
         Task<List<T>> Query<T>(string sql, object? param = null);
         Task<List<T>> Query<T>(object? param);
 

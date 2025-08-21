@@ -135,6 +135,15 @@ namespace cl2j.Tooling
             return sb.ToString();
         }
 
+        public static Localized<T> Create(string language, T value)
+        {
+            var dict = new Dictionary<string, T>
+            {
+                { language, value },
+            };
+            return FromDict(dict);
+        }
+
         public static Localized<T> CreateFrEn(T fr, T en)
         {
             var dict = new Dictionary<string, T>
