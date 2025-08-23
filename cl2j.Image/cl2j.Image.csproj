@@ -1,19 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <AnalysisMode>Recommended</AnalysisMode>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
-    <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
-  </ItemGroup>
-  <ItemGroup>
-    <EditorConfigFiles Remove=".editorconfig" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj" />
-    <ProjectReference Include="..\cl2j.Tooling\cl2j.Tooling.csproj" />
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AnalysisMode>Recommended</AnalysisMode>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+		<PackageReference Include="System.Drawing.Common" Version="8.0.8" />
+	</ItemGroup>
+	<ItemGroup>
+		<EditorConfigFiles Remove=".editorconfig" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj" />
+		<ProjectReference Include="..\cl2j.Tooling\cl2j.Tooling.csproj" />
+	</ItemGroup>
 </Project>
