@@ -220,7 +220,7 @@ namespace cl2j.Database.SqlServer
         {
             if (value.GetType() == typeof(string))
                 return $"'{value}'";
-            return value.ToString();
+            return value?.ToString() ?? string.Empty;
         }
 
         #endregion
