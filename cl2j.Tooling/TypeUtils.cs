@@ -69,13 +69,13 @@ namespace cl2j.Tooling
                     value = GetCSharpRepresentation(t.DeclaringType, trimArgCount, availableArguments) + "+" + value;
 
                 // Build the type arguments (if any)
-                string argString = string.Empty;
+                var argString = new StringBuilder();
                 var thisTypeArgs = t.GetGenericArguments();
                 for (int i = 0; i < thisTypeArgs.Length && availableArguments.Count > 0; i++)
                 {
-                    if (i != 0) argString += ", ";
+                    if (i != 0) argString.Append(", ");
 
-                    argString += GetCSharpRepresentation(availableArguments[0], trimArgCount, true);
+                    argString.Append(GetCSharpRepresentation(availableArguments[0], trimArgCount, true));
                     availableArguments.RemoveAt(0);
                 }
 

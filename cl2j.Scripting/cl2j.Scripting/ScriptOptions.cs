@@ -21,13 +21,13 @@ namespace cl2j.Scripting
 
         public void AddDefault()
         {
-            AddNamespaces([
+            AddNamespaces(
                 "System",
                 "System.Text",
                 "System.Collections",
                 "System.Threading.Tasks",
                 "System.Linq"
-            ]);
+            );
 
             AddAssembly(typeof(Script)); // This Library :-)
 

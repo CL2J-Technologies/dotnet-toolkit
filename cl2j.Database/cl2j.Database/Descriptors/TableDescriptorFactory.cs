@@ -12,7 +12,7 @@ namespace cl2j.Database.Descriptors
 
         public static TableDescriptor Create(Type type, IDatabaseFormatter formatter)
         {
-            return TableDescriptors.GetOrAdd(type, o => InternalCreate(type, formatter));
+            return TableDescriptors.GetOrAdd(type, InternalCreate(type, formatter));
         }
 
         private static TableDescriptor InternalCreate(Type type, IDatabaseFormatter formatter)

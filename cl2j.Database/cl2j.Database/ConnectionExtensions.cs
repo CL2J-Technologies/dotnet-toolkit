@@ -19,7 +19,7 @@ namespace cl2j.Database
 
         public static readonly JsonSerializerOptions JsonSerializeOptions = new()
         {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull | JsonIgnoreCondition.WhenWritingDefault,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 

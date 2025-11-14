@@ -194,13 +194,13 @@ namespace cl2j.Database.Helpers
         {
             var type = typeof(T);
 
-            options.AddNamespaces([
+            options.AddNamespaces(
                 "System",
                 "System.Data",
                 "System.Data.Common",
                 "System.Collections.Generic",
-                "cl2j.Database.Helpers",
-            ]);
+                "cl2j.Database.Helpers"
+            );
             if (type.Namespace is not null)
                 options.AddNamespaces(type.Namespace);
 

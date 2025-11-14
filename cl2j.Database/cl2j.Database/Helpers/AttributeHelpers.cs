@@ -22,7 +22,7 @@ namespace cl2j.Database.Helpers
             where TAttribute : class
         {
             var attr = Attribute.GetCustomAttribute(propertyInfo, typeof(TAttribute));
-            return attr as TAttribute is not null;
+            return attr is TAttribute;
         }
     }
 }

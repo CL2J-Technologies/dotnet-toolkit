@@ -218,7 +218,7 @@ namespace cl2j.Database.SqlServer
 
         public string FormatParameterValue(object value)
         {
-            if (value.GetType() == typeof(string))
+            if (value is string)
                 return $"'{value}'";
             return value?.ToString() ?? string.Empty;
         }
