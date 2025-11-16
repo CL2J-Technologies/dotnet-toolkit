@@ -6,27 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Json.List
 {
-    public class DataStoreListCommandAndQueryJson<TKey, TValue> : DataStoreListCommandAndQueryBase<TKey, TValue>
+    public class DataStoreListCommandAndQueryJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, Func<TValue, TKey> getKeyPredicate, ILogger logger, bool indent = false) : DataStoreListCommandAndQueryBase<TKey, TValue>(getKeyPredicate)
     {
-        private readonly IFileStorageProvider fileStorageProvider;
-        private readonly string filename;
-        private readonly ILogger logger;
-        private readonly bool indent;
-
         private static readonly SemaphoreSlim semaphore = new(1, 1);
-
-        public DataStoreListCommandAndQueryJson(IFileStorageProvider fileStorageProvider, string filename, Func<TValue, TKey> getKeyPredicate, ILogger logger, bool indent = false)
-            : base(getKeyPredicate)
-        {
-            this.fileStorageProvider = fileStorageProvider;
-            this.filename = filename;
-            this.logger = logger;
-            this.indent = indent;
-        }
 
         public override async Task<List<TValue>> GetAllAsync()
         {
-            return await fileStorageProvider.GetListValuesAsync<TValue>(filename, this.logger);
+            return await fileStorageProvider.GetListValuesAsync<TValue>(filename, logger);
         }
 
         public override async Task<TValue?> GetByIdAsync(TKey key)

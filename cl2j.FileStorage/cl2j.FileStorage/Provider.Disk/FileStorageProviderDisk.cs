@@ -63,7 +63,7 @@ namespace cl2j.FileStorage.Provider.Disk
 
             var fullName = GetName(path);
             if (!Directory.Exists(fullName))
-                return new List<string>();
+                return [];
 
             var list = Directory.GetFiles(fullName);
             return list.Select(n => n[(fullName.Length + 1)..]);
@@ -75,7 +75,7 @@ namespace cl2j.FileStorage.Provider.Disk
 
             var fullName = GetName(path);
             if (!Directory.Exists(fullName))
-                return new List<string>();
+                return [];
 
             var list = Directory.GetDirectories(fullName);
             return list.Select(n => n[(fullName.Length + 1)..]);

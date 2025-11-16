@@ -2,16 +2,8 @@
 
 namespace cl2j.DataStore.Dictionary
 {
-    public class DataStoreDictionaryCommandAndQueryCache<TKey, TValue> : DataStoreDictionaryLoadCache<TKey, TValue>, IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
+    public class DataStoreDictionaryCommandAndQueryCache<TKey, TValue>(string name, IDataStoreDictionaryCommandAndQuery<TKey, TValue> dataStore, TimeSpan refreshInterval, ILogger logger) : DataStoreDictionaryLoadCache<TKey, TValue>(name, dataStore, refreshInterval, logger), IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
     {
-        private readonly IDataStoreDictionaryCommandAndQuery<TKey, TValue> dataStore;
-
-        public DataStoreDictionaryCommandAndQueryCache(string name, IDataStoreDictionaryCommandAndQuery<TKey, TValue> dataStore, TimeSpan refreshInterval, ILogger logger)
-            : base(name, dataStore, refreshInterval, logger)
-        {
-            this.dataStore = dataStore;
-        }
-
         public async Task<TValue?> GetByIdAsync(TKey key)
         {
             await cacheLoader.WaitAsync();

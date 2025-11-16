@@ -3,13 +3,13 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.Tooling
 {
-    public abstract class CacheableObject<T>
+    public abstract class CacheableObject<T> : IDisposable
     {
         private readonly string name;
         private readonly ILogger logger;
 
         private readonly CacheLoader cacheLoader;
-        private List<T> cache = new();
+        private List<T> cache = [];
         protected static readonly SemaphoreSlim semaphore = new(1, 1);
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
@@ -91,6 +91,18 @@ namespace cl2j.Tooling
             }
 
             return cache;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                cacheLoader.Dispose();
         }
     }
 }

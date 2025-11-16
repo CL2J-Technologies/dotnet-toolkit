@@ -5,15 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore
 {
-    public abstract class DataStoreDictionaryFactoryBase
+    public abstract class DataStoreDictionaryFactoryBase(ILogger logger)
     {
         private readonly ConcurrentDictionary<string, object> dict = new();
-        private readonly ILogger logger;
-
-        public DataStoreDictionaryFactoryBase(ILogger logger)
-        {
-            this.logger = logger;
-        }
 
         protected void AddDataStore(string name, object dataStore)
         {

@@ -1,0 +1,5 @@
+# C# files
+[*.cs]
+
+# Template should be a static expression
+dotnet_diagnostic.IDE0079.severity = none

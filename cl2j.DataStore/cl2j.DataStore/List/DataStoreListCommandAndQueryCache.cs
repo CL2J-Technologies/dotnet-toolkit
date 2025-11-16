@@ -4,11 +4,11 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListCommandAndQueryCache<TKey, TValue> : DataStoreListCommandAndQueryBase<TKey, TValue>, Tooling.Observers.IObservable<List<TValue>>
+    public class DataStoreListCommandAndQueryCache<TKey, TValue> : DataStoreListCommandAndQueryBase<TKey, TValue>, Tooling.Observers.IObservable<List<TValue>>, IDisposable
     {
         private readonly CacheLoader cacheLoader;
         private readonly IDataStoreListCommandAndQuery<TKey, TValue> dataStore;
-        private List<TValue> cache = new();
+        private List<TValue> cache = [];
 
         private readonly Tooling.Observers.Observable<List<TValue>> observable = new();
 
@@ -29,9 +29,9 @@ namespace cl2j.DataStore.List
                     if (orderbyPredicate != null)
                     {
                         if (ascending == null || ascending.Value)
-                            tmpCache = tmpCache.OrderBy(orderbyPredicate).ToList();
+                            tmpCache = [.. tmpCache.OrderBy(orderbyPredicate)];
                         else
-                            tmpCache = tmpCache.OrderByDescending(orderbyPredicate).ToList();
+                            tmpCache = [.. tmpCache.OrderByDescending(orderbyPredicate)];
                     }
 
                     await semaphore.WaitAsync();
@@ -127,7 +127,7 @@ namespace cl2j.DataStore.List
             try
             {
                 await dataStore.ReplaceAllByAsync(items);
-                cache = items.ToList();
+                cache = [.. items];
                 await NotifyAsync(cache);
             }
             finally
@@ -144,6 +144,18 @@ namespace cl2j.DataStore.List
         public async Task NotifyAsync(List<TValue> t)
         {
             await observable.NotifyAsync(t);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                cacheLoader.Dispose();
         }
     }
 }

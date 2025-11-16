@@ -3,19 +3,8 @@ using cl2j.FileStorage.Extensions;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListCommandAndQueryArchive<TKey, TValue> : IDataStoreListCommandAndQuery<TKey, TValue>
+    public class DataStoreListCommandAndQueryArchive<TKey, TValue>(IDataStoreListCommandAndQuery<TKey, TValue> dataStore, IFileStorageProvider fileStorageProvider, string filename) : IDataStoreListCommandAndQuery<TKey, TValue>
     {
-        private readonly IDataStoreListCommandAndQuery<TKey, TValue> dataStore;
-        private readonly IFileStorageProvider fileStorageProvider;
-        private readonly string filename;
-
-        public DataStoreListCommandAndQueryArchive(IDataStoreListCommandAndQuery<TKey, TValue> dataStore, IFileStorageProvider fileStorageProvider, string filename)
-        {
-            this.dataStore = dataStore;
-            this.fileStorageProvider = fileStorageProvider;
-            this.filename = filename;
-        }
-
         public async Task<List<TValue>> GetAllAsync()
         {
             return await dataStore.GetAllAsync();

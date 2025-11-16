@@ -6,16 +6,9 @@ using Microsoft.Extensions.Options;
 
 namespace cl2j.Tooling.Email
 {
-    public class EmailService : IEmailService
+    public class EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailService> logger) : IEmailService
     {
-        private readonly ILogger<EmailService> logger;
-        private readonly SmtpSettings smtpSettings;
-
-        public EmailService(IOptions<SmtpSettings> smtpSettings, ILogger<EmailService> logger)
-        {
-            this.logger = logger;
-            this.smtpSettings = smtpSettings.Value;
-        }
+        private readonly SmtpSettings smtpSettings = smtpSettings.Value;
 
         public async Task<bool> SendEmailAsync(string subject, string body, string toEmail, bool isBodyHtml = false)
         {

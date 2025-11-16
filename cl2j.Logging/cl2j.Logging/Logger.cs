@@ -28,7 +28,7 @@ namespace cl2j.Logging
             { LogLevel.None, ConsoleColor.White }
         };
 
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
         {
             return null!;
         }

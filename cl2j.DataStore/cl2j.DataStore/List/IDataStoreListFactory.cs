@@ -1,6 +1,4 @@
-﻿using cl2j.DataStore.List;
-
-namespace cl2j.FileStorage.Core
+﻿namespace cl2j.DataStore.List
 {
     public interface IDataStoreListFactory
     {

@@ -4,17 +4,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
-
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Authors>cl2j</Authors>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Copyright />
-		<PackageProjectUrl>https://github.com/jfblier/cl2j.DataStore</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jfblier/cl2j.DataStore</RepositoryUrl>
-		<PackageReadmeFile>readme.md</PackageReadmeFile>
-		<Version>1.0.8</Version>
-		<Description>Multi-providers CRUD Repository abstraction .NET library written in C#</Description>
-		<Title>Multi-providers CRUD Repository abstraction .NET library written in C#</Title>		
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -3,10 +3,8 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.Tooling
 {
-#pragma warning disable CA1001 // Types that own disposable fields should be disposable
 
-    public class CacheLoader
-#pragma warning restore CA1001 // Types that own disposable fields should be disposable
+    public class CacheLoader : IDisposable
     {
         private static readonly SemaphoreSlim semaphore = new(1, 1);
         private readonly string name;
@@ -14,9 +12,7 @@ namespace cl2j.Tooling
         private readonly Func<Task> refreshCallback;
         private readonly ILogger logger;
         private bool loaded;
-#pragma warning disable IDE0052 // Remove unread private members
-        private readonly Timer timer;
-#pragma warning restore IDE0052 // Remove unread private members
+        private Timer? timer;
 
         public CacheLoader(string name, TimeSpan refreshInterval, Func<Task> refreshCallback, ILogger logger)
         {
@@ -55,6 +51,21 @@ namespace cl2j.Tooling
             finally
             {
                 semaphore.Release();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                timer?.Dispose();
+                timer = null;
             }
         }
     }

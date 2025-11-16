@@ -9,11 +9,9 @@ namespace cl2j.Tooling
     public class Localized<T> : IDictionary<string, T>
 #pragma warning restore CA1710 // Identifiers should have correct suffix
     {
-        private readonly Dictionary<string, T> data = new();
+        private readonly Dictionary<string, T> data = [];
 
-#pragma warning disable CA2211 // Non-constant fields should not be visible
-        public static string DefaultLanguage = "en";
-#pragma warning restore CA2211 // Non-constant fields should not be visible
+        public const string DefaultLanguage = "en";
 
         public ICollection<string> Keys => ((IDictionary<string, T>)data).Keys;
 
@@ -188,7 +186,7 @@ namespace cl2j.Tooling
 
         public Localized<T> Clone()
         {
-            Localized<T> clone = new();
+            Localized<T> clone = [];
 
             foreach (var (key, value) in this)
                 clone[key] = value;

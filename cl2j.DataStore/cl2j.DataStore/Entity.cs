@@ -1,4 +1,4 @@
-﻿namespace cl2j.DataStore.Core
+﻿namespace cl2j.DataStore
 {
     public class Entity<TKey> : IEntity<TKey>
     {

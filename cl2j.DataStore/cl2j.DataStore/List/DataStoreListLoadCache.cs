@@ -4,10 +4,10 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListLoadCache<TValue> : IDataStoreListLoad<TValue>, Tooling.Observers.IObservable<List<TValue>>
+    public class DataStoreListLoadCache<TValue> : IDataStoreListLoad<TValue>, Tooling.Observers.IObservable<List<TValue>>, IDisposable
     {
         private readonly CacheLoader cacheLoader;
-        private List<TValue> cache = new();
+        private List<TValue> cache = [];
 
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
@@ -56,6 +56,18 @@ namespace cl2j.DataStore.List
         public async Task NotifyAsync(List<TValue> t)
         {
             await observable.NotifyAsync(t);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                cacheLoader.Dispose();
         }
     }
 }

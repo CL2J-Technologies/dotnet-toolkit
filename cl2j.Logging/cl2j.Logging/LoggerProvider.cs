@@ -8,9 +8,6 @@ namespace cl2j.Logging
 {
     public class LoggerProvider : ILoggerProvider
     {
-#pragma warning disable CA2211 // Non-constant fields should not be visible
-        public static LoggerProvider Instance = null!;
-#pragma warning restore CA2211 // Non-constant fields should not be visible
         public readonly MemoryLogger MemoryLogger = null!;
         private readonly LoggerOptions options;
 

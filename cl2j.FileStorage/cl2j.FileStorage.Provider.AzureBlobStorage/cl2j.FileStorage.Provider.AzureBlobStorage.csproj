@@ -4,21 +4,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
-
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>1.0.8</Version>
-		<Company>cl2j</Company>
-		<Product>cl2j.FileStorage.Provider.AzureBlobStorage</Product>
-		<Description>
-			cl2j.FileStorage is a multi-providers library that abstract file operations like read, write, delete and more. It's an open and extensible framework based on interfaces and Dependency Injection.
-
-			Azure Blob Storage implementation
-		</Description>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/jfblier/cl2j.FileStorage</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jfblier/cl2j.FileStorage</RepositoryUrl>
-		<RepositoryType>GitHub</RepositoryType>
-		<PackageReadmeFile>readme.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />

@@ -130,7 +130,6 @@ namespace cl2j.Database.Helpers
             {
                 var c = tableDescriptor.Columns[i];
                 var propType = c.Property.PropertyType;
-                var propSetter = $"t.{c.Name}";
                 var propTypeName = TypeUtils.GetTypeName(propType);
 
                 var vi = $"v{i}";

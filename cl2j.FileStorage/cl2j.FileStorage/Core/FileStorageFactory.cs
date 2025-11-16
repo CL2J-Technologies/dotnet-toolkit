@@ -3,17 +3,11 @@ using Microsoft.Extensions.Configuration;
 
 namespace cl2j.FileStorage.Core
 {
-    public class FileStorageFactory : IFileStorageFactory
+    public class FileStorageFactory(IConfigurationRoot configuration) : IFileStorageFactory
     {
         private static readonly object Lock = new();
-        private readonly List<string> registrations = new();
-        private readonly IConfigurationRoot configuration;
-        private static readonly Dictionary<string, IFileStorageProvider> storageProviderInstances = new();
-
-        public FileStorageFactory(IConfigurationRoot configuration)
-        {
-            this.configuration = configuration;
-        }
+        private readonly List<string> registrations = [];
+        private static readonly Dictionary<string, IFileStorageProvider> storageProviderInstances = [];
 
         public void Register<T>(string type) where T : IFileStorageProvider, new()
         {
