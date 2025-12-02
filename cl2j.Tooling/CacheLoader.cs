@@ -21,9 +21,8 @@ namespace cl2j.Tooling
             this.refreshCallback = refreshCallback;
             this.logger = logger;
 
-            logger.LogDebug($"CacheLoader<{name}> Initialized with refresh every {refreshInterval}");
-
             timer = new Timer(RefreshAsync, null, TimeSpan.Zero, refreshInterval);
+            logger.LogDebug($"CacheLoader<{name}> Initialized with refresh every {refreshInterval} [TimeCount={Timer.ActiveCount}]");
         }
 
         public async Task<bool> WaitAsync()

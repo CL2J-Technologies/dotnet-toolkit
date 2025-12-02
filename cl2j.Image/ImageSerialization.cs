@@ -13,6 +13,16 @@ namespace cl2j.Image
             img.Save(path, jpegCodec, encoderParams);
         }
 
+        public static Stream SaveJpegToStream(System.Drawing.Image image, long quality = 75L)
+        {
+            var jpegCodec = GetEncoderInfo("image/jpeg");
+            var encoderParams = CreateEncoder(quality);
+
+            var ms = new MemoryStream();
+            image.Save(ms, jpegCodec, encoderParams);
+            return ms;
+        }
+
         public static byte[] SaveJpegToBytes(System.Drawing.Image image, long quality = 75L)
         {
             var jpegCodec = GetEncoderInfo("image/jpeg");
