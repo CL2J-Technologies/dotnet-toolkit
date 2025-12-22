@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AnalysisMode>none</AnalysisMode>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.2" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.2" />
+		<PackageReference Include="Dapper" Version="2.1.66" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\cl2j.Database\cl2j.Database.SqlServer\cl2j.Database.SqlServer.csproj" />
+		<ProjectReference Include="..\..\cl2j.Database\cl2j.Database\cl2j.Database.csproj" />
+		<ProjectReference Include="..\..\cl2j.Logging\cl2j.Logging\cl2j.Logging.csproj" />
+	</ItemGroup>
+
+</Project>

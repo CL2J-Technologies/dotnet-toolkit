@@ -22,5 +22,71 @@ namespace cl2j.Tooling
 
             return sb.ToString();
         }
+
+        public static string? GetTypeName<T>() => GetTypeName(typeof(T));
+
+        public static string? GetTypeName(Type type)
+        {
+            var typeName = GetCSharpRepresentation(type);
+
+            if (type.ReflectedType is not null)
+                return $"{type.ReflectedType!.FullName}.{typeName}";
+
+            return GetTypeNameWithNamespace(typeName, type.Namespace);
+        }
+
+        private static string GetTypeNameWithNamespace(string typeName, string? nameSpace)
+        {
+            if (nameSpace?.Length > 0)
+                return $"{nameSpace}.{typeName}";
+            return typeName;
+        }
+
+        private static string GetCSharpRepresentation(Type t, bool trimArgCount = true, bool addNamespace = false)
+        {
+            if (t.IsGenericType)
+            {
+                var genericArgs = t.GetGenericArguments().ToList();
+                return GetCSharpRepresentation(t, trimArgCount, genericArgs);
+            }
+
+            if (addNamespace)
+                return GetTypeNameWithNamespace(t.Name, t.Namespace);
+
+            return t.Name;
+        }
+
+        private static string GetCSharpRepresentation(Type t, bool trimArgCount, List<Type> availableArguments)
+        {
+            if (t.IsGenericType)
+            {
+                string value = t.Name;
+                if (trimArgCount && value.IndexOf('`') > -1)
+                    value = value[..value.IndexOf('`')];
+
+                // This is a nested type, build the nesting type first
+                if (t.DeclaringType != null)
+                    value = GetCSharpRepresentation(t.DeclaringType, trimArgCount, availableArguments) + "+" + value;
+
+                // Build the type arguments (if any)
+                var argString = new StringBuilder();
+                var thisTypeArgs = t.GetGenericArguments();
+                for (int i = 0; i < thisTypeArgs.Length && availableArguments.Count > 0; i++)
+                {
+                    if (i != 0) argString.Append(", ");
+
+                    argString.Append(GetCSharpRepresentation(availableArguments[0], trimArgCount, true));
+                    availableArguments.RemoveAt(0);
+                }
+
+                // If there are type arguments, add them with < >
+                if (argString.Length > 0)
+                    value += "<" + argString + ">";
+
+                return value;
+            }
+
+            return t.Name;
+        }
     }
 }

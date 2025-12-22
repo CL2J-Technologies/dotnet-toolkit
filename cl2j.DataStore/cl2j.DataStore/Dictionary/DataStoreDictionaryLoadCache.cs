@@ -4,10 +4,10 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Dictionary
 {
-    public abstract class DataStoreDictionaryLoadCache<TKey, TValue> : Tooling.Observers.IObservable<Dictionary<TKey, TValue>> where TKey : notnull
+    public abstract class DataStoreDictionaryLoadCache<TKey, TValue> : Tooling.Observers.IObservable<Dictionary<TKey, TValue>>, IDisposable where TKey : notnull
     {
         protected readonly CacheLoader cacheLoader;
-        protected Dictionary<TKey, TValue> cache = new();
+        protected Dictionary<TKey, TValue> cache = [];
         protected static readonly SemaphoreSlim semaphore = new(1, 1);
 
         private readonly Tooling.Observers.Observable<Dictionary<TKey, TValue>> observable = new();
@@ -55,6 +55,18 @@ namespace cl2j.DataStore.Dictionary
         public async Task NotifyAsync(Dictionary<TKey, TValue> t)
         {
             await observable.NotifyAsync(t);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                cacheLoader.Dispose();
         }
     }
 }

@@ -1,15 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<None Include=".editorconfig" />
-	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />

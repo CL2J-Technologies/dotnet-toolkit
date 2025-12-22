@@ -1,32 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
-
-		<AssemblyName>cl2j.FileStorage</AssemblyName>
-		<RootNamespace>cl2j.FileStorage</RootNamespace>
-		<Company>cl2j</Company>
-		<Description>cl2j.FileStorage is a multi-providers library that abstract file operations like read, write, delete and more. It's an open and extensible framework based on interfaces and Dependency Injection.</Description>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/jfblier/cl2j.FileStorage</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/jfblier/cl2j.FileStorage</RepositoryUrl>
-		<RepositoryType>GitHub</RepositoryType>
-		<PackageTags />
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageReadmeFile>readme.md</PackageReadmeFile>
-		<Version>1.0.8</Version>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.4" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
 
 		<None Include="..\readme.md" Pack="true" PackagePath="\" />
-		<None Include=".editorconfig" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -34,6 +20,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\cl2j.Tooling\cl2j.Tooling.csproj" />
+		<ProjectReference Include="..\..\cl2j.Tooling\cl2j.Tooling.csproj" />
 	</ItemGroup>
 </Project>

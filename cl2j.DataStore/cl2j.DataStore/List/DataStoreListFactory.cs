@@ -1,15 +1,9 @@
-﻿using cl2j.FileStorage.Core;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListFactory : DataStoreDictionaryFactoryBase, IDataStoreListFactory
+    public class DataStoreListFactory(ILogger<DataStoreListFactory> logger) : DataStoreDictionaryFactoryBase(logger), IDataStoreListFactory
     {
-        public DataStoreListFactory(ILogger<DataStoreListFactory> logger)
-            : base(logger)
-        {
-        }
-
         public void AddDataStoreListLoad<TValue>(string name, IDataStoreListLoad<TValue> dataStore)
         {
             AddDataStore(name, dataStore);

@@ -11,6 +11,6 @@ namespace cl2j.Logging
         public bool IncludeConsole { get; set; }
         public bool ClearOnStartup { get; set; }
         public bool MemoryLogs { get; set; }
-        public Dictionary<string, LogLevel> Filters { get; set; } = new Dictionary<string, LogLevel>();
+        public Dictionary<string, LogLevel> Filters { get; set; } = [];
     }
 }

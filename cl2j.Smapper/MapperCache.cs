@@ -2,7 +2,7 @@
 
 namespace cl2j.Smapper
 {
-    internal class MapperCache
+    internal sealed class MapperCache
     {
         private static readonly ConcurrentDictionary<string, TypeMapper> cache = new();
 

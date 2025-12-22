@@ -5,13 +5,8 @@ using Microsoft.Extensions.Logging;
 namespace cl2j.Logging
 {
     [DebuggerStepThrough]
-    internal class Logger : ILogger
+    internal sealed class Logger(LoggerProvider provider, string categoryName, Dictionary<string, LogLevel> filters, IDateTimeProvider dateTimeProvider) : ILogger
     {
-        private readonly string categoryName;
-        private readonly Dictionary<string, LogLevel> filters;
-        private readonly IDateTimeProvider dateTimeProvider;
-        private readonly LoggerProvider provider;
-
         private readonly Dictionary<LogLevel, string> logLevelDescriptions = new()
         {
             { LogLevel.Critical, "CRI" },
@@ -33,15 +28,7 @@ namespace cl2j.Logging
             { LogLevel.None, ConsoleColor.White }
         };
 
-        public Logger(LoggerProvider provider, string categoryName, Dictionary<string, LogLevel> filters, IDateTimeProvider dateTimeProvider)
-        {
-            this.categoryName = categoryName;
-            this.filters = filters;
-            this.dateTimeProvider = dateTimeProvider;
-            this.provider = provider;
-        }
-
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull
         {
             return null!;
         }

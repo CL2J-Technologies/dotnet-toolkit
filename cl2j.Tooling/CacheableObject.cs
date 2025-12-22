@@ -3,18 +3,18 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.Tooling
 {
-    public abstract class CacheableObject<T>
+    public abstract class CacheableObject<T> : IDisposable
     {
         private readonly string name;
         private readonly ILogger logger;
 
         private readonly CacheLoader cacheLoader;
-        private List<T> cache = new();
+        private List<T> cache = [];
         protected static readonly SemaphoreSlim semaphore = new(1, 1);
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
         {
-            cacheLoader = new CacheLoader(name, refreshInterval, async () => { await RefreshCache(); }, logger);
+            cacheLoader = new CacheLoader(name, refreshInterval, RefreshCache, logger);
             this.name = name;
             this.logger = logger;
         }
@@ -27,6 +27,11 @@ namespace cl2j.Tooling
             return cache;
         }
 
+        protected async Task WaitForCache()
+        {
+            await cacheLoader.WaitAsync();
+        }
+
         protected async Task RefreshCache()
         {
             try
@@ -36,6 +41,10 @@ namespace cl2j.Tooling
                 try
                 {
                     cache = await LoadCache();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"{name}: Unexpected error", ex);
                 }
                 finally
                 {
@@ -82,6 +91,18 @@ namespace cl2j.Tooling
             }
 
             return cache;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                cacheLoader.Dispose();
         }
     }
 }

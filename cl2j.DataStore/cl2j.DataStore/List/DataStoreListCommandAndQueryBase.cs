@@ -1,13 +1,8 @@
 ﻿namespace cl2j.DataStore.List
 {
-    public abstract class DataStoreListCommandAndQueryBase<TKey, TValue> : IDataStoreListCommandAndQuery<TKey, TValue>
+    public abstract class DataStoreListCommandAndQueryBase<TKey, TValue>(Func<TValue, TKey> getKeyPredicate) : IDataStoreListCommandAndQuery<TKey, TValue>
     {
-        protected readonly Func<TValue, TKey> getKeyPredicate;
-
-        public DataStoreListCommandAndQueryBase(Func<TValue, TKey> getKeyPredicate)
-        {
-            this.getKeyPredicate = getKeyPredicate;
-        }
+        protected readonly Func<TValue, TKey> getKeyPredicate = getKeyPredicate;
 
         public abstract Task<List<TValue>> GetAllAsync();
 

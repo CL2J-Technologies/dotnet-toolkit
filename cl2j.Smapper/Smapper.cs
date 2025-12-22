@@ -1,4 +1,6 @@
-﻿namespace cl2j.Smapper
+﻿using System.Text.Json;
+
+namespace cl2j.Smapper
 {
     public static class Smapper
     {
@@ -10,6 +12,14 @@
 
             var destination = Map(source, mapper, input);
             return destination;
+        }
+
+        public static TSource? Clone<TSource>(this TSource source)
+            where TSource : class
+        {
+            var data = JsonSerializer.Serialize(source);
+            var cloned = JsonSerializer.Deserialize<TSource>(data);
+            return cloned;
         }
 
         private static TDestination Map<TDestination>(object source, TypeMapper mapper, TDestination? input)

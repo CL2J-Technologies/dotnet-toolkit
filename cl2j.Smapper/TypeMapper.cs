@@ -2,9 +2,9 @@
 
 namespace cl2j.Smapper
 {
-    internal class TypeMapper
+    internal sealed class TypeMapper
     {
-        public List<PropertyMap> PropertyMaps { get; set; } = new();
+        public List<PropertyMap> PropertyMaps { get; set; } = [];
 
         public static TypeMapper Create(Type source, Type destination)
         {

@@ -34,7 +34,7 @@ namespace cl2j.FileStorage.Extensions
             var options = CreateSerializerOptions();
 
             if (data.StartsWith(byteOrderMarkUtf8, StringComparison.Ordinal))
-                data = data.Remove(0, byteOrderMarkUtf8.Length);
+                data = data[byteOrderMarkUtf8.Length..];
 
             var value = JsonConvert.DeserializeObject<T>(data, options);
             return value == null ? throw new JsonException($"Unable to deserialize {typeof(T).Name} from value '{data}'") : value;

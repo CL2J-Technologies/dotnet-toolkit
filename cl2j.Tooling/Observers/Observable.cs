@@ -2,7 +2,7 @@
 
 public class Observable<T> : IObservable<T>
 {
-    private readonly List<IObserver<T>> observers = new();
+    private readonly List<IObserver<T>> observers = [];
 
     public bool Subscribe(IObserver<T> observer)
     {

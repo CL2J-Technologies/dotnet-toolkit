@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+		<PackageReference Include="Dapper" Version="2.1.28" />
+		<PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include=".editorconfig" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />
+	</ItemGroup>
+</Project>

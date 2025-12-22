@@ -2,16 +2,9 @@
 
 namespace cl2j.Logging
 {
-    public class MemoryLogger
+    public class MemoryLogger(int maxLines = 1000)
     {
-        private readonly int maxLines;
-        private readonly List<LogData> list;
-
-        public MemoryLogger(int maxLines = 1000)
-        {
-            this.maxLines = maxLines;
-            list = new(maxLines);
-        }
+        private readonly List<LogData> list = new(maxLines);
 
         public IList<LogData> GetLogs()
         {

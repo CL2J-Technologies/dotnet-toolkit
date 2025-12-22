@@ -5,22 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Json.Dictionary
 {
-    public class DataStoreDictionaryCommandAndQueryJson<TKey, TValue> : IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
+    public class DataStoreDictionaryCommandAndQueryJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, ILogger logger, bool indent = false) : IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
     {
-        private readonly IFileStorageProvider fileStorageProvider;
-        private readonly string filename;
-        private readonly ILogger logger;
-        private readonly bool indent;
-
         private static readonly SemaphoreSlim semaphore = new(1, 1);
-
-        public DataStoreDictionaryCommandAndQueryJson(IFileStorageProvider fileStorageProvider, string filename, ILogger logger, bool indent = false)
-        {
-            this.fileStorageProvider = fileStorageProvider;
-            this.filename = filename;
-            this.logger = logger;
-            this.indent = indent;
-        }
 
         public async Task<Dictionary<TKey, TValue>> GetAllAsync()
         {

@@ -2,13 +2,8 @@
 
 namespace cl2j.DataStore.Dictionary
 {
-    public class DataStoreDictionaryFactory : DataStoreDictionaryFactoryBase, IDataStoreDictionaryFactory
+    public class DataStoreDictionaryFactory(ILogger<DataStoreDictionaryFactory> logger) : DataStoreDictionaryFactoryBase(logger), IDataStoreDictionaryFactory
     {
-        public DataStoreDictionaryFactory(ILogger<DataStoreDictionaryFactory> logger)
-            : base(logger)
-        {
-        }
-
         public void AddDataStoreDictionaryCommandAndQuery<TKey, TValue>(string name, IDataStoreDictionaryCommandAndQuery<TKey, TValue> dataStore) where TKey : notnull
         {
             AddDataStore(name, dataStore);
