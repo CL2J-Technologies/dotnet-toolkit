@@ -42,6 +42,11 @@ namespace cl2j.Logging
             return services;
         }
 
+        public static IServiceCollection AddLogging(this IServiceCollection services, IConfigurationRoot configuration, string? applicationName = null)
+        {
+            return AddLogging(services, (IConfiguration)configuration, applicationName);
+        }
+
         private static void AddFilter(ILoggingBuilder loggingBuilder, string key, LogLevel logLevel)
         {
             loggingBuilder.AddFilter(key, logLevel);
