@@ -32,11 +32,13 @@ namespace cl2j.DataStore.Dictionary
                         semaphore.Release();
                     }
 
-                    logger.LogDebug($"DataStoreDictionary.LoadCache<{name}> --> {cache.Count} {name}(s) in {sw.ElapsedMilliseconds}ms");
+                    if (logger.IsEnabled(LogLevel.Debug))
+                        logger.LogDebug($"DataStoreDictionary.LoadCache<{name}> --> {cache.Count} {name}(s) in {sw.ElapsedMilliseconds}ms");
                 }
                 catch (Exception ex)
                 {
-                    logger.LogCritical(ex, $"DataStoreDictionary.LoadCache<{name}> --> Unable to read the entities");
+                    if (logger.IsEnabled(LogLevel.Critical))
+                        logger.LogCritical(ex, $"DataStoreDictionary.LoadCache<{name}> --> Unable to read the entities");
                 }
             }, logger);
         }

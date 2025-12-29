@@ -64,7 +64,8 @@ namespace cl2j.DataStore.Json.List
         {
             var sw = Stopwatch.StartNew();
             var list = await fileStorageProvider.ReadJsonObjectAsync<List<TValue>>(filename, null);
-            logger.LogTrace($"GetListValues<{filename}>() -> {list.Count} in {sw.ElapsedMilliseconds}ms");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"GetListValues<{filename}>() -> {list.Count} in {sw.ElapsedMilliseconds}ms");
             return list;
         }
 
@@ -72,7 +73,8 @@ namespace cl2j.DataStore.Json.List
         {
             var sw = Stopwatch.StartNew();
             await fileStorageProvider.WriteJsonObjectAsync(filename, values);
-            logger.LogTrace($"WriteListValuesAsync<{filename}>() -> {values.Count} in {sw.ElapsedMilliseconds}ms");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"WriteListValuesAsync<{filename}>() -> {values.Count} in {sw.ElapsedMilliseconds}ms");
         }
     }
 }

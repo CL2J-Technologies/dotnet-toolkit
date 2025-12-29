@@ -45,11 +45,13 @@ namespace cl2j.DataStore.List
                         semaphore.Release();
                     }
 
-                    logger.LogDebug($"DataStoreCache<{name}> --> {cache.Count} {name}(s) in {sw.ElapsedMilliseconds}ms");
+                    if (logger.IsEnabled(LogLevel.Debug))
+                        logger.LogDebug($"DataStoreCache<{name}> --> {cache.Count} {name}(s) in {sw.ElapsedMilliseconds}ms");
                 }
                 catch (Exception ex)
                 {
-                    logger.LogCritical(ex, $"DataStoreCache<{name}> --> Unable to read the entities");
+                    if (logger.IsEnabled(LogLevel.Critical))
+                        logger.LogCritical(ex, $"DataStoreCache<{name}> --> Unable to read the entities");
                 }
             }, logger);
         }

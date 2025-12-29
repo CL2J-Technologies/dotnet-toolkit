@@ -26,7 +26,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -38,13 +39,15 @@ namespace cl2j.Database.Databases
                 var sw = Stopwatch.StartNew();
                 using var connection = await CreateConnection();
                 var list = (await connection.Query<T>(sql, param)).ToList();
-                logger.Log(options.TraceLevel, $"GetAll<{typeof(T).Name}>({param}) -> {list.Count} [{sw.ElapsedMilliseconds}ms]");
+                if (logger.IsEnabled(options.TraceLevel))
+                    logger.Log(options.TraceLevel, $"GetAll<{typeof(T).Name}>({param}) -> {list.Count} [{sw.ElapsedMilliseconds}ms]");
 
                 return list;
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.GetAll<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.GetAll<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -59,7 +62,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -74,7 +78,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -89,7 +94,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Get<{typeof(T).Name}> - Exception thrown\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -104,7 +110,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.QueryKeys<{typeof(T).Name}> - Exception thrown\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.QueryKeys<{typeof(T).Name}> - Exception thrown\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -125,7 +132,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Insert<{typeof(T).Name}> - Exception thrown");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Insert<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }
@@ -141,7 +149,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Insert<{typeof(T).Name}> - Exception thrown");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Insert<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }
@@ -156,7 +165,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Update<{typeof(T).Name}> - Exception thrown");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Update<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }
@@ -170,7 +180,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.DeleteKey<{typeof(T).Name}> - Exception thrown");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.DeleteKey<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }
@@ -184,7 +195,8 @@ namespace cl2j.Database.Databases
             }
             catch (Exception ex)
             {
-                logger.Log(options.ExceptionLevel, ex, $"Database.Execute - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Execute - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }

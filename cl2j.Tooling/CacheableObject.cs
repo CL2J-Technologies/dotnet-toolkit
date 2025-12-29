@@ -44,17 +44,20 @@ namespace cl2j.Tooling
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"{name}: Unexpected error", ex);
+                    if (logger.IsEnabled(LogLevel.Error))
+                        logger.LogError($"{name}: Unexpected error", ex);
                 }
                 finally
                 {
                     semaphore.Release();
                 }
-                logger.LogDebug($"{name} --> {cache.Count} in {sw.ElapsedMilliseconds}ms");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug($"{name} --> {cache.Count} in {sw.ElapsedMilliseconds}ms");
             }
             catch (Exception ex)
             {
-                logger.LogCritical(ex, $"{name} --> Unable to load cache");
+                if (logger.IsEnabled(LogLevel.Critical))
+                    logger.LogCritical(ex, $"{name} --> Unable to load cache");
             }
         }
 

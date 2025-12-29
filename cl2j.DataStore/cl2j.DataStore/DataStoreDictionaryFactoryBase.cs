@@ -13,7 +13,8 @@ namespace cl2j.DataStore
         {
             if (!dict.TryAdd(name, dataStore))
                 throw new ConflictException($"Data store '{name}' already added.");
-            logger.LogInformation($"Added DataStore {name} [{dataStore.GetType().GetPrettyName()}]");
+            if (logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation($"Added DataStore {name} [{dataStore.GetType().GetPrettyName()}]");
         }
 
         protected T Get<T>(string name) where T : class

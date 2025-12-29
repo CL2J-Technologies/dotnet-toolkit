@@ -86,13 +86,15 @@ namespace Microsoft.Extensions.Logging
 
         public void TraceTime(string? text)
         {
-            logger.LogTrace($"{text} [{ElapsedTimeFormatted}]");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"{text} [{ElapsedTimeFormatted}]");
             stopwatch.Restart();
         }
 
         public void DebugTime(string? text)
         {
-            logger.LogDebug($"{text} [{ElapsedTimeFormatted}]");
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug($"{text} [{ElapsedTimeFormatted}]");
             stopwatch.Restart();
         }
 

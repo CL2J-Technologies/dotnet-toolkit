@@ -11,7 +11,6 @@ namespace cl2j.Scripting
         private const string DefaultMethodName = "Execute";
         private const string DefaultInputName = "context";
 
-        private int assemblyLoadCount;
         private int assemblyLoadCountDuplicates;
 
         public HashSet<string> Namespaces { get; set; } = [];
@@ -29,11 +28,11 @@ namespace cl2j.Scripting
                 "System.Linq"
             );
 
-            AddAssembly(typeof(Script)); // This Library :-)
+            //AddAssembly(typeof(Script)); // This Library :-)
 
             var sw = Stopwatch.StartNew();
             AddExecutableAssemblies();
-            Debug.WriteLine($"ScriptOptions.AddDefault: {assemblyLoadCount} Load, {assemblyLoadCountDuplicates} duplicates in {sw.ElapsedMilliseconds}ms");
+            Console.WriteLine($"ScriptOptions.AddDefault: {Assemblies.Count} Load, {assemblyLoadCountDuplicates} duplicates in {sw.ElapsedMilliseconds}ms");
         }
 
         public void AddNamespaces(params string[] nameSpaces)
@@ -41,36 +40,6 @@ namespace cl2j.Scripting
             var list = nameSpaces.Where(ns => !string.IsNullOrEmpty(ns));
             foreach (var l in list)
                 Namespaces.Add(l);
-        }
-
-        public void AddExecutableAssemblies()
-        {
-            var rootAsembly = Assembly.GetEntryAssembly();
-            if (rootAsembly is not null)
-            {
-                var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
-                AddAssemblies(domainAssemblies, true);
-            }
-        }
-
-        public bool AddAssemblies(IEnumerable<Assembly> assemblies, bool recursive = false)
-        {
-            bool res = true;
-            foreach (var assembly in assemblies)
-            {
-                res &= AddAssembly(assembly);
-
-                if (recursive)
-                {
-                    var referencedAssemblies = assembly.GetReferencedAssemblies();
-                    foreach (var reference in referencedAssemblies)
-                    {
-                        var refAssembly = Assembly.Load(reference);
-                        AddAssembly(refAssembly);
-                    }
-                }
-            }
-            return res;
         }
 
         public bool AddAssembly(Type type)
@@ -81,11 +50,14 @@ namespace cl2j.Scripting
         public bool AddAssembly(Assembly assembly)
         {
             var location = assembly.Location;
+            if (string.IsNullOrEmpty(location))
+                return true;
+
             try
             {
                 if (!Assemblies.Any(a => a.FilePath == location))
                 {
-                    ++assemblyLoadCount;
+                    //Console.WriteLine($"ScriptOptions.AddAssembly('{assembly.FullName}'): {assembly.Location}");
                     var reference = MetadataReference.CreateFromFile(location);
                     Assemblies.Add(reference);
                 }
@@ -94,8 +66,9 @@ namespace cl2j.Scripting
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[EXCEPTION] ScriptOptions.AddAssemblies: Failed to load assembly {assembly.FullName}: {ex.Message}");
                 return false;
             }
         }
@@ -158,5 +131,53 @@ namespace cl2j.Scripting
 
         public static string Method<TIn, TOut>(string methodName, string inputName) => $"public {TypeUtils.GetTypeName<TOut>()} {methodName}({TypeUtils.GetTypeName<TIn>()} {inputName})";
         public static string AddReturn(string code) => $"return {code};";
+
+        #region Private Methods
+
+        private void AddExecutableAssemblies()
+        {
+            var rootAsembly = Assembly.GetEntryAssembly();
+            if (rootAsembly is not null)
+            {
+                var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+                AddAssemblies(domainAssemblies, true);
+            }
+        }
+
+        private bool AddAssemblies(IEnumerable<Assembly> assemblies, bool recursive = false)
+        {
+            bool res = true;
+            foreach (var assembly in assemblies)
+            {
+                try
+                {
+                    res &= AddAssembly(assembly);
+
+                    if (recursive)
+                    {
+                        try
+                        {
+                            var referencedAssemblies = assembly.GetReferencedAssemblies();
+                            foreach (var reference in referencedAssemblies)
+                            {
+                                var refAssembly = Assembly.Load(reference);
+                                AddAssembly(refAssembly);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[EXCEPTION] ScriptOptions.AddAssemblies: Failed to load referenced assemblies for {assembly.FullName}: {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[EXCEPTION] ScriptOptions.AddAssemblies: Failed to load assembly {assembly.FullName}: {ex.Message}");
+                }
+            }
+            return res;
+        }
+
+        #endregion Private Methods
     }
 }
