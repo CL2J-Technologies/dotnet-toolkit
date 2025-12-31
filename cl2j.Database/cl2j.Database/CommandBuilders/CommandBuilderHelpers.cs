@@ -109,6 +109,21 @@ namespace cl2j.Database.CommandBuilders
             };
         }
 
+        public static TextStatement GetUpdateColumnStatement(Type type, string columnName, IDatabaseFormatter formatter)
+        {
+            var tableDescriptor = TableDescriptorFactory.Create(type, formatter);
+            var column = tableDescriptor.Columns.FirstOrDefault(c => c.Name == columnName && c.ColumnAtribute.Key == KeyType.None) ?? throw new ArgumentException($"Column '{columnName}' not found or is a key column.");
+
+            var updateColumnSql = $"{column.NameFormatted}={formatter.FormatParameterName(column.Name)}";
+            var where = GetColumnWhereClause(tableDescriptor.Keys, formatter);
+
+            return new TextStatement
+            {
+                TableDescriptor = tableDescriptor,
+                Text = $"UPDATE {tableDescriptor.NameFormatted} SET {updateColumnSql} WHERE {where}"
+            };
+        }
+
         public static TextStatement GetDeleteStatement(Type type, IDatabaseFormatter formatter)
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, formatter);

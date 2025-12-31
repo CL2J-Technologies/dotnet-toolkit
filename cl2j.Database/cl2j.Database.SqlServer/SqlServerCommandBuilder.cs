@@ -53,6 +53,11 @@ namespace cl2j.Database.SqlServer
             return CommandBuilderHelpers.GetUpdateStatement(type, this);
         }
 
+        public TextStatement GetUpdateColumnStatement(Type type, string columnName)
+        {
+            return CommandBuilderHelpers.GetUpdateColumnStatement(type, columnName, this);
+        }
+
         public TextStatement GetDeleteStatement(Type type)
         {
             return CommandBuilderHelpers.GetDeleteStatement(type, this);

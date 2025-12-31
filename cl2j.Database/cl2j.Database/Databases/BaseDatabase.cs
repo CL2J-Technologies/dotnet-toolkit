@@ -171,6 +171,21 @@ namespace cl2j.Database.Databases
             }
         }
 
+        public async Task Update<T, TValue>(T t, string columnName, TValue value) where T : class
+        {
+            try
+            {
+                using var connection = await CreateConnection();
+                await connection.UpdateColumn(t, columnName, value);
+            }
+            catch (Exception ex)
+            {
+                if (logger.IsEnabled(options.ExceptionLevel))
+                    logger.Log(options.ExceptionLevel, ex, $"Database.Update<{typeof(T).Name}> - Exception thrown");
+                throw;
+            }
+        }
+
         public async Task DeleteKey<T>(object key) where T : class
         {
             try

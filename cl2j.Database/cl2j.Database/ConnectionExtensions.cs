@@ -8,6 +8,7 @@ using cl2j.Database.Databases;
 using cl2j.Database.Descriptors;
 using cl2j.Database.Exceptions;
 using cl2j.Database.Helpers;
+using cl2j.Tooling.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace cl2j.Database
@@ -22,6 +23,15 @@ namespace cl2j.Database
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
+
+        #region Helpers
+
+        public static string ToJsonString<T>(T value)
+        {
+            return JsonSerializer.Serialize(value, JsonSerializeOptions);
+        }
+
+        #endregion
 
         #region DDL
 
@@ -187,6 +197,23 @@ namespace cl2j.Database
             Trace($"{statement.Text} --> '{result}'");
 
             return result;
+        }
+
+        public static async Task UpdateColumn<TIn, TValue>(this DbConnection connection, TIn item, string columnName, TValue? value)
+            => await UpdateColumn(connection, item, columnName, value, CancellationToken.None);
+
+        public static async Task UpdateColumn<TIn, TValue>(this DbConnection connection, TIn item, string columnName, TValue? value, CancellationToken cancellationToken, DbTransaction? transaction = null)
+        {
+            await EnsureConnectionOpen(connection, cancellationToken);
+
+            var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
+            var statement = commandBuilder.GetUpdateColumnStatement(typeof(TIn), columnName);
+
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateParameters(item, statement.TableDescriptor, columnName, value);
+            var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
+
+            Trace($"{statement.Text} --> '{result}'");
         }
 
         public static async Task Delete<TIn>(this DbConnection connection, TIn item)
@@ -381,6 +408,15 @@ namespace cl2j.Database
             CreateParameters(command, t!, tableDescriptor.Columns);
         }
 
+        private static void CreateParameters<T, TValue>(this DbCommand command, T t, TableDescriptor tableDescriptor, string columnName, TValue? value)
+        {
+            var column = tableDescriptor.Columns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase)) ?? throw new ValidationException($"column '{columnName}' doesn't exists");
+            CreateParameter(command, column, value);
+
+            //Ensure keys are also added for the where clause
+            CreateKeyParameters(command, t!, tableDescriptor);
+        }
+
         private static void CreateObjectParameters(this DbCommand command, object param, ICommandBuilder commandBuilder)
         {
             var type = param.GetType();
@@ -411,23 +447,31 @@ namespace cl2j.Database
         private static void CreateParameters(this DbCommand command, object t, IEnumerable<ColumnDescriptor> columns)
         {
             foreach (var column in columns)
+                command.CreateParameter(t, column);
+        }
+
+        private static void CreateParameter(this DbCommand command, object t, ColumnDescriptor column)
+        {
+            var value = column.Property.GetValue(t, null);
+            command.CreateParameter(column, value);
+        }
+
+        private static void CreateParameter(this DbCommand command, ColumnDescriptor column, object? value)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = column.Name;
+
+            if (column.ColumnAtribute.Json)
             {
-                var parameter = command.CreateParameter();
-                parameter.ParameterName = column.Name;
-
-                var value = column.Property.GetValue(t, null);
-                if (column.ColumnAtribute.Json)
-                {
-                    parameter.Value = JsonSerializer.Serialize(value, JsonSerializeOptions);
-                    parameter.DbType = DbType.String;
-                }
-                else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
-                    parameter.Value = DateTimeOffset.UtcNow;
-                else
-                    parameter.Value = value ?? DBNull.Value;
-
-                command.Parameters.Add(parameter);
+                parameter.Value = ToJsonString(value);
+                parameter.DbType = DbType.String;
             }
+            else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
+                parameter.Value = DateTimeOffset.UtcNow;
+            else
+                parameter.Value = value ?? DBNull.Value;
+
+            command.Parameters.Add(parameter);
         }
 
         private static void GenerateKeys<TIn>(TIn item, IEnumerable<ColumnDescriptor> keys, IIdentifierGenerator identifierGenerator)
