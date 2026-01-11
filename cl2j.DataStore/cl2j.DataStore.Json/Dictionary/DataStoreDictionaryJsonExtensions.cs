@@ -44,7 +44,8 @@ namespace cl2j.DataStore.Json.Dictionary
         {
             var sw = Stopwatch.StartNew();
             var dict = await fileStorageProvider.ReadJsonObjectAsync<Dictionary<TKey, TValue>>(filename, null);
-            logger.LogTrace($"GetDictionaryValues<{filename}>() -> {dict.Count} in {sw.ElapsedMilliseconds}ms");
+            if (logger.IsEnabled(LogLevel.Trace))
+                logger.LogTrace($"GetDictionaryValues<{filename}>() -> {dict.Count} in {sw.ElapsedMilliseconds}ms");
             return dict;
         }
     }

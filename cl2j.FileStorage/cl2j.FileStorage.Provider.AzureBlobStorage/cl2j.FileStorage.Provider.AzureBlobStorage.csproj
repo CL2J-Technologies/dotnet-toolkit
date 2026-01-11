@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AnalysisMode>Recommended</AnalysisMode>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage.csproj" />

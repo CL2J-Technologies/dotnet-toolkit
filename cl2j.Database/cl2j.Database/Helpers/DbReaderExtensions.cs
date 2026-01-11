@@ -34,9 +34,7 @@ namespace cl2j.Database.Helpers
                     try
                     {
 #endif
-                        var options = ScriptOptions.Create<DbDataReader, List<T>>(code);
-                        ConfigureScriptOptions<T>(options, tableDescriptor);
-                        return Script.Create(options);
+                        return CreateScript<List<T>>(code, tableDescriptor);
 #if DEBUG
                     }
 #pragma warning disable CS0168 // Variable is declared but never used
@@ -47,7 +45,6 @@ namespace cl2j.Database.Helpers
                     }
 #endif
                 });
-
 
                 return script.Execute<DbDataReader, List<T>>(reader) ?? [];
             }
@@ -75,9 +72,7 @@ namespace cl2j.Database.Helpers
                 var script = CacheReadSingle.GetOrAdd(type, type =>
                 {
                     var code = GenerateReadSingleCode<T>(tableDescriptor);
-                    var options = ScriptOptions.Create<DbDataReader, T>(code);
-                    ConfigureScriptOptions<T>(options, tableDescriptor);
-                    return Script.Create(options);
+                    return CreateScript<T>(code, tableDescriptor);
                 });
 
 #pragma warning disable CS0168 // Variable is declared but never used
@@ -187,6 +182,14 @@ namespace cl2j.Database.Helpers
                 sb.AppendLine();
             }
             sb.AppendLine("\t};");
+        }
+
+        private static Script CreateScript<T>(string code, TableDescriptor tableDescriptor)
+        {
+            var options = ScriptOptions.Create<DbDataReader, T>(code, addDefault: true);
+            ConfigureScriptOptions<T>(options, tableDescriptor);
+            var script = Script.Create(options);
+            return script;
         }
 
         private static void ConfigureScriptOptions<T>(ScriptOptions options, TableDescriptor tableDescriptor)

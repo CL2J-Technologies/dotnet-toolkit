@@ -22,7 +22,8 @@ namespace cl2j.Tooling
             this.logger = logger;
 
             timer = new Timer(RefreshAsync, null, TimeSpan.Zero, refreshInterval);
-            logger.LogDebug($"CacheLoader<{name}> Initialized with refresh every {refreshInterval} [TimeCount={Timer.ActiveCount}]");
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug($"CacheLoader<{name}> Initialized with refresh every {refreshInterval} [TimeCount={Timer.ActiveCount}]");
         }
 
         public async Task<bool> WaitAsync()
@@ -45,7 +46,8 @@ namespace cl2j.Tooling
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"CacheLoader<{name}> : Unexpected error while doing the refresh.");
+                if (logger.IsEnabled(LogLevel.Error))
+                    logger.LogError(ex, $"CacheLoader<{name}> : Unexpected error while doing the refresh.");
             }
             finally
             {

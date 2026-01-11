@@ -5,7 +5,7 @@ namespace cl2j.FileStorage.Core
 {
     public class FileStorageFactory(IConfigurationRoot configuration) : IFileStorageFactory
     {
-        private static readonly object Lock = new();
+        private static readonly Lock Lock = new();
         private readonly List<string> registrations = [];
         private static readonly Dictionary<string, IFileStorageProvider> storageProviderInstances = [];
 

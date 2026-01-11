@@ -26,12 +26,14 @@ namespace cl2j.Tooling.Email
                 var client = CreateSmtpClient(smtpSettings);
                 await client.SendMailAsync(message);
 
-                logger.LogInformation($"Sent email sent to '{toEmail}' (from={from})");
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation($"Sent email sent to '{toEmail}' (from={from})");
                 return true;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Unexpected error while sending email to '{toEmail}'");
+                if (logger.IsEnabled(LogLevel.Error))
+                    logger.LogError(ex, $"Unexpected error while sending email to '{toEmail}'");
                 return false;
             }
         }
@@ -53,7 +55,8 @@ namespace cl2j.Tooling.Email
             if (smtpSettings.ErrorTo == null)
                 throw new ValidationException("'ErrorTo' Smtp configuration is missing");
 
-            logger.LogError(ex, $"{subject} : {details}");
+            if (logger.IsEnabled(LogLevel.Error))
+                logger.LogError(ex, $"{subject} : {details}");
             return await SendEmailAsync(smtpSettings.From, subject, details + Environment.NewLine + ex.Message, smtpSettings.ErrorTo, isBodyHtml);
         }
 

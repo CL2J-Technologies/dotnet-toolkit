@@ -16,6 +16,7 @@ namespace cl2j.Database.CommandBuilders
 
         TextStatement GetInsertStatement(Type type);
         TextStatement GetUpdateStatement(Type type);
+        TextStatement GetUpdateColumnStatement(Type type, string columnName);
         TextStatement GetDeleteStatement(Type type);
 
         TextStatement GetQueryStatement(Type type);

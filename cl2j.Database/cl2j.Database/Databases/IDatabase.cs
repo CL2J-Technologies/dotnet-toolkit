@@ -12,6 +12,7 @@ namespace cl2j.Database.Databases
         Task<string> NewKey<T>();
         Task<T> Insert<T>(T t) where T : class;
         Task<T> Update<T>(T t) where T : class;
+        Task Update<T, TValue>(T t, string columnName, TValue value) where T : class;
         Task DeleteKey<T>(object key) where T : class;
 
         Task<string> BuildSelectStatement<T>(string? sqlStatement = null);

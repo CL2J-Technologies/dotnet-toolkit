@@ -22,9 +22,9 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             if (string.IsNullOrEmpty(settings.Container))
                 throw new NotFoundException("FileStorageProviderDisk: ContainerName configuration not defined.");
 
-            container = new BlobContainerClient(settings.ConnectionString, settings.Container);
             try
             {
+                container = new BlobContainerClient(settings.ConnectionString, settings.Container);
                 container.CreateIfNotExists();
             }
             catch (Exception ex)

@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Text.Json;
 using cl2j.Database.Descriptors;
 
 namespace cl2j.Database.Helpers
@@ -37,7 +36,7 @@ namespace cl2j.Database.Helpers
                     else
                     {
                         if (column.ColumnAtribute.Json)
-                            values[i] = JsonSerializer.Serialize(v, ConnectionExtensions.JsonSerializeOptions);
+                            values[i] = ConnectionExtensions.ToJsonString(v);
                         else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
                             values[i] = DateTimeOffset.UtcNow;
                         else
