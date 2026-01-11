@@ -466,7 +466,7 @@ namespace cl2j.Database
                 parameter.Value = ToJsonString(value);
                 parameter.DbType = DbType.String;
             }
-            else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
+            else if (value is null && column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
                 parameter.Value = DateTimeOffset.UtcNow;
             else
                 parameter.Value = value ?? DBNull.Value;
