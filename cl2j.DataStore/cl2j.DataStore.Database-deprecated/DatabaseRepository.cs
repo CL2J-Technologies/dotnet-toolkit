@@ -19,13 +19,15 @@ namespace cl2j.DataStore.Database
                 var sw = Stopwatch.StartNew();
                 using var connection = await CreateConnection();
                 var list = (await connection.QueryAsync<T>(sql, param)).ToList();
-                logger.LogTrace($"GetAll<{typeof(T).Name}>({param}) -> {list.Count} [{sw.ElapsedMilliseconds}ms]");
+                if (logger.IsEnabled(LogLevel.Trace))
+                    logger.LogTrace($"GetAll<{typeof(T).Name}>({param}) -> {list.Count} [{sw.ElapsedMilliseconds}ms]");
 
                 return list;
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, $"DatabaseRepository.GetAll<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(ex, $"DatabaseRepository.GetAll<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -40,7 +42,8 @@ namespace cl2j.DataStore.Database
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, $"DatabaseRepository.Get<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(ex, $"DatabaseRepository.Get<{typeof(T).Name}> - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
@@ -54,7 +57,8 @@ namespace cl2j.DataStore.Database
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, $"DatabaseRepository.Insert<{typeof(T).Name}> - Exception thrown");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(ex, $"DatabaseRepository.Insert<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }
@@ -68,7 +72,8 @@ namespace cl2j.DataStore.Database
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, $"DatabaseRepository.Update<{typeof(T).Name}> - Exception thrown");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(ex, $"DatabaseRepository.Update<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }
@@ -82,7 +87,8 @@ namespace cl2j.DataStore.Database
             }
             catch (Exception ex)
             {
-                logger.LogDebug(ex, $"DatabaseRepository.Execute - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(ex, $"DatabaseRepository.Execute - Exception thrown\n\tsql={sql}\n\tparameters={param}\n\tException={ex.Message}");
                 throw;
             }
         }
