@@ -14,11 +14,11 @@ namespace cl2j.Smapper
             return destination;
         }
 
-        public static TSource? Clone<TSource>(this TSource source)
+        public static TSource Clone<TSource>(this TSource source)
             where TSource : class
         {
             var data = JsonSerializer.Serialize(source);
-            var cloned = JsonSerializer.Deserialize<TSource>(data);
+            var cloned = JsonSerializer.Deserialize<TSource>(data) ?? throw new InvalidOperationException();
             return cloned;
         }
 
