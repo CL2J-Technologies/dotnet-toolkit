@@ -47,6 +47,7 @@ namespace cl2j.FileStorage.Provider.Disk
                 return new FileStoreFileInfo
                 {
                     Size = fi.Length,
+                    CreatedOn = fi.CreationTimeUtc,
                     LastModified = fi.LastWriteTimeUtc,
                     Created = fi.CreationTime
                 };

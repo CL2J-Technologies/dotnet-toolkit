@@ -57,6 +57,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             return new FileStoreFileInfo
             {
                 Size = prop.ContentLength,
+                CreatedOn = prop.CreatedOn.DateTime,
                 LastModified = prop.LastModified.DateTime,
                 Created = prop.CreatedOn.DateTime
             };
