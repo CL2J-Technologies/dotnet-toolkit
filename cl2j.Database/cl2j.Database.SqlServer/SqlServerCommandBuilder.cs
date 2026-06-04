@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 
 namespace cl2j.Database.SqlServer
 {
-    internal class SqlServerCommandBuilder(IIdentifierGenerator? identifierGenerator) : ICommandBuilder, IDatabaseFormatter
+    internal sealed class SqlServerCommandBuilder(IIdentifierGenerator? identifierGenerator) : ICommandBuilder, IDatabaseFormatter
     {
         private readonly IIdentifierGenerator identifierGenerator = identifierGenerator ?? GuidIdentifierGenerator.Default;
 

@@ -16,11 +16,7 @@ namespace cl2j.Logging
             {
                 var defaultLogLevel = loggingSection?.GetValue<LogLevel?>("LogLevel");
                 if (defaultLogLevel != null)
-                {
-                    loggingBuilder.SetMinimumLevel(defaultLogLevel.Value);
-                    AddFilter(loggingBuilder, "", defaultLogLevel.Value);
-                    return;
-                }
+                    loggingBuilder.AddFilter<LoggerProvider>("", defaultLogLevel.Value);
             });
 
             // Registering LoggerProvider to handle FileStorage + Console + Debug Logging
@@ -47,9 +43,5 @@ namespace cl2j.Logging
             return AddLogging(services, (IConfiguration)configuration, applicationName);
         }
 
-        private static void AddFilter(ILoggingBuilder loggingBuilder, string key, LogLevel logLevel)
-        {
-            loggingBuilder.AddFilter(key, logLevel);
-        }
     }
 }

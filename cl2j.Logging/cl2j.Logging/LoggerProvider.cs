@@ -36,7 +36,7 @@ namespace cl2j.Logging
 
         public ILogger CreateLogger(string categoryName)
         {
-            return new Logger(this, categoryName, options.Filters, DateTimeProvider.Create(options.TimeZoneName));
+            return new Logger(this, categoryName, DateTimeProvider.Create(options.TimeZoneName));
         }
 
         public void Dispose()

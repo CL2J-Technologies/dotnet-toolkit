@@ -1,0 +1,33 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/cl2j.Database/">
+    <Project Path="cl2j.Database/cl2j.Database.SqlServer/cl2j.Database.SqlServer.csproj" />
+    <Project Path="cl2j.Database/cl2j.Database/cl2j.Database.csproj" />
+  </Folder>
+  <Folder Name="/cl2j.DataStore/">
+    <Project Path="cl2j.DataStore/cl2j.DataStore.Json/cl2j.DataStore.Json.csproj" />
+  </Folder>
+  <Folder Name="/cl2j.FileStorage/" />
+  <Folder Name="/cl2j.Scripting/" />
+  <Folder Name="/DataStore/">
+    <Project Path="cl2j.DataStore/cl2j.DataStore/cl2j.DataStore.csproj" />
+  </Folder>
+  <Folder Name="/FileStorage/">
+    <Project Path="cl2j.FileStorage/cl2j.FileStorage.Provider.AzureBlobStorage/cl2j.FileStorage.Provider.AzureBlobStorage.csproj" />
+    <Project Path="cl2j.FileStorage/cl2j.FileStorage/cl2j.FileStorage.csproj" />
+  </Folder>
+  <Folder Name="/Logging/">
+    <Project Path="cl2j.Logging/cl2j.Logging/cl2j.Logging.csproj" />
+  </Folder>
+  <Folder Name="/Scripting/">
+    <Project Path="cl2j.Scripting/cl2j.Scripting/cl2j.Scripting.csproj" />
+  </Folder>
+  <Project Path="cl2j.Image/cl2j.Image.csproj" />
+  <Project Path="cl2j.Smapper/cl2j.Smapper.csproj" />
+  <Project Path="cl2j.Tooling/cl2j.Tooling.csproj" />
+  <Project Path="cl2j.WebTooling/cl2j.WebTooling.csproj" />
+</Solution>

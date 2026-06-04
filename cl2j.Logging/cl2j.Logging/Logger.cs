@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace cl2j.Logging
 {
     [DebuggerStepThrough]
-    internal sealed class Logger(LoggerProvider provider, string categoryName, Dictionary<string, LogLevel> filters, IDateTimeProvider dateTimeProvider) : ILogger
+    internal sealed class Logger(LoggerProvider provider, string categoryName, IDateTimeProvider dateTimeProvider) : ILogger
     {
         private readonly Dictionary<LogLevel, string> logLevelDescriptions = new()
         {
@@ -35,22 +35,13 @@ namespace cl2j.Logging
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return logLevel < LogLevel.None;
+            return logLevel != LogLevel.None;
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             if (!IsEnabled(logLevel))
                 return;
-
-            if (filters != null)
-            {
-                foreach (var kvp in filters)
-                {
-                    if (categoryName.StartsWith(kvp.Key, StringComparison.InvariantCulture) && logLevel < kvp.Value)
-                        return;
-                }
-            }
 
             var sb = new StringBuilder();
             sb.Append($"{dateTimeProvider.Now():yyyy-MM-dd HH:mm:ss.fff} {logLevelDescriptions[logLevel]} [{categoryName}] ");

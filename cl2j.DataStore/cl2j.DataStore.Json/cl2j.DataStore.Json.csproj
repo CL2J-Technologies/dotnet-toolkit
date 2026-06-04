@@ -1,13 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>cl2j.DataStore.Json</PackageId>
+    <Description>JSON file provider for cl2j.DataStore.</Description>
+  </PropertyGroup>
 
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<AnalysisMode>Recommended</AnalysisMode>
-	</PropertyGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />
+  </ItemGroup>
 </Project>
