@@ -1,21 +1,27 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IsPackable>true</IsPackable>
+		<PackageId>cl2j.DataStore.Database-deprecated</PackageId>
+		<Version>2.0.1</Version>
+		<Authors>jfblier</Authors>
+		<Description>Deprecated SQL database repository implementation for cl2j.DataStore. Kept for backward compatibility during migration to cl2j.Database.</Description>
+		<PackageTags>cl2j;datastore;database;dapper</PackageTags>
+		<RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
 		<PackageReference Include="Dapper" Version="2.1.72" />
 		<PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+		<PackageReference Include="cl2j.DataStore" Version="2.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Include=".editorconfig" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />
-	</ItemGroup>
 </Project>
