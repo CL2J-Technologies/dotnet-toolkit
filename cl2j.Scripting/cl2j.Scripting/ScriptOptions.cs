@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using cl2j.Scripting.InstanceCreators;
 using cl2j.Tooling;
@@ -10,6 +11,19 @@ namespace cl2j.Scripting
     {
         private const string DefaultMethodName = "Execute";
         private const string DefaultInputName = "context";
+
+        // One reference per assembly file, for the life of the process. MetadataReference.CreateFromFile
+        // memory-maps the file it is given, and the compilation it is handed to holds that mapping for as
+        // long as the compiled script lives — which, for a cached script, is the life of the process.
+        // Creating a fresh reference per compilation therefore kept a whole copy of the assembly set
+        // alive per script: 58 MB a compilation in a console, ~135 MB in an ASP.NET host with three
+        // hundred assemblies loaded. None of it is on the managed heap, so no collection ever gives it
+        // back — twenty compiled scripts and the process is holding gigabytes of the same metadata.
+        //
+        // The files do not change while the process runs, so one reference shared across every
+        // compilation is both correct and what Roslyn asks for: it also lets it reuse metadata it has
+        // already read instead of parsing each assembly again.
+        private static readonly ConcurrentDictionary<string, PortableExecutableReference> ReferenceCache = new(StringComparer.Ordinal);
 
         private int assemblyLoadCountDuplicates;
 
@@ -55,13 +69,12 @@ namespace cl2j.Scripting
 
             try
             {
-                if (!Assemblies.Any(a => a.FilePath == location))
-                {
-                    //Console.WriteLine($"ScriptOptions.AddAssembly('{assembly.FullName}'): {assembly.Location}");
-                    var reference = MetadataReference.CreateFromFile(location);
-                    Assemblies.Add(reference);
-                }
-                else
+                // Shared, so the set can be a plain reference-equality Add: two references built from
+                // one file used to compare unequal, which is why this had to scan the whole set by path
+                // on every one of the several thousand assemblies an AddDefault walks through.
+                var reference = ReferenceCache.GetOrAdd(location, static path => MetadataReference.CreateFromFile(path));
+
+                if (!Assemblies.Add(reference))
                     ++assemblyLoadCountDuplicates;
 
                 return true;
