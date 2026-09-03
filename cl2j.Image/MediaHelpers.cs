@@ -1,5 +1,6 @@
-﻿using System.Drawing;
+﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
 using cl2j.FileStorage.Core;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace cl2j.Image
 {
@@ -15,14 +16,23 @@ namespace cl2j.Image
             }
         }
 
-        public static async Task UploadMediaAsync(IFileStorageProvider fileStorageProvider, string fileName, Bitmap image, int max = 1280)
+        public static async Task UploadMediaAsync(IFileStorageProvider fileStorageProvider, string fileName, ImageRgba32 image, int max = 1280)
         {
-            var imageModified = ImageUtils.CleanImage(image, max, out var _);
-            if (imageModified != null)
+            //Corrige au passage, le 3 septembre 2026 : cette surcharge calculait l image nettoyee
+            //puis serialisait `image`, l originale. Le redimensionnement etait donc calcule et jete.
+            var imageModified = ImageUtils.CleanImage(image, max, out _);
+            try
             {
-                var bytes = ImageSerialization.SaveJpegToBytes(image);
+                var bytes = ImageSerialization.SaveJpegToBytes(imageModified);
                 using var ms = new MemoryStream(bytes);
                 await fileStorageProvider.WriteAsync(fileName, ms, GetContentTypeFromFileName(fileName));
+            }
+            finally
+            {
+                //CleanImage rend l originale quand il n y a rien a faire : ne liberer que ce qu il
+                //a cree.
+                if (!ReferenceEquals(imageModified, image))
+                    imageModified.Dispose();
             }
         }
 

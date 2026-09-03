@@ -1,83 +1,55 @@
-﻿using System.Drawing;
+﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace cl2j.Image
 {
     public static class ExifUtils
     {
-        public static bool RotateFlipIfRequired(Bitmap image)
+        //Porte sur ImageSharp le 3 septembre 2026, voir ImageResizer pour le pourquoi.
+        //
+        //L ancienne version deroulait a la main les huit valeurs du tag 274 en RotateFlipType.
+        //ImageSharp fait exactement ce travail dans AutoOrient, y compris les quatre cas mirroir,
+        //et retire l etiquette derriere lui. On garde la valeur de retour — « l image a-t-elle ete
+        //modifiee » — que les appelants utilisent pour decider s il faut reencoder.
+        public static bool RotateFlipIfRequired(ImageRgba32 image)
         {
-            if (Array.IndexOf(image.PropertyIdList, 274) > -1)
-            {
-                //1 = Horizontal(normal). No rotation required.
-                //2 = Mirror horizontal
-                //3 = Rotate 180
-                //4 = Mirror vertical
-                //5 = Mirror horizontal and rotate 270 CW
-                //6 = Rotate 90 CW
-                //7 = Mirror horizontal and rotate 90 CW
-                //8 = Rotate 270 CW
+            var orientation = LireOrientation(image);
 
-                var pi = image.GetPropertyItem(274);
-                if (pi != null && pi.Value != null && pi.Value.Length > 0)
-                {
-                    var orientation = (int)pi.Value[0];
-                    switch (orientation)
-                    {
-                        case 1:
-                            break;
+            //1 = Horizontal (normal), rien a faire. Absente, rien a faire non plus.
+            if (orientation is null or 1)
+                return false;
 
-                        case 2:
-                            image.RotateFlip(RotateFlipType.RotateNoneFlipX);
-                            break;
-
-                        case 3:
-                            image.RotateFlip(RotateFlipType.Rotate180FlipNone);
-                            break;
-
-                        case 4:
-                            image.RotateFlip(RotateFlipType.Rotate180FlipX);
-                            break;
-
-                        case 5:
-                            image.RotateFlip(RotateFlipType.Rotate90FlipX);
-                            break;
-
-                        case 6:
-                            image.RotateFlip(RotateFlipType.Rotate90FlipNone);
-                            break;
-
-                        case 7:
-                            image.RotateFlip(RotateFlipType.Rotate270FlipX);
-                            break;
-
-                        case 8:
-                            image.RotateFlip(RotateFlipType.Rotate270FlipNone);
-                            break;
-                    }
-
-                    if (orientation > 1)
-                    {
-                        // This EXIF data is now invalid and should be removed.
-                        image.RemovePropertyItem(274);
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            image.Mutate(x => x.AutoOrient());
+            return true;
         }
 
-        public static bool Strip(Bitmap image)
+        public static bool Strip(ImageRgba32 image)
         {
-            var modified = image.PropertyItems.Length > 0;
+            var metadata = image.Metadata;
+            var modified = metadata.ExifProfile is not null
+                || metadata.IptcProfile is not null
+                || metadata.XmpProfile is not null
+                || metadata.IccProfile is not null;
 
-            while (image.PropertyItems.Length > 0)
-            {
-                var pi = image.PropertyItems[0];
-                image.RemovePropertyItem(pi.Id);
-            }
+            metadata.ExifProfile = null;
+            metadata.IptcProfile = null;
+            metadata.XmpProfile = null;
+            metadata.IccProfile = null;
 
             return modified;
+        }
+
+        private static ushort? LireOrientation(ImageRgba32 image)
+        {
+            var profile = image.Metadata.ExifProfile;
+            if (profile is null)
+                return null;
+
+            return profile.TryGetValue(ExifTag.Orientation, out var value) && value.Value is ushort orientation
+                ? orientation
+                : null;
         }
     }
 }

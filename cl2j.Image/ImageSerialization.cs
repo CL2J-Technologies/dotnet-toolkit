@@ -1,50 +1,39 @@
-﻿using System.Drawing.Imaging;
-using cl2j.Tooling.Exceptions;
+﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace cl2j.Image
 {
     public class ImageSerialization
     {
-        public static void SaveJpeg(string path, System.Drawing.Image img, long quality = 75L)
+        //Porte sur ImageSharp le 3 septembre 2026, voir ImageResizer pour le pourquoi.
+        //
+        //`quality` reste un `long` pour ne pas casser les appelants, qui passent tous `75L`.
+        //ImageSharp attend un entier de 1 a 100, comme le faisait l encodeur JPEG de GDI+.
+        public static void SaveJpeg(string path, ImageRgba32 image, long quality = 75L)
         {
-            var jpegCodec = GetEncoderInfo("image/jpeg");
-            var encoderParams = CreateEncoder(quality);
-
-            img.Save(path, jpegCodec, encoderParams);
+            image.Save(path, Encoder(quality));
         }
 
-        public static Stream SaveJpegToStream(System.Drawing.Image image, long quality = 75L)
+        public static Stream SaveJpegToStream(ImageRgba32 image, long quality = 75L)
         {
-            var jpegCodec = GetEncoderInfo("image/jpeg");
-            var encoderParams = CreateEncoder(quality);
-
             var ms = new MemoryStream();
-            image.Save(ms, jpegCodec, encoderParams);
+            image.Save(ms, Encoder(quality));
+            ms.Position = 0;
             return ms;
         }
 
-        public static byte[] SaveJpegToBytes(System.Drawing.Image image, long quality = 75L)
+        public static byte[] SaveJpegToBytes(ImageRgba32 image, long quality = 75L)
         {
-            var jpegCodec = GetEncoderInfo("image/jpeg");
-            var encoderParams = CreateEncoder(quality);
-
             using var ms = new MemoryStream();
-            image.Save(ms, jpegCodec, encoderParams);
+            image.Save(ms, Encoder(quality));
             return ms.ToArray();
         }
 
-        private static EncoderParameters CreateEncoder(long quality)
+        private static JpegEncoder Encoder(long quality)
         {
-            var qualityParam = new EncoderParameter(Encoder.Quality, quality);
-            var encoderParams = new EncoderParameters(1);
-            encoderParams.Param[0] = qualityParam;
-            return encoderParams;
-        }
-
-        public static ImageCodecInfo GetEncoderInfo(string mimeType)
-        {
-            var jpegCodec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(t => t.MimeType == mimeType) ?? throw new NotFoundException($"{mimeType} codec doesn't exists.");
-            return jpegCodec;
+            return new JpegEncoder { Quality = (int)Math.Clamp(quality, 1, 100) };
         }
     }
 }

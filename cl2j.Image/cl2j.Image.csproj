@@ -2,12 +2,21 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Image</PackageId>
-    <Description>Image utilities: EXIF data extraction, image comparison, and resizing.</Description>
+    <Description>Image utilities: EXIF data extraction, image comparison, and resizing. Cross-platform, on ImageSharp.</Description>
+
+    <!-- 3.0.0 : changement rupteur, la surface publique passe de System.Drawing.Bitmap a
+         SixLabors.ImageSharp.Image<Rgba32>. Le numero est surcharge ici plutot que dans
+         Directory.Build.props, qui porte la version commune a tous les paquets du depot.
+         Sans ce numero, la publication serait sautee par l option skip-duplicate du workflow :
+         2.0.0 existe deja sur nuget.org, et le correctif n atteindrait jamais le flux. -->
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- System.Drawing.Common retire le 3 septembre 2026. Il leve
+         PlatformNotSupportedException hors Windows depuis .NET 6, ce qui rendait cette
+         bibliotheque muette et inoperante sous Linux. Ne pas le reintroduire. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="System.Drawing.Common" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>

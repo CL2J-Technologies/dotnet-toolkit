@@ -1,5 +1,6 @@
-﻿using System.Diagnostics;
-using System.Drawing;
+﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
+using System.Diagnostics;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace cl2j.Image
 {
@@ -16,7 +17,7 @@ namespace cl2j.Image
             public string Name2 { get; set; } = null!;
         }
 
-        public static bool AreImagesIdentical(Bitmap image1, Bitmap image2, ImageCompareSettings settings)
+        public static bool AreImagesIdentical(ImageRgba32 image1, ImageRgba32 image2, ImageCompareSettings settings)
         {
             if (image1 == null || image2 == null)
                 return false;
@@ -90,7 +91,7 @@ namespace cl2j.Image
             return false;
         }
 
-        public static bool Compare(Bitmap image1, Bitmap image2, out int diff)
+        public static bool Compare(ImageRgba32 image1, ImageRgba32 image2, out int diff)
         {
             diff = 0;
 
@@ -101,8 +102,8 @@ namespace cl2j.Image
             {
                 for (int y = 0; y < image1.Height; ++y)
                 {
-                    var c1 = image1.GetPixel(x, y);
-                    var c2 = image2.GetPixel(x, y);
+                    var c1 = image1[x, y];
+                    var c2 = image2[x, y];
                     diff += c1.DiffGrayscale(c2);
                 }
             }
@@ -112,7 +113,7 @@ namespace cl2j.Image
             return true;
         }
 
-        public static double Equals(Bitmap image1, Bitmap image2, int pixelDiffMax)
+        public static double Equals(ImageRgba32 image1, ImageRgba32 image2, int pixelDiffMax)
         {
             if (image1.Width != image2.Width || image1.Height != image2.Height)
                 return 0;
@@ -122,8 +123,8 @@ namespace cl2j.Image
             {
                 for (int y = 0; y < image1.Height; ++y)
                 {
-                    var c1 = image1.GetPixel(x, y);
-                    var c2 = image2.GetPixel(x, y);
+                    var c1 = image1[x, y];
+                    var c2 = image2[x, y];
                     var diff = c1.DiffGrayscale(c2);
                     if (diff <= pixelDiffMax)
                         ++nbPixelEquals;

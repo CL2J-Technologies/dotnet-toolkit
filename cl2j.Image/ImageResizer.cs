@@ -1,30 +1,33 @@
-﻿using System.Drawing;
-using System.Drawing.Drawing2D;
+﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace cl2j.Image
 {
     public class ImageResizer
     {
-        public static Bitmap Resize(Bitmap image, int newWidth, int newHeight)
+        //Porte sur ImageSharp le 3 septembre 2026. System.Drawing leve
+        //PlatformNotSupportedException sur tout ce qui n est pas Windows depuis .NET 6, et le site
+        //Appartogo tourne sous Linux : son portail n a jamais produit une seule vignette, sans une
+        //ligne d erreur. Voir l entree s19 du journal du depot cl2j.
+        //
+        //Les images rendues appartiennent a l appelant, qui doit les liberer. C etait deja la
+        //convention avec Bitmap ; le portage ne l a pas changee.
+        public static ImageRgba32 Resize(ImageRgba32 image, int newWidth, int newHeight)
         {
             if (image.Width == newWidth && image.Height == newHeight)
                 return image;
 
-            var res = new Bitmap(newWidth, newHeight);
-
-            using (var graphic = Graphics.FromImage(res))
+            //Bicubique, comme l ancien InterpolationMode.HighQualityBicubic.
+            return image.Clone(x => x.Resize(new ResizeOptions
             {
-                graphic.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                graphic.SmoothingMode = SmoothingMode.HighQuality;
-                graphic.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                graphic.CompositingQuality = CompositingQuality.HighQuality;
-                graphic.DrawImage(image, 0, 0, newWidth, newHeight);
-            }
-
-            return res;
+                Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
+                Sampler = KnownResamplers.Bicubic,
+                Mode = ResizeMode.Stretch
+            }));
         }
 
-        public static Bitmap ResizeIfOversize(Bitmap image, int maxW, int maxH)
+        public static ImageRgba32 ResizeIfOversize(ImageRgba32 image, int maxW, int maxH)
         {
             int newW;
             int newH;
@@ -39,7 +42,10 @@ namespace cl2j.Image
                 newH = maxH;
             }
 
-            return Resize(image, newW, newH);
+            //Une image tres allongee pouvait rendre une dimension nulle, sur quoi Bitmap levait.
+            //On borne a 1 : ImageSharp leve aussi, et un panorama ne doit pas faire tomber un
+            //cycle d agregation.
+            return Resize(image, Math.Max(1, newW), Math.Max(1, newH));
         }
     }
 }
