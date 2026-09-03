@@ -9,6 +9,10 @@ namespace cl2j.FileStorage.Provider.Disk
         private DirectoryInfo directory = null!;
         private const int BufferSize = 4096;
 
+        //Suffixe des fichiers temporaires de WriteAsync. Il sert deux fois : a les nommer, et a les
+        //ecarter des listings.
+        private const string TemporarySuffix = ".tmp";
+
         public void Initialize(string providerName, IConfigurationSection configuration)
         {
             Name = providerName;
@@ -66,7 +70,10 @@ namespace cl2j.FileStorage.Provider.Disk
             if (!Directory.Exists(fullName))
                 return [];
 
-            var list = Directory.GetFiles(fullName);
+            //Les temporaires de WriteAsync sont exclus : ils ne vivent normalement qu une fraction
+            //de seconde, mais un processus tue pendant une ecriture peut en laisser un. Il ne doit
+            //jamais passer pour une donnee aux yeux d un appelant qui balaie le dossier.
+            var list = Directory.GetFiles(fullName).Where(n => !n.EndsWith(TemporarySuffix, StringComparison.Ordinal));
             return list.Select(n => n[(fullName.Length + 1)..]);
         }
 
@@ -86,7 +93,11 @@ namespace cl2j.FileStorage.Provider.Disk
         {
             try
             {
-                var fs = new FileStream(GetName(name), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                //FileShare.Delete en plus, depuis que WriteAsync remplace la cible par renommage :
+                //sous Windows, `MoveFileEx` echoue si le fichier remplace est ouvert sans ce
+                //partage. Sans lui, une lecture en cours empecherait une ecriture qui, avant,
+                //passait — la troncature, elle, ne demandait rien.
+                var fs = new FileStream(GetName(name), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(fs);
                 await fs.CopyToAsync(stream);
                 return true;
@@ -97,16 +108,89 @@ namespace cl2j.FileStorage.Provider.Disk
             }
         }
 
+        /// <summary>
+        /// Ecriture atomique : le fichier cible est soit l ancien, soit le nouveau, jamais entre
+        /// les deux.
+        ///
+        /// **Pourquoi, depuis le 3 septembre 2026.** L implementation precedente ouvrait la cible
+        /// en `FileMode.Create`, qui la **tronque a zero avant d ecrire**. Un processus interrompu
+        /// entre les deux — sur Appartogo, une VM desallouee par sa Logic App pendant qu un cycle
+        /// de crawl ecrivait — laissait un fichier vide ou partiel. Le stockage Azure du meme
+        /// projet ne connait pas ce probleme : un blob n y devient visible qu une fois l envoi
+        /// valide. Le disque local n avait pas la meme garantie ; il l a maintenant.
+        ///
+        /// Le temporaire est cree **dans le meme dossier** que la cible, donc sur le meme volume :
+        /// c est la condition pour que `File.Move` soit atomique — `MoveFileEx` avec
+        /// `MOVEFILE_REPLACE_EXISTING` sous Windows, `rename` sous Linux.
+        ///
+        /// `Flush(flushToDisk: true)` pousse les octets jusqu au disque avant le renommage. Sans
+        /// lui, l atomicite ne tiendrait que face a la mort du processus, pas face a une coupure
+        /// brutale de la machine : NTFS journalise les metadonnees, pas le contenu.
+        /// </summary>
         public async Task WriteAsync(string name, Stream stream, string? contentType)
         {
             var fileName = GetName(name);
             CreateDirectory(fileName);
 
-            using var outputStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, BufferSize, true);
-            var bytes = new byte[stream.Length];
-            stream.Seek(0, SeekOrigin.Begin);
-            var actualCount = await stream.ReadAsync(bytes);
-            await outputStream.WriteAsync(bytes.AsMemory(0, actualCount));
+            var temporaryFileName = $"{fileName}.{Guid.NewGuid():N}{TemporarySuffix}";
+            try
+            {
+                using (var outputStream = new FileStream(temporaryFileName, FileMode.CreateNew, FileAccess.Write, FileShare.None, BufferSize, true))
+                {
+                    var bytes = new byte[stream.Length];
+                    stream.Seek(0, SeekOrigin.Begin);
+                    var actualCount = await stream.ReadAsync(bytes);
+                    await outputStream.WriteAsync(bytes.AsMemory(0, actualCount));
+
+                    await outputStream.FlushAsync();
+                    outputStream.Flush(flushToDisk: true);
+                }
+
+                ReplaceAtomically(temporaryFileName, fileName);
+            }
+            catch
+            {
+                //Ne jamais laisser un temporaire derriere soi : il ne porte pas le nom attendu, donc
+                //personne ne le lira jamais, et il grossirait le dossier a chaque echec.
+                TryDelete(temporaryFileName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Remplace la cible par le temporaire, en un geste.
+        ///
+        /// `File.Replace` plutot que `File.Move(overwrite: true)` : sous Windows, Move echoue avec
+        /// « Access to the path is denied » des qu un lecteur tient la cible ouverte, meme en
+        /// partage. `ReplaceFile`, sur lequel Replace s appuie, est concu pour ce cas. Le detail
+        /// n est pas theorique — il est verifie par un test, et l ancienne implementation par
+        /// troncature n avait pas cette contrainte : la perdre aurait ete une regression.
+        /// </summary>
+        private static void ReplaceAtomically(string temporaryFileName, string fileName)
+        {
+            try
+            {
+                File.Replace(temporaryFileName, fileName, destinationBackupFileName: null, ignoreMetadataErrors: true);
+            }
+            catch (FileNotFoundException)
+            {
+                //Replace exige une cible existante, Move non. C est le cas du premier ecrit.
+                File.Move(temporaryFileName, fileName, overwrite: true);
+            }
+        }
+
+        private static void TryDelete(string fileName)
+        {
+            try
+            {
+                if (File.Exists(fileName))
+                    File.Delete(fileName);
+            }
+            catch
+            {
+                //Rien a faire de plus : on est deja dans un chemin d erreur, et masquer l exception
+                //d origine par celle du menage serait pire.
+            }
         }
 
         public async Task AppendAsync(string name, Stream stream)

@@ -3,6 +3,13 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.FileStorage</PackageId>
     <Description>Multi-provider file storage abstraction: read, write, delete, and more. Extensible via Dependency Injection.</Description>
+
+    <!-- 2.1.0 : les ecritures du fournisseur disque sont devenues atomiques. Aucune rupture
+         d API, mais un comportement qui change — d ou le mineur, et non le correctif. Le numero
+         est surcharge ici parce que Directory.Build.props porte la version commune du depot :
+         sans lui, l option skip-duplicate du workflow sauterait la publication, 2.0.0 existant
+         deja, et le correctif n atteindrait jamais cooperius ni TourDuChapeau. -->
+    <Version>2.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
