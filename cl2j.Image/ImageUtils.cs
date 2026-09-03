@@ -458,6 +458,31 @@ namespace cl2j.Image
         /// ce `null` : aucune vignette n a jamais ete produite, sans une ligne de journal. Un
         /// appelant qui ne peut rien faire d un `null` doit lever ou journaliser, jamais continuer.
         /// </summary>
+        /// <summary>
+        /// Rend vrai si les octets portent une image d un format reconnu, en ne lisant que
+        /// l en-tete — pas de decodage complet, donc negligeable devant un telechargement.
+        ///
+        /// Sert a repondre a une question que le code appelant doit poser avant de stocker quoi que
+        /// ce soit : « ce que la source vient de me rendre est-il vraiment une image ? ». Le
+        /// 3 septembre 2026, le crawler d Appartogo stockait la page d accueil de LogisQuebec sous
+        /// un nom en `.jpg` — la source redirigeait ses photos supprimees vers son accueil, et
+        /// `HttpClient` suit les redirections tout seul.
+        /// </summary>
+        public static bool IsImage(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length == 0)
+                return false;
+
+            try
+            {
+                return ISImage.Identify(bytes) is not null;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         public static ImageRgba32? ReadImage(byte[] bytes)
         {
             if (bytes == null)

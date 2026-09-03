@@ -93,6 +93,30 @@ namespace cl2j.Image.Tests
         }
 
         [Fact]
+        public void IsImage_reconnait_un_jpeg()
+        {
+            Assert.True(ImageUtils.IsImage(Jpeg(64, 48)));
+        }
+
+        [Theory]
+        [InlineData("<!DOCTYPE html>\r\n<html lang=\"fr\"><head><title>LogisQuebec</title></head></html>")]
+        [InlineData("")]
+        [InlineData("not an image at all")]
+        public void IsImage_refuse_ce_qui_n_est_pas_une_image(string contenu)
+        {
+            //Le cas qui compte est le premier : une source qui redirige ses photos supprimees vers
+            //sa page d accueil rend du HTML avec un code 200, et HttpClient suit la redirection
+            //tout seul. Sans cette garde, la page est stockee sous un nom en .jpg.
+            Assert.False(ImageUtils.IsImage(System.Text.Encoding.UTF8.GetBytes(contenu)));
+        }
+
+        [Fact]
+        public void IsImage_refuse_des_octets_absents()
+        {
+            Assert.False(ImageUtils.IsImage(null!));
+        }
+
+        [Fact]
         public void Strip_retire_le_profil_exif()
         {
             using var image = new ImageRgba32(10, 10);
