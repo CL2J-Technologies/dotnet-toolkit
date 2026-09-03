@@ -28,6 +28,7 @@
     <Project Path="cl2j.Scripting/cl2j.Scripting/cl2j.Scripting.csproj" />
   </Folder>
   <Project Path="cl2j.Image/cl2j.Image.csproj" />
+  <Project Path="cl2j.Image.Tests/cl2j.Image.Tests.csproj" />
   <Project Path="cl2j.Smapper/cl2j.Smapper.csproj" />
   <Project Path="cl2j.Tooling/cl2j.Tooling.csproj" />
   <Project Path="cl2j.WebTooling/cl2j.WebTooling.csproj" />
