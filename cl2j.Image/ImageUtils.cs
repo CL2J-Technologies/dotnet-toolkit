@@ -488,18 +488,12 @@ namespace cl2j.Image
 
             try
             {
-                if (ISImage.Identify(bytes) is not null)
-                    return true;
+                return ISImage.Identify(bytes) is not null;
             }
             catch (Exception)
             {
-                //On tombe dans le repli ci-dessous.
+                return false;
             }
-
-            //Un HEIC est une image, meme si ImageSharp ne sait pas la lire. Sans ce repli, la garde
-            //ajoutee le 3 septembre — celle qui empeche de stocker une page HTML sous un nom en
-            //`.jpg` — rejetterait aussi toutes les photos d iPhone.
-            return FormatsEtendus.Identifier(bytes) is not null;
         }
 
         public static ImageRgba32? ReadImage(byte[] bytes)
@@ -513,10 +507,48 @@ namespace cl2j.Image
             }
             catch (Exception)
             {
-                //Repli sur ImageMagick : HEIC, AVIF, et les autres formats qu ImageSharp ne connait
-                //pas. Voir FormatsEtendus, y compris sa note de securite.
-                return FormatsEtendus.Decoder(bytes);
+                return null;
             }
+        }
+
+        /// <summary>
+        /// Nomme le format d un fichier qu `ImageSharp` ne sait pas lire, en lisant sa signature.
+        /// Rend `null` quand le format n est pas reconnu. Sert a **expliquer un refus**, jamais a
+        /// decider d accepter : rien ici ne decode quoi que ce soit.
+        ///
+        /// **Pourquoi cette methode existe.** Decision du client, 4 septembre 2026 : aucune
+        /// bibliotheque native ne sera ajoutee pour decoder le HEIC. ImageMagick le fait, mais il
+        /// reconnait plus de deux cents formats, dont des langages capables de lire et d ecrire des
+        /// fichiers, et son historique de vulnerabilites — la famille ImageTragick — n a pas de
+        /// parade a 100 %. Sur 95 photos concernees, le jeu n en vaut pas la chandelle. La
+        /// conversion se fera **dans le navigateur**, avant le televersement.
+        ///
+        /// Mais un client reste un client : un vieux navigateur, un appel direct a l API ou une
+        /// conversion ratee enverront quand meme du HEIC. Le serveur doit donc refuser, et le
+        /// refus doit etre **lisible** — « format HEIC non accepte » plutot qu une erreur generique
+        /// que personne ne sait interpreter. Quinze mois de vignettes manquantes sont nes d un
+        /// echec muet ; on ne recommence pas.
+        ///
+        /// Douze octets suffisent : quatre de taille, la balise `ftyp`, puis la marque. C est du
+        /// code gere, sans dependance, et cela couvre les 124 fichiers refuses du portail.
+        /// </summary>
+        public static string? NommerUnFormatNonSupporte(byte[] bytes)
+        {
+            if (bytes is null || bytes.Length < 12)
+                return null;
+
+            if (bytes[4] != (byte)'f' || bytes[5] != (byte)'t' || bytes[6] != (byte)'y' || bytes[7] != (byte)'p')
+                return null;
+
+            var marque = System.Text.Encoding.ASCII.GetString(bytes, 8, 4);
+            return marque switch
+            {
+                "heic" or "heix" or "heim" or "heis" or "hevc" or "hevx" or "hevm" or "hevs" or "mif1" or "msf1" => "HEIC",
+                "avif" or "avis" => "AVIF",
+                "qt  " => "video QuickTime",
+                "mp42" or "mp41" or "isom" or "iso2" => "video MP4",
+                _ => null,
+            };
         }
 
         /// <summary>

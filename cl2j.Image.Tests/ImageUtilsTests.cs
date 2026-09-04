@@ -155,128 +155,85 @@ namespace cl2j.Image.Tests
 
         //Un degrade plutot qu une image unie : un JPEG uni se compresse a presque rien, et le test
         //de reduction de taille ne prouverait alors pas grand-chose.
-        // --- Formats qu ImageSharp ne connait pas ---------------------------------------------
+        // --- Formats non rendus par les navigateurs ---------------------------------------------
         //
-        // Contexte : sur 124 fichiers refuses par le rattrapage des vignettes du portail
-        // le 4 septembre 2026, 93 etaient du HEIC et 2 de l AVIF — des photos d iPhone televersees
-        // telles quelles et stockees sous un nom en `.jpg`. Elles ne s affichent dans aucun
-        // navigateur. Le repli sur ImageMagick les convertit au lieu de les refuser.
+        // Contexte : sur 124 fichiers refuses par le rattrapage du portail le 4 septembre 2026,
+        // 93 etaient du HEIC et 2 de l AVIF — des photos d iPhone televersees telles quelles et
+        // stockees sous un nom en `.jpg`. Decision du client le meme jour : **aucune bibliotheque
+        // native** ne sera ajoutee pour les decoder ; la conversion se fera dans le navigateur.
+        // Le serveur, lui, doit refuser proprement et savoir *nommer* ce qu il refuse.
         //
-        // ⚠️ Ces tests utilisent l **AVIF**, pas le HEIC, et ce n est pas un choix de confort :
-        // ImageMagick *lit* le HEIC mais ne l *ecrit* pas — « no encode delegate for HEIC ». Un
-        // test HEIC exigerait donc un fichier binaire au depot, et le seul dont on dispose est la
-        // photo d un utilisateur reel : elle n a rien a y faire. AVIF et HEIC passent par le meme
-        // decodeur libheif et le meme chemin de code, donc la couverture est la meme. Le HEIC lui-
-        // meme a ete verifie a la main sur un fichier de production, 4032 x 3024.
-
-        [Fact]
-        public void ReadImage_decode_un_format_inconnu_d_ImageSharp()
-        {
-            var octets = Avif(320, 240);
-            Assert.Null(TenterAvecImageSharp(octets));
-
-            using var image = ImageUtils.ReadImage(octets);
-
-            Assert.NotNull(image);
-            Assert.Equal(320, image!.Width);
-            Assert.Equal(240, image.Height);
-        }
-
-        [Fact]
-        public void IsImage_accepte_un_format_inconnu_d_ImageSharp()
-        {
-            // Sans le repli, la garde qui empeche de stocker une page HTML en `.jpg` rejetterait
-            // aussi toutes les photos d iPhone.
-            Assert.True(ImageUtils.IsImage(Avif(64, 64)));
-        }
-
-        [Fact]
-        public void Le_repli_refuse_un_format_hors_liste_blanche()
-        {
-            // ImageMagick lit plus de deux cents formats, dont plusieurs sont des langages capables
-            // de lire et d ecrire des fichiers — la famille ImageTragick. Le repli ne lui laisse
-            // decoder que HEIC, HEIF et AVIF. Un PSD est une image parfaitement valide, qu il sait
-            // lire — et qu ImageSharp ne lit pas, donc le repli est bien atteint — et qui doit
-            // pourtant etre refusee : c est la preuve que la liste blanche
-            // mord vraiment, et non qu on refuse simplement ce qui est illisible.
-            using var horsListe = new ImageMagick.MagickImage(ImageMagick.MagickColors.Firebrick, 64, 64)
-            {
-                Format = ImageMagick.MagickFormat.Psd
-            };
-            var octets = horsListe.ToByteArray();
-
-            Assert.Null(TenterAvecImageSharp(octets));
-            Assert.Null(ImageUtils.ReadImage(octets));
-            Assert.False(ImageUtils.IsImage(octets));
-        }
-
-        [Fact]
-        public void IsImage_refuse_toujours_ce_qui_n_est_pas_une_image()
-        {
-            var html = System.Text.Encoding.UTF8.GetBytes("<!DOCTYPE html><html><body>Accueil</body></html>");
-            Assert.False(ImageUtils.IsImage(html));
-        }
+        // Le TIFF sert ici de temoin : ImageSharp le lit, mais aucun navigateur ne l affiche. C est
+        // exactement le cas que la nouvelle regle de re-encodage doit attraper, et il se genere
+        // sans rien installer.
 
         [Fact]
         public void CleanImage_reencode_un_format_que_le_navigateur_ne_rend_pas()
         {
-            // Le coeur du correctif du 4 septembre. Une image de 320 x 240 ne depasse aucune
-            // dimension et n a pas d EXIF a redresser : l ancienne version rendait donc les octets
-            // d origine tels quels, et c est ainsi que 93 HEIC se sont retrouves stockes en HEIC.
-            var octets = Avif(320, 240);
+            // Le coeur du correctif. Une image de 320 x 240 ne depasse aucune dimension et n a pas
+            // d EXIF a redresser : l ancienne version rendait donc les octets d origine tels quels.
+            var octets = Tiff(320, 240);
 
             var nettoyee = ImageUtils.CleanImage(octets, 1280);
 
             Assert.NotNull(nettoyee);
-            Assert.NotEqual(octets, nettoyee);
-            var format = SixLabors.ImageSharp.Image.DetectFormat(nettoyee!);
-            Assert.Equal("JPEG", format.Name);
+            Assert.Equal("JPEG", SixLabors.ImageSharp.Image.DetectFormat(nettoyee!).Name);
         }
 
         [Fact]
         public void CleanImage_ne_reencode_pas_un_JPEG_deja_conforme()
         {
-            // Le pendant du test precedent : la nouvelle regle ne doit pas re-compresser pour rien
-            // ce qui est deja servi correctement.
+            // Le pendant du test precedent : la regle ne doit pas recompresser pour rien ce qui est
+            // deja servi correctement.
             var octets = Jpeg(320, 240);
 
-            var nettoyee = ImageUtils.CleanImage(octets, 1280);
+            Assert.Same(octets, ImageUtils.CleanImage(octets, 1280));
+        }
 
-            Assert.Same(octets, nettoyee);
+        [Theory]
+        [InlineData("heic", "HEIC")]
+        [InlineData("mif1", "HEIC")]
+        [InlineData("avif", "AVIF")]
+        [InlineData("qt  ", "video QuickTime")]
+        [InlineData("mp42", "video MP4")]
+        public void NommerUnFormatNonSupporte_reconnait_les_marques_du_portail(string marque, string attendu)
+        {
+            // Les cinq familles reellement trouvees dans listing-portal. Sans ce nom, le portail ne
+            // peut dire a l utilisateur pourquoi sa photo est refusee — et un refus muet est
+            // precisement ce qui a coute quinze mois de vignettes manquantes.
+            Assert.Equal(attendu, ImageUtils.NommerUnFormatNonSupporte(BoiteIsoBmff(marque)));
         }
 
         [Fact]
-        public void CreateThumbnailCropped_produit_une_vignette_depuis_un_format_inconnu()
+        public void NommerUnFormatNonSupporte_ne_nomme_pas_ce_qu_il_ne_reconnait_pas()
         {
-            // Le cas reel : le portail recoit une photo de telephone et doit en tirer une vignette
-            // de 450 x 338, celle que la carte de liste demande.
-            using var vignette = ImageUtils.CreateThumbnailCropped(Avif(1600, 1200), 450, 338);
-
-            Assert.Equal(450, vignette.Width);
-
-            // 337 et non 338 : une source en 4:3 exacte a le meme rapport que 450 x 338 arrondi,
-            // donc le chemin « rapports egaux » redimensionne sans recadrer et 1200 x 450 / 1600
-            // tombe sur 337,5. Geometrie d origine, anterieure au portage ; l assertion suit la
-            // mesure plutot que l inverse.
-            Assert.Equal(337, vignette.Height);
+            Assert.Null(ImageUtils.NommerUnFormatNonSupporte(Jpeg(32, 32)));
+            Assert.Null(ImageUtils.NommerUnFormatNonSupporte(BoiteIsoBmff("zzzz")));
+            Assert.Null(ImageUtils.NommerUnFormatNonSupporte([1, 2, 3]));
+            Assert.Null(ImageUtils.NommerUnFormatNonSupporte(null!));
         }
 
-        private static ImageRgba32? TenterAvecImageSharp(byte[] octets)
+        private static byte[] BoiteIsoBmff(string marque)
         {
-            try { return SixLabors.ImageSharp.Image.Load<Rgba32>(octets); }
-            catch (Exception) { return null; }
+            // Quatre octets de taille, la balise `ftyp`, puis la marque : l en-tete d un conteneur
+            // ISO-BMFF. Ce qui suit n a pas d importance, rien ne le decode.
+            var octets = new byte[16];
+            octets[3] = 16;
+            System.Text.Encoding.ASCII.GetBytes("ftyp").CopyTo(octets, 4);
+            System.Text.Encoding.ASCII.GetBytes(marque).CopyTo(octets, 8);
+            return octets;
         }
 
-        private static byte[] Avif(int largeur, int hauteur)
+        private static byte[] Tiff(int largeur, int hauteur)
         {
-            using var image = new ImageMagick.MagickImage(ImageMagick.MagickColors.CornflowerBlue, (uint)largeur, (uint)hauteur)
-            {
-                Format = ImageMagick.MagickFormat.Avif
-            };
-            return image.ToByteArray();
+            using var image = new ImageRgba32(largeur, hauteur);
+            using var ms = new MemoryStream();
+            image.Save(ms, new SixLabors.ImageSharp.Formats.Tiff.TiffEncoder());
+            return ms.ToArray();
         }
 
         private static byte[] Jpeg(int largeur, int hauteur)
+
 
         {
             using var image = new ImageRgba32(largeur, hauteur);

@@ -17,12 +17,6 @@
          PlatformNotSupportedException hors Windows depuis .NET 6, ce qui rendait cette
          bibliotheque muette et inoperante sous Linux. Ne pas le reintroduire. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-
-    <!-- Repli de decodage pour les formats qu ImageSharp ne connait pas, HEIC en tete.
-         14.16.0 et non une version plus ancienne : les 14.9.x portent onze alertes NuGet, dont
-         quatre de severite haute. Cette dependance analyse du contenu televerse par des tiers,
-         donc sa version se suit. Voir FormatsEtendus. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.16.0" />
   </ItemGroup>
 
   <ItemGroup>
