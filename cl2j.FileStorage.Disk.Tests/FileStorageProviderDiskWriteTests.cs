@@ -114,7 +114,37 @@ namespace cl2j.FileStorage.Disk.Tests
             Assert.Equal(contenu, await LireAsync("un/deux/trois.bin"));
         }
 
+        [Fact]
+        public async Task WriteAsync_reussit_quand_un_tiers_tient_la_cible_puis_la_relache()
+        {
+            // Reproduit la panne du 4 septembre 2026, vue sur la VM du crawler :
+            // « Unable to remove the file to be replaced » — l erreur Windows 1175. File.Replace doit
+            // supprimer l ancienne cible, ce qui echoue tant qu un tiers la tient ouverte sans
+            // FileShare.Delete. Un antivirus qui scanne le fichier qu on vient d ecrire suffit, d ou
+            // le caractere intermittent.
+            //
+            // Le verrou est relache apres 120 ms — dans la fenetre des cinq tentatives, qui couvrent
+            // une demi-seconde. Sans le reessai, cet appel leve.
+            await EcrireAsync("fichier.bin", Contenu(1000));
+            var chemin = Path.Combine(racine, "fichier.bin");
+
+            var verrou = new FileStream(chemin, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var relache = Task.Run(async () =>
+            {
+                await Task.Delay(120);
+                verrou.Dispose();
+            });
+
+            var nouveau = Contenu(2000);
+            await EcrireAsync("fichier.bin", nouveau);
+            await relache;
+
+            Assert.Equal(nouveau, await LireAsync("fichier.bin"));
+            Assert.Empty(Directory.GetFiles(racine, "*.tmp", SearchOption.AllDirectories));
+        }
+
         private async Task EcrireAsync(string nom, byte[] contenu)
+
         {
             using var source = new MemoryStream(contenu);
             await provider.WriteAsync(nom, source, null);

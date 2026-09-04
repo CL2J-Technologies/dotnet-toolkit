@@ -157,6 +157,12 @@ namespace cl2j.FileStorage.Provider.Disk
             }
         }
 
+        //Tentatives et attente entre elles. Cinq essais espaces de 50, 100, 150 et 200 ms couvrent
+        //une demi-seconde — largement au-dela de ce que dure l ouverture d un antivirus, et assez
+        //court pour ne pas figer une boucle qui ecrit souvent.
+        private const int TentativesDeRemplacement = 5;
+        private const int AttenteEntreTentativesMs = 50;
+
         /// <summary>
         /// Remplace la cible par le temporaire, en un geste.
         ///
@@ -165,17 +171,45 @@ namespace cl2j.FileStorage.Provider.Disk
         /// partage. `ReplaceFile`, sur lequel Replace s appuie, est concu pour ce cas. Le detail
         /// n est pas theorique — il est verifie par un test, et l ancienne implementation par
         /// troncature n avait pas cette contrainte : la perdre aurait ete une regression.
+        ///
+        /// **Mais Replace a sa propre faiblesse, constatee en production le 4 septembre 2026 :**
+        /// « Unable to remove the file to be replaced » — l erreur Windows 1175. `ReplaceFile` doit
+        /// *supprimer* l ancienne cible, et cela echoue tant qu un tiers la tient ouverte sans
+        /// autoriser la suppression. Un antivirus qui scanne le fichier qu on vient d ecrire suffit,
+        /// ce qui explique que l echec soit intermittent et non systematique.
+        ///
+        /// Le cas s est presente sur `Results/GeocodingAddresses.json`, reecrit en entier — 11,6 Mo
+        /// — a chaque adresse geocodee. Plus le fichier est gros et souvent reecrit, plus la fenetre
+        /// s ouvre.
+        ///
+        /// On retente donc, puis on retombe sur Move en dernier recours : les deux echouent sous des
+        /// conditions differentes, et celle qui bloque Replace ne bloque pas forcement Move. Si les
+        /// deux echouent, l exception remonte — perdre l ecriture en silence serait pire.
         /// </summary>
         private static void ReplaceAtomically(string temporaryFileName, string fileName)
         {
-            try
+            for (var tentative = 1; ; ++tentative)
             {
-                File.Replace(temporaryFileName, fileName, destinationBackupFileName: null, ignoreMetadataErrors: true);
-            }
-            catch (FileNotFoundException)
-            {
-                //Replace exige une cible existante, Move non. C est le cas du premier ecrit.
-                File.Move(temporaryFileName, fileName, overwrite: true);
+                try
+                {
+                    File.Replace(temporaryFileName, fileName, destinationBackupFileName: null, ignoreMetadataErrors: true);
+                    return;
+                }
+                catch (FileNotFoundException)
+                {
+                    //Replace exige une cible existante, Move non. C est le cas du premier ecrit.
+                    File.Move(temporaryFileName, fileName, overwrite: true);
+                    return;
+                }
+                catch (IOException) when (tentative < TentativesDeRemplacement)
+                {
+                    Thread.Sleep(AttenteEntreTentativesMs * tentative);
+                }
+                catch (IOException)
+                {
+                    File.Move(temporaryFileName, fileName, overwrite: true);
+                    return;
+                }
             }
         }
 
