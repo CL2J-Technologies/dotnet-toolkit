@@ -46,12 +46,30 @@ namespace cl2j.Image
         private const uint HauteurMax = 20000;
         private const ulong MemoireMax = 512 * 1024 * 1024;
 
+        //**La mitigation qui compte le plus.** Le danger d ImageMagick ne vient pas de son decodeur
+        //HEIC : il vient de son *etendue*. Il reconnait plus de deux cents formats, dont plusieurs
+        //sont des langages — MSL et MVG savent lire et ecrire des fichiers — et delegue a des
+        //binaires externes pour d autres. C est la famille de failles connue sous le nom
+        //d ImageTragick, et elle se declenche a l *identification* du format, avant tout decodage
+        //voulu : il suffit qu un fichier televerse se presente comme l un d eux.
+        //
+        //On ne lui laisse donc decoder que ce pour quoi il est ici. Tout le reste est refuse avant
+        //qu il ne touche aux octets. La liste est courte volontairement : elle couvre les formats
+        //que les appareils produisent et qu ImageSharp ne lit pas.
+        private static readonly HashSet<MagickFormat> formatsAutorises =
+        [
+            MagickFormat.Heic,
+            MagickFormat.Heif,
+            MagickFormat.Avif,
+        ];
+
         private static readonly Lock verrou = new();
         private static bool limitesPosees;
 
         /// <summary>
         /// Tente de decoder des octets qu ImageSharp a refuses. Rend null si ImageMagick n y arrive
-        /// pas non plus — auquel cas ce n est vraiment pas une image.
+        /// pas non plus, ou si le format n est pas dans la liste blanche — auquel cas ce n est pas
+        /// une image qu on veuille accepter ici.
         /// </summary>
         public static ImageRgba32? Decoder(byte[] bytes)
         {
@@ -59,7 +77,18 @@ namespace cl2j.Image
             {
                 PoserLesLimites();
 
+                //Identifier d abord, decoder ensuite. MagickImageInfo lit l en-tete sans deployer
+                //le decodeur complet ni les delegues : c est ce qui rend la liste blanche efficace
+                //plutot que decorative.
+                if (!EstAutorise(bytes))
+                    return null;
+
                 using var magick = new MagickImage(bytes);
+
+                //Ceinture et bretelles : ce que l en-tete annonce et ce que le decodeur reconnait
+                //peuvent differer sur un fichier forge.
+                if (!formatsAutorises.Contains(magick.Format))
+                    return null;
 
                 //PNG et non JPEG : le repli n est qu une etape intermediaire, et l appelant
                 //re-encode ensuite en JPEG. Passer par un JPEG ici ajouterait une compression avec
@@ -85,11 +114,23 @@ namespace cl2j.Image
             {
                 PoserLesLimites();
                 var info = new MagickImageInfo(bytes);
-                return info.Format.ToString();
+                return formatsAutorises.Contains(info.Format) ? info.Format.ToString() : null;
             }
             catch (Exception)
             {
                 return null;
+            }
+        }
+
+        private static bool EstAutorise(byte[] bytes)
+        {
+            try
+            {
+                return formatsAutorises.Contains(new MagickImageInfo(bytes).Format);
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

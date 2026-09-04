@@ -191,6 +191,26 @@ namespace cl2j.Image.Tests
         }
 
         [Fact]
+        public void Le_repli_refuse_un_format_hors_liste_blanche()
+        {
+            // ImageMagick lit plus de deux cents formats, dont plusieurs sont des langages capables
+            // de lire et d ecrire des fichiers — la famille ImageTragick. Le repli ne lui laisse
+            // decoder que HEIC, HEIF et AVIF. Un PSD est une image parfaitement valide, qu il sait
+            // lire — et qu ImageSharp ne lit pas, donc le repli est bien atteint — et qui doit
+            // pourtant etre refusee : c est la preuve que la liste blanche
+            // mord vraiment, et non qu on refuse simplement ce qui est illisible.
+            using var horsListe = new ImageMagick.MagickImage(ImageMagick.MagickColors.Firebrick, 64, 64)
+            {
+                Format = ImageMagick.MagickFormat.Psd
+            };
+            var octets = horsListe.ToByteArray();
+
+            Assert.Null(TenterAvecImageSharp(octets));
+            Assert.Null(ImageUtils.ReadImage(octets));
+            Assert.False(ImageUtils.IsImage(octets));
+        }
+
+        [Fact]
         public void IsImage_refuse_toujours_ce_qui_n_est_pas_une_image()
         {
             var html = System.Text.Encoding.UTF8.GetBytes("<!DOCTYPE html><html><body>Accueil</body></html>");

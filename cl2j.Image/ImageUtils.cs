@@ -525,7 +525,7 @@ namespace cl2j.Image
         /// image, ce qui est exactement la panne constatee sur 93 fichiers du portail. Ce qui n est
         /// pas dans cette liste doit ressortir re-encode.
         /// </summary>
-        internal static bool EstUnFormatDuWeb(byte[] bytes)
+        public static bool EstUnFormatDuWeb(byte[] bytes)
         {
             try
             {
