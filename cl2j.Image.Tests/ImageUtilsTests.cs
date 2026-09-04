@@ -155,7 +155,109 @@ namespace cl2j.Image.Tests
 
         //Un degrade plutot qu une image unie : un JPEG uni se compresse a presque rien, et le test
         //de reduction de taille ne prouverait alors pas grand-chose.
+        // --- Formats qu ImageSharp ne connait pas ---------------------------------------------
+        //
+        // Contexte : sur 124 fichiers refuses par le rattrapage des vignettes du portail
+        // le 4 septembre 2026, 93 etaient du HEIC et 2 de l AVIF — des photos d iPhone televersees
+        // telles quelles et stockees sous un nom en `.jpg`. Elles ne s affichent dans aucun
+        // navigateur. Le repli sur ImageMagick les convertit au lieu de les refuser.
+        //
+        // ⚠️ Ces tests utilisent l **AVIF**, pas le HEIC, et ce n est pas un choix de confort :
+        // ImageMagick *lit* le HEIC mais ne l *ecrit* pas — « no encode delegate for HEIC ». Un
+        // test HEIC exigerait donc un fichier binaire au depot, et le seul dont on dispose est la
+        // photo d un utilisateur reel : elle n a rien a y faire. AVIF et HEIC passent par le meme
+        // decodeur libheif et le meme chemin de code, donc la couverture est la meme. Le HEIC lui-
+        // meme a ete verifie a la main sur un fichier de production, 4032 x 3024.
+
+        [Fact]
+        public void ReadImage_decode_un_format_inconnu_d_ImageSharp()
+        {
+            var octets = Avif(320, 240);
+            Assert.Null(TenterAvecImageSharp(octets));
+
+            using var image = ImageUtils.ReadImage(octets);
+
+            Assert.NotNull(image);
+            Assert.Equal(320, image!.Width);
+            Assert.Equal(240, image.Height);
+        }
+
+        [Fact]
+        public void IsImage_accepte_un_format_inconnu_d_ImageSharp()
+        {
+            // Sans le repli, la garde qui empeche de stocker une page HTML en `.jpg` rejetterait
+            // aussi toutes les photos d iPhone.
+            Assert.True(ImageUtils.IsImage(Avif(64, 64)));
+        }
+
+        [Fact]
+        public void IsImage_refuse_toujours_ce_qui_n_est_pas_une_image()
+        {
+            var html = System.Text.Encoding.UTF8.GetBytes("<!DOCTYPE html><html><body>Accueil</body></html>");
+            Assert.False(ImageUtils.IsImage(html));
+        }
+
+        [Fact]
+        public void CleanImage_reencode_un_format_que_le_navigateur_ne_rend_pas()
+        {
+            // Le coeur du correctif du 4 septembre. Une image de 320 x 240 ne depasse aucune
+            // dimension et n a pas d EXIF a redresser : l ancienne version rendait donc les octets
+            // d origine tels quels, et c est ainsi que 93 HEIC se sont retrouves stockes en HEIC.
+            var octets = Avif(320, 240);
+
+            var nettoyee = ImageUtils.CleanImage(octets, 1280);
+
+            Assert.NotNull(nettoyee);
+            Assert.NotEqual(octets, nettoyee);
+            var format = SixLabors.ImageSharp.Image.DetectFormat(nettoyee!);
+            Assert.Equal("JPEG", format.Name);
+        }
+
+        [Fact]
+        public void CleanImage_ne_reencode_pas_un_JPEG_deja_conforme()
+        {
+            // Le pendant du test precedent : la nouvelle regle ne doit pas re-compresser pour rien
+            // ce qui est deja servi correctement.
+            var octets = Jpeg(320, 240);
+
+            var nettoyee = ImageUtils.CleanImage(octets, 1280);
+
+            Assert.Same(octets, nettoyee);
+        }
+
+        [Fact]
+        public void CreateThumbnailCropped_produit_une_vignette_depuis_un_format_inconnu()
+        {
+            // Le cas reel : le portail recoit une photo de telephone et doit en tirer une vignette
+            // de 450 x 338, celle que la carte de liste demande.
+            using var vignette = ImageUtils.CreateThumbnailCropped(Avif(1600, 1200), 450, 338);
+
+            Assert.Equal(450, vignette.Width);
+
+            // 337 et non 338 : une source en 4:3 exacte a le meme rapport que 450 x 338 arrondi,
+            // donc le chemin « rapports egaux » redimensionne sans recadrer et 1200 x 450 / 1600
+            // tombe sur 337,5. Geometrie d origine, anterieure au portage ; l assertion suit la
+            // mesure plutot que l inverse.
+            Assert.Equal(337, vignette.Height);
+        }
+
+        private static ImageRgba32? TenterAvecImageSharp(byte[] octets)
+        {
+            try { return SixLabors.ImageSharp.Image.Load<Rgba32>(octets); }
+            catch (Exception) { return null; }
+        }
+
+        private static byte[] Avif(int largeur, int hauteur)
+        {
+            using var image = new ImageMagick.MagickImage(ImageMagick.MagickColors.CornflowerBlue, (uint)largeur, (uint)hauteur)
+            {
+                Format = ImageMagick.MagickFormat.Avif
+            };
+            return image.ToByteArray();
+        }
+
         private static byte[] Jpeg(int largeur, int hauteur)
+
         {
             using var image = new ImageRgba32(largeur, hauteur);
             for (var y = 0; y < hauteur; ++y)

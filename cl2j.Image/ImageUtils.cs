@@ -56,8 +56,13 @@ namespace cl2j.Image
                     };
                 }
 
-                if (modified)
+                //Meme raison que dans CleanImage : un format que les navigateurs ne rendent pas doit
+                //ressortir re-encode, meme quand rien d autre ne le justifie.
+                if (modified || !EstUnFormatDuWeb(bytes))
+                {
                     bytes = ImageSerialization.SaveJpegToBytes(image, quality);
+                    modified = true;
+                }
 
                 return new OptimizeReasult
                 {
@@ -361,7 +366,8 @@ namespace cl2j.Image
             //
             //On laisse desormais l exception remonter. Une image illisible est une erreur que
             //l appelant doit voir, pas un silence a stocker.
-            using var image = ISImage.Load<Rgba32>(bytes);
+            using var image = ReadImage(bytes)
+                ?? throw new ValidationException("Invalid image : aucun decodeur n a pu la lire.");
 
             var modified = ExifUtils.RotateFlipIfRequired(image);
             modified |= ExifUtils.Strip(image);
@@ -372,7 +378,14 @@ namespace cl2j.Image
                 return ImageSerialization.SaveJpegToBytes(redimensionnee, 75L);
             }
 
-            return modified ? ImageSerialization.SaveJpegToBytes(image, 75L) : bytes;
+            //Le format decide autant que la taille. Un HEIC de 1200 x 900 ne depasse rien, n a rien
+            //a redresser, et ressortirait donc tel quel — c est exactement ainsi que 93 photos
+            //d iPhone se sont retrouvees stockees en HEIC sous un nom en `.jpg`, invisibles dans
+            //tous les navigateurs. Ce qui n est pas un format du web est re-encode, sans condition.
+            if (modified || !EstUnFormatDuWeb(bytes))
+                return ImageSerialization.SaveJpegToBytes(image, 75L);
+
+            return bytes;
         }
 
         public static ImageRgba32 CleanImage(this ImageRgba32 image, int max, out bool modified)
@@ -475,12 +488,18 @@ namespace cl2j.Image
 
             try
             {
-                return ISImage.Identify(bytes) is not null;
+                if (ISImage.Identify(bytes) is not null)
+                    return true;
             }
             catch (Exception)
             {
-                return false;
+                //On tombe dans le repli ci-dessous.
             }
+
+            //Un HEIC est une image, meme si ImageSharp ne sait pas la lire. Sans ce repli, la garde
+            //ajoutee le 3 septembre — celle qui empeche de stocker une page HTML sous un nom en
+            //`.jpg` — rejetterait aussi toutes les photos d iPhone.
+            return FormatsEtendus.Identifier(bytes) is not null;
         }
 
         public static ImageRgba32? ReadImage(byte[] bytes)
@@ -494,7 +513,32 @@ namespace cl2j.Image
             }
             catch (Exception)
             {
-                return null;
+                //Repli sur ImageMagick : HEIC, AVIF, et les autres formats qu ImageSharp ne connait
+                //pas. Voir FormatsEtendus, y compris sa note de securite.
+                return FormatsEtendus.Decoder(bytes);
+            }
+        }
+
+        /// <summary>
+        /// Vrai si le format est rendu par les navigateurs. Un HEIC decode correctement mais ne
+        /// s affiche ni sous Chrome ni sous Firefox : le stocker tel quel produit une annonce sans
+        /// image, ce qui est exactement la panne constatee sur 93 fichiers du portail. Ce qui n est
+        /// pas dans cette liste doit ressortir re-encode.
+        /// </summary>
+        internal static bool EstUnFormatDuWeb(byte[] bytes)
+        {
+            try
+            {
+                var format = ISImage.DetectFormat(bytes);
+                return format is not null
+                    && (format.Name.Equals("JPEG", StringComparison.OrdinalIgnoreCase)
+                        || format.Name.Equals("PNG", StringComparison.OrdinalIgnoreCase)
+                        || format.Name.Equals("WEBP", StringComparison.OrdinalIgnoreCase)
+                        || format.Name.Equals("GIF", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
     }
