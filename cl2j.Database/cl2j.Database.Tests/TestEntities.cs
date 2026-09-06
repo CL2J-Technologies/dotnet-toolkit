@@ -56,4 +56,126 @@ namespace cl2j.Database.Tests
         [Column(Name = "Name", Length = 100)]
         public string Name { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    ///     A schema-qualified table with a foreign key, an ignored property, a required column and
+    ///     a JSON one. Used by the CREATE TABLE test, which is where those all show up at once.
+    /// </summary>
+    [Table("Invoice", Schema = "billing")]
+    public sealed class Invoice
+    {
+        [Column(Name = "Id", Key = KeyType.Key, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "CustomerId", Length = 50)]
+        [ForeignKey("FK_Invoice_Customer", "Customer", "Id")]
+        public string CustomerId { get; set; } = string.Empty;
+
+        [Column(Name = "Amount", Length = 18, Decimals = 2, Required = true)]
+        public decimal Amount { get; set; }
+
+        [Column(Name = "Metadata", Json = true)]
+        public string? Metadata { get; set; }
+
+        [Ignore]
+        public string NotAColumn { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    ///     No <see cref="TableAttribute"/> and no declared key. The table name should fall back to
+    ///     the type name, and a property called Id should be picked up as the key by convention.
+    /// </summary>
+    public sealed class ImplicitlyKeyed
+    {
+        public string Id { get; set; } = string.Empty;
+
+        public string Label { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    ///     One property per branch of GetColumnDataType. The values are never read; only the
+    ///     declared types matter.
+    /// </summary>
+    [Table("AllTypes")]
+    public sealed class AllTypesRow
+    {
+        [Column(Name = "Flag")]
+        public bool Flag { get; set; }
+
+        [Column(Name = "Small")]
+        public short Small { get; set; }
+
+        [Column(Name = "Count")]
+        public int Count { get; set; }
+
+        [Column(Name = "Big")]
+        public long Big { get; set; }
+
+        [Column(Name = "Price", Length = 18, Decimals = 2)]
+        public decimal Price { get; set; }
+
+        [Column(Name = "Ratio")]
+        public double Ratio { get; set; }
+
+        [Column(Name = "Bounded", Length = 64)]
+        public string Bounded { get; set; } = string.Empty;
+
+        [Column(Name = "Unbounded")]
+        public string Unbounded { get; set; } = string.Empty;
+
+        [Column(Name = "Moment")]
+        public DateTimeOffset Moment { get; set; }
+
+        [Column(Name = "Stamp")]
+        public DateTime Stamp { get; set; }
+
+        [Column(Name = "Ref")]
+        public Guid Ref { get; set; }
+
+        [Column(Name = "Kind")]
+        public SampleKind Kind { get; set; }
+
+        [Column(Name = "Declared", TypeName = "geography")]
+        public string Declared { get; set; } = string.Empty;
+
+        [Column(Name = "WithDefault", Length = 10, Default = "'n/a'")]
+        public string WithDefault { get; set; } = string.Empty;
+    }
+
+    public enum SampleKind
+    {
+        First,
+        Second
+    }
+
+    /// <summary>
+    ///     A key whose type no provider knows how to declare. GetColumnKeyType must refuse it
+    ///     rather than emit something meaningless.
+    /// </summary>
+    [Table("UnsupportedKeyRow")]
+    public sealed class UnsupportedKeyRow
+    {
+        [Column(Name = "Id", Key = KeyType.Key)]
+        public bool Id { get; set; }
+    }
+
+    /// <summary>
+    ///     A key the library generates itself, with a prefix.
+    /// </summary>
+    [Table("PrefixedRow")]
+    public sealed class PrefixedRow
+    {
+        [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50, KeyPrefix = "cus_")]
+        public string Id { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    ///     Query parameters, not a table. GetQueryStatement(type, paramType) builds its WHERE from
+    ///     the columns of a second type like this one.
+    /// </summary>
+    public sealed class CustomerFilter
+    {
+        [Column(Name = "Name")]
+        public string Name { get; set; } = string.Empty;
+    }
 }
