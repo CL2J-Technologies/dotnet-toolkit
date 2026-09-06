@@ -36,14 +36,45 @@ never built and never run.
 
 ## Versioning
 
-Packages carry their own `<Version>`, bumped manually. `Directory.Build.props` at the repository
-root supplies the default for packages that have not been versioned individually.
+**Every package publishes the same version**, held in `<Version>` in `Directory.Build.props` at the
+repository root. To release: bump that one number, commit to `main`, and the workflow publishes the
+whole set together.
 
-`cl2j.Database` and `cl2j.Database.SqlServer` version together, from
-`cl2j.Database/Directory.Build.props`. Neither project declares its own `<Version>`.
+**No `.csproj` declares its own `<Version>`.** A local override is not a shortcut, it is the bug —
+see below.
 
-Breaking a public API means a major bump. Removing a member from a published interface is breaking,
-even when the only implementation in this repository is internal.
+### Why shared, and not per package
+
+`dotnet pack` turns each `ProjectReference` into a `PackageReference` at the referenced project's
+version. A package that is not republished therefore keeps pointing at whatever its dependency was
+on the day it was last packed.
+
+The repository ran on per-package versions for a while, and that is exactly what happened:
+`cl2j.Logging` 2.0.0 kept depending on `cl2j.FileStorage` **2.0.0** while 2.2.0 was out — two
+fixes behind, both of them data-loss bugs, with nothing anywhere to signal it. A consumer that
+referenced `cl2j.Logging` and did the obvious thing silently got the broken version. Four packages
+were in that state before anyone looked. See issue #17.
+
+Publishing everything together means those floors are always current. That is the point of the
+scheme, not a side effect of it.
+
+### The cost, accepted knowingly
+
+A package that did not change still gets a new number. The version therefore says *which release a
+package belongs to*, not *what changed inside it* — a consumer cannot read semver meaning into a
+bump of a package that was merely carried along.
+
+Do not "fix" this by giving one package its own version. That reintroduces the stale floors, and
+it does so silently, which is the part that makes it expensive.
+
+### Choosing the number
+
+A breaking API change anywhere in the repository makes the shared bump a major one. Removing a
+member from a published interface is breaking, even when the only implementation here is internal.
+
+The number must exceed every version already published, for every package. `--skip-duplicate` in
+the workflow means a number that already exists on NuGet.org is skipped in silence rather than
+failing, so a too-low number does not publish and does not complain either.
 
 ## Security
 
