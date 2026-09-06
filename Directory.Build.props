@@ -19,9 +19,12 @@
          The cost, accepted knowingly: a package that did not change still gets a new number, so
          the version says which release a package belongs to, not what changed inside it.
 
-         4.0.0 is the first shared number after the per-package period. It clears every version
-         published during it, the highest being cl2j.Image 3.1.0. -->
-    <Version>4.0.0</Version>
+         4.0.0 was the first shared number after the per-package period, clearing every version
+         published during it — the highest being cl2j.Image 3.1.0.
+
+         4.1.0: string keys bind as ANSI (#7). No API break, but a change in behaviour, hence the
+         minor rather than the patch. -->
+    <Version>4.1.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>

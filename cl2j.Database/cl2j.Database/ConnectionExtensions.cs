@@ -444,6 +444,11 @@ namespace cl2j.Database
             var parameter = command.CreateParameter();
             parameter.ParameterName = column.Name;
             parameter.Value = key;
+
+            var dbType = ParameterTyping.DbTypeFor(column, key);
+            if (dbType is not null)
+                parameter.DbType = dbType.Value;
+
             command.Parameters.Add(parameter);
         }
 
@@ -459,6 +464,11 @@ namespace cl2j.Database
                 var parameter = command.CreateParameter();
                 parameter.ParameterName = statementParameter.Name;
                 parameter.Value = statementParameter.Value;
+
+                var dbType = ParameterTyping.DbTypeFor(statementParameter.Column, statementParameter.Value);
+                if (dbType is not null)
+                    parameter.DbType = dbType.Value;
+
                 command.Parameters.Add(parameter);
             }
         }
@@ -488,7 +498,13 @@ namespace cl2j.Database
             else if (value is null && column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
                 parameter.Value = DateTimeOffset.UtcNow;
             else
+            {
                 parameter.Value = value ?? DBNull.Value;
+
+                var dbType = ParameterTyping.DbTypeFor(column, value);
+                if (dbType is not null)
+                    parameter.DbType = dbType.Value;
+            }
 
             command.Parameters.Add(parameter);
         }
