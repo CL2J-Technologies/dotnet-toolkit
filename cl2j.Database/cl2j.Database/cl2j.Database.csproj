@@ -3,6 +3,9 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Database</PackageId>
     <Description>Database abstraction layer with connection and query extensions.</Description>
+
+    <!-- Majeure : FormatParameterValue disparait de IDatabaseFormatter. -->
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
