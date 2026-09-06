@@ -117,7 +117,7 @@ namespace cl2j.Database.SqlServer
                 //executes it — it never becomes SQL text.
                 var name = $"key{index++}";
                 placeholders.Append(FormatParameterName(name));
-                statement.Parameters.Add(new StatementParameter(name, value));
+                statement.Parameters.Add(new StatementParameter(name, value, key));
             }
 
             statement.Text += $" WHERE {key.NameFormatted} IN ({placeholders}) ";

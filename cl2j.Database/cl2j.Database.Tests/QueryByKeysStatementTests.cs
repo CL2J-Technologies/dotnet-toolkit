@@ -49,6 +49,16 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
+        public void Each_key_parameter_carries_the_column_it_is_compared_against()
+        {
+            //Without the column, binding has nothing to type the value from, and the keys of an IN
+            //list would go out as Unicode against an ANSI key column — issue #7 on a second path.
+            var statement = Builder().GetQueryByKeysStatement(typeof(Customer), ["cust-1", "cust-2"]);
+
+            Assert.All(statement.Parameters, p => Assert.Equal("Id", p.Column?.Name));
+        }
+
+        [Fact]
         public void A_quote_in_a_key_does_not_reach_the_statement_text()
         {
             var statement = Builder().GetQueryByKeysStatement(typeof(Customer), ["O'Brien"]);
