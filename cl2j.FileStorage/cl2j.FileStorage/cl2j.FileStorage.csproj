@@ -3,13 +3,6 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.FileStorage</PackageId>
     <Description>Multi-provider file storage abstraction: read, write, delete, and more. Extensible via Dependency Injection.</Description>
-
-    <!-- 2.1.0: the disk provider writes became atomic. No API break, but a change in behaviour —
-         hence the minor, not the patch. The number is overridden here because
-         Directory.Build.props carries the version shared across the repository: without it, the
-         workflow skip-duplicate option would skip publishing, 2.0.0 already existing, and the fix
-         would never reach cooperius or TourDuChapeau. -->
-    <Version>2.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

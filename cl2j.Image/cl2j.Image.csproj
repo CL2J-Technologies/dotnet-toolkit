@@ -3,13 +3,6 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Image</PackageId>
     <Description>Image utilities: EXIF data extraction, image comparison, and resizing. Cross-platform, on ImageSharp.</Description>
-
-    <!-- 3.0.0: breaking change, the public surface moves from System.Drawing.Bitmap to
-         SixLabors.ImageSharp.Image<Rgba32>. The number is overridden here rather than in
-         Directory.Build.props, which carries the version shared by every package in the
-         repository. Without it, publishing would be skipped by the workflow skip-duplicate
-         option: 2.0.0 already exists on nuget.org, and the fix would never reach the feed. -->
-    <Version>3.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
