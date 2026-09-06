@@ -13,14 +13,30 @@ namespace cl2j.FileStorage.Extensions
         private readonly int maxSize;
 
         private readonly SemaphoreSlim semaphoreSlim = new(1);
+        private readonly Func<DateTime> clock;
         private int currentTotalSize;
         private DateTime lastWrite;
 
-        public BufferedFileStorage(IFileStorageProvider fileStorageProvider, string fileNamePattern, int maxSize, TimeSpan flushInterval, bool clearFile)
+        /// <param name="clock">
+        /// L horloge qui nomme les fichiers et decide de la bascule. Par defaut UTC, ce qui garde
+        /// le comportement des appelants existants.
+        ///
+        /// <para>Elle existe parce que le nom et le contenu divergeaient : le journal horodatait
+        /// ses lignes dans le fuseau configure par l application, pendant que le nom du fichier et
+        /// la bascule etaient en UTC en dur. Un fichier nomme pour le 6 septembre s ouvrait donc le
+        /// 5 a 19 h 59, et diagnostiquer une soiree demandait d ouvrir le fichier du lendemain.</para>
+        ///
+        /// <para>⚠️ Les trois usages — le nom, les deux tests de bascule et la marque du dernier
+        /// ecrit — doivent partager la meme horloge. N en corriger qu un les fait diverger a
+        /// nouveau.</para>
+        /// </param>
+        public BufferedFileStorage(IFileStorageProvider fileStorageProvider, string fileNamePattern, int maxSize, TimeSpan flushInterval, bool clearFile, Func<DateTime>? clock = null)
         {
             this.fileStorageProvider = fileStorageProvider;
             this.fileNamePattern = fileNamePattern;
             this.maxSize = maxSize;
+            // Assignee avant ClearFileAsync : ce dernier nomme deja un fichier.
+            this.clock = clock ?? (() => DateTime.UtcNow);
 
             lastWrite = DateTime.MinValue;
 
@@ -66,13 +82,13 @@ namespace cl2j.FileStorage.Extensions
             if (buffer.Length == 0)
                 return;
 
-            if (DateTime.UtcNow.Date != lastWrite.Date || (maxSize > 0 && currentTotalSize > maxSize))
+            if (clock().Date != lastWrite.Date || (maxSize > 0 && currentTotalSize > maxSize))
             {
                 await semaphoreSlim.WaitAsync();
                 try
                 {
                     //Ensure that the filename was not obtained since the lock
-                    if (DateTime.UtcNow.Date != lastWrite.Date || (maxSize > 0 && currentTotalSize > maxSize))
+                    if (clock().Date != lastWrite.Date || (maxSize > 0 && currentTotalSize > maxSize))
                         await NextFileNameAsync();
                 }
                 finally
@@ -94,7 +110,7 @@ namespace cl2j.FileStorage.Extensions
                 bufferValue = buffer.ToString();
                 buffer.Length = 0; // Clear buffer
 
-                lastWrite = DateTime.UtcNow;
+                lastWrite = clock();
             }
             finally
             {
@@ -135,7 +151,7 @@ namespace cl2j.FileStorage.Extensions
             var lastNumber = 1;
             while (true)
             {
-                var fileName = string.Format(fileNamePattern, DateTime.UtcNow, lastNumber).ToLowerInvariant();
+                var fileName = string.Format(fileNamePattern, clock(), lastNumber).ToLowerInvariant();
                 var fileInfo = await fileStorageProvider.GetInfoAsync(fileName);
 
                 var size = fileInfo?.Size ?? 0;
