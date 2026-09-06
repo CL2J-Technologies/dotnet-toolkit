@@ -6,7 +6,12 @@ namespace cl2j.FileStorage.Extensions
 {
     public class BufferedFileStorage : IDisposable
     {
-        private static Timer timer = null!;
+        // Le minuteur etait `static`. Deux instances partageaient donc le champ : la seconde
+        // orphelinait le minuteur de la premiere, et `Dispose` liberait celui de la derniere
+        // creee — donc disposer une instance arretait silencieusement le depot periodique d une
+        // autre, sans exception ni trace. Sans effet tant qu une application n a qu un seul
+        // `LoggerProvider`, ce qui est le cas courant, mais rien ne l imposait.
+        private readonly Timer timer;
         private readonly StringBuilder buffer = new();
         private readonly string fileNamePattern;
         private readonly IFileStorageProvider fileStorageProvider;
