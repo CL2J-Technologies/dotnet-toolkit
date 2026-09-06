@@ -7,23 +7,22 @@ using ISImage = SixLabors.ImageSharp.Image;
 namespace cl2j.Image
 {
     /// <summary>
-    /// Utilitaires d image, sur ImageSharp.
+    /// Image utilities, built on ImageSharp.
     ///
-    /// **Porte depuis System.Drawing le 3 septembre 2026.** Le motif n est pas la modernisation :
-    /// `System.Drawing.Common` leve `PlatformNotSupportedException` sur tout ce qui n est pas
-    /// Windows depuis .NET 6. Le site Appartogo tourne sous Linux, et son portail n avait donc
-    /// **jamais** produit une seule vignette depuis son ouverture en juin 2025 — 5 400 images,
-    /// zero vignette, sans une ligne d erreur, parce que les deux points d entree avalaient
-    /// l exception pour rendre `null` ou les octets d origine. Voir l entree s19 du journal du
-    /// depot cl2j.
+    /// **Ported from System.Drawing on September 3rd 2026.** The reason is not modernisation:
+    /// `System.Drawing.Common` throws `PlatformNotSupportedException` on anything but Windows
+    /// since .NET 6. The Appartogo site runs on Linux, so its portal had **never** produced a
+    /// single thumbnail since it opened in June 2025 — 5,400 images, zero thumbnails, without one
+    /// line of error, because both entry points swallowed the exception to return `null` or the
+    /// original bytes. See entry s19 of the cl2j repository journal.
     ///
-    /// La meme panne attendait le crawler : elle se serait declenchee le jour ou l agregation
-    /// quitte la VM Windows pour une Function ou un conteneur Linux.
+    /// The same failure was waiting for the crawler: it would have fired the day aggregation
+    /// leaves the Windows VM for a Function or a Linux container.
     ///
-    /// **Convention de propriete, inchangee :** les images rendues appartiennent a l appelant, qui
-    /// doit les liberer. Certaines methodes rendent l instance recue quand il n y a rien a faire —
-    /// `Resize` a taille egale, `Crop` sans bordure, `CropCenter` sur une image deja plus petite.
-    /// Ne pas liberer un resultat sans savoir s il s agit de l original.
+    /// **Ownership convention, unchanged:** the images returned belong to the caller, who must
+    /// dispose them. Some methods return the instance they received when there is nothing to do —
+    /// `Resize` at equal size, `Crop` with no border, `CropCenter` on an already smaller image.
+    /// Do not dispose a result without knowing whether it is the original.
     /// </summary>
     public static class ImageUtils
     {
@@ -45,19 +44,19 @@ namespace cl2j.Image
 
                 if (image.Width > max || image.Height > max)
                 {
-                    using var redimensionnee = ImageResizer.ResizeIfOversize(image, max, max);
-                    bytes = ImageSerialization.SaveJpegToBytes(redimensionnee, quality);
+                    using var resized = ImageResizer.ResizeIfOversize(image, max, max);
+                    bytes = ImageSerialization.SaveJpegToBytes(resized, quality);
 
                     return new OptimizeReasult
                     {
                         Modified = true,
-                        Width = redimensionnee.Width,
-                        Height = redimensionnee.Height
+                        Width = resized.Width,
+                        Height = resized.Height
                     };
                 }
 
-                //Meme raison que dans CleanImage : un format que les navigateurs ne rendent pas doit
-                //ressortir re-encode, meme quand rien d autre ne le justifie.
+                //Same reason as in CleanImage: a format browsers do not render must come back
+                //re-encoded, even when nothing else calls for it.
                 if (modified || !EstUnFormatDuWeb(bytes))
                 {
                     bytes = ImageSerialization.SaveJpegToBytes(image, quality);
@@ -102,15 +101,15 @@ namespace cl2j.Image
                 newH = image.Height;
             }
 
-            var croppedImage = CropCenter(image, newW, newH, out var recadree);
+            var croppedImage = CropCenter(image, newW, newH, out var cropped);
 
             if (croppedImage.Width == w && croppedImage.Height == h)
-                return recadree ? croppedImage : croppedImage.Clone();
+                return cropped ? croppedImage : croppedImage.Clone();
 
-            var vignette = ImageResizer.Resize(croppedImage, w, h);
-            if (recadree && !ReferenceEquals(vignette, croppedImage))
+            var thumbnail = ImageResizer.Resize(croppedImage, w, h);
+            if (cropped && !ReferenceEquals(thumbnail, croppedImage))
                 croppedImage.Dispose();
-            return vignette;
+            return thumbnail;
         }
 
         public static ImageRgba32 CreateThumbnail(ImageRgba32 image, int w, int h, Rgba32 backgroundColor)
@@ -140,13 +139,13 @@ namespace cl2j.Image
                 y = (h - newH) / 2;
             }
 
-            using var redimensionnee = ImageResizer.Resize(image, Math.Max(1, newW), Math.Max(1, newH));
+            using var resized = ImageResizer.Resize(image, Math.Max(1, newW), Math.Max(1, newH));
 
             var target = new ImageRgba32(w, h);
             target.Mutate(g =>
             {
                 g.BackgroundColor(backgroundColor);
-                g.DrawImage(redimensionnee, new SixLabors.ImageSharp.Point(x, y), 1f);
+                g.DrawImage(resized, new SixLabors.ImageSharp.Point(x, y), 1f);
             });
 
             return target;
@@ -224,9 +223,9 @@ namespace cl2j.Image
             if (croppedWidth == bmp.Width && croppedHeight == bmp.Height)
                 return bmp;
 
-            //Une image entierement blanche donne des bornes croisees : l ancienne version levait
-            //alors une BadRequestException depuis Graphics.DrawImage. On garde le meme signal,
-            //mais leve avant plutot que d attendre la bibliotheque.
+            //An entirely white image gives crossed bounds: the old version then threw a
+            //BadRequestException from Graphics.DrawImage. We keep the same signal, but throw up
+            //front rather than waiting for the library.
             if (croppedWidth <= 0 || croppedHeight <= 0 || leftmost + croppedWidth > w || topmost + croppedHeight > h)
                 throw new BadRequestException($"Values are topmost={topmost} btm={bottommost} left={leftmost} right={rightmost} croppedWidth={croppedWidth} croppedHeight={croppedHeight}");
 
@@ -295,10 +294,10 @@ namespace cl2j.Image
             }
             finally
             {
-                //Les intermediaires sont a nous, les originaux non. Crop et Resize rendent parfois
-                //l instance recue : c est ce que verifie la comparaison de reference. Sans ce soin,
-                //l agregation liberait les images de son appelant — et sur des dizaines de milliers
-                //de comparaisons, ne rien liberer du tout coutait la memoire.
+                //The intermediates are ours, the originals are not. Crop and Resize sometimes
+                //return the instance they received: that is what the reference comparison checks.
+                //Without this care, aggregation disposed its caller images — and across tens of
+                //thousands of comparisons, disposing nothing at all cost memory.
                 Liberer(newImage, image1, image2);
                 Liberer(newImageCrawler, image1, image2);
             }
@@ -359,29 +358,29 @@ namespace cl2j.Image
             if (bytes == null)
                 return bytes;
 
-            //Plus de repli, et c est le coeur du correctif. L ancienne version enchainait deux
-            //tentatives qui se terminaient toutes les deux par System.Drawing, puis rendait les
-            //octets d origine sans rien dire : sous Linux, toute image ressortait telle quelle,
-            //non redimensionnee — 2,4 Mo mesures sur une photo du portail.
+            //No more fallback, and that is the heart of the fix. The old version chained two
+            //attempts that both ended in System.Drawing, then returned the original bytes without
+            //saying anything: on Linux, every image came back as-is, not resized — 2.4 MB measured
+            //on one portal photo.
             //
-            //On laisse desormais l exception remonter. Une image illisible est une erreur que
-            //l appelant doit voir, pas un silence a stocker.
+            //The exception is now allowed to propagate. An unreadable image is an error the caller
+            //must see, not a silence to store.
             using var image = ReadImage(bytes)
-                ?? throw new ValidationException("Invalid image : aucun decodeur n a pu la lire.");
+                ?? throw new ValidationException("Invalid image: no decoder could read it.");
 
             var modified = ExifUtils.RotateFlipIfRequired(image);
             modified |= ExifUtils.Strip(image);
 
             if (image.Width > max || image.Height > max)
             {
-                using var redimensionnee = ImageResizer.ResizeIfOversize(image, max, max);
-                return ImageSerialization.SaveJpegToBytes(redimensionnee, 75L);
+                using var resized = ImageResizer.ResizeIfOversize(image, max, max);
+                return ImageSerialization.SaveJpegToBytes(resized, 75L);
             }
 
-            //Le format decide autant que la taille. Un HEIC de 1200 x 900 ne depasse rien, n a rien
-            //a redresser, et ressortirait donc tel quel — c est exactement ainsi que 93 photos
-            //d iPhone se sont retrouvees stockees en HEIC sous un nom en `.jpg`, invisibles dans
-            //tous les navigateurs. Ce qui n est pas un format du web est re-encode, sans condition.
+            //The format decides as much as the size does. A 1200 x 900 HEIC exceeds nothing, has
+            //nothing to straighten, and would therefore come back untouched — that is exactly how
+            //93 iPhone photos ended up stored as HEIC under a `.jpg` name, invisible in every
+            //browser. Anything that is not a web format is re-encoded, unconditionally.
             if (modified || !EstUnFormatDuWeb(bytes))
                 return ImageSerialization.SaveJpegToBytes(image, 75L);
 
@@ -464,22 +463,21 @@ namespace cl2j.Image
         }
 
         /// <summary>
-        /// Rend l image, ou `null` si les octets ne sont pas une image lisible.
+        /// Returns the image, or `null` if the bytes are not a readable image.
         ///
-        /// ⚠️ **Le `null` est silencieux, et c est ce qui a coute quinze mois.** Sous Linux, cette
-        /// methode rendait `null` pour *toutes* les images, et `cl2j.Medias.MediaService` ignorait
-        /// ce `null` : aucune vignette n a jamais ete produite, sans une ligne de journal. Un
-        /// appelant qui ne peut rien faire d un `null` doit lever ou journaliser, jamais continuer.
+        /// ⚠️ **The `null` is silent, and that is what cost fifteen months.** On Linux this method
+        /// returned `null` for *every* image, and `cl2j.Medias.MediaService` ignored that `null`:
+        /// no thumbnail was ever produced, without one line of log. A caller that can do nothing
+        /// with a `null` must throw or log, never carry on.
         /// </summary>
         /// <summary>
-        /// Rend vrai si les octets portent une image d un format reconnu, en ne lisant que
-        /// l en-tete — pas de decodage complet, donc negligeable devant un telechargement.
+        /// Returns true if the bytes carry an image in a recognised format, reading only the
+        /// header — no full decode, so negligible next to a download.
         ///
-        /// Sert a repondre a une question que le code appelant doit poser avant de stocker quoi que
-        /// ce soit : « ce que la source vient de me rendre est-il vraiment une image ? ». Le
-        /// 3 septembre 2026, le crawler d Appartogo stockait la page d accueil de LogisQuebec sous
-        /// un nom en `.jpg` — la source redirigeait ses photos supprimees vers son accueil, et
-        /// `HttpClient` suit les redirections tout seul.
+        /// It answers a question the calling code must ask before storing anything: "is what the
+        /// source just handed me really an image?". On September 3rd 2026, the Appartogo crawler
+        /// was storing the LogisQuebec home page under a `.jpg` name — the source redirected its
+        /// deleted photos to its home page, and `HttpClient` follows redirects on its own.
         /// </summary>
         public static bool IsImage(byte[] bytes)
         {
@@ -512,25 +510,25 @@ namespace cl2j.Image
         }
 
         /// <summary>
-        /// Nomme le format d un fichier qu `ImageSharp` ne sait pas lire, en lisant sa signature.
-        /// Rend `null` quand le format n est pas reconnu. Sert a **expliquer un refus**, jamais a
-        /// decider d accepter : rien ici ne decode quoi que ce soit.
+        /// Names the format of a file `ImageSharp` cannot read, by reading its signature. Returns
+        /// `null` when the format is not recognised. It serves to **explain a refusal**, never to
+        /// decide to accept: nothing here decodes anything.
         ///
-        /// **Pourquoi cette methode existe.** Decision du client, 4 septembre 2026 : aucune
-        /// bibliotheque native ne sera ajoutee pour decoder le HEIC. ImageMagick le fait, mais il
-        /// reconnait plus de deux cents formats, dont des langages capables de lire et d ecrire des
-        /// fichiers, et son historique de vulnerabilites — la famille ImageTragick — n a pas de
-        /// parade a 100 %. Sur 95 photos concernees, le jeu n en vaut pas la chandelle. La
-        /// conversion se fera **dans le navigateur**, avant le televersement.
+        /// **Why this method exists.** Client decision, September 4th 2026: no native library will
+        /// be added to decode HEIC. ImageMagick does it, but it recognises more than two hundred
+        /// formats, some of them languages able to read and write files, and its vulnerability
+        /// history — the ImageTragick family — has no fully reliable defence. For 95 photos, the
+        /// game is not worth the candle. The conversion will happen **in the browser**, before the
+        /// upload.
         ///
-        /// Mais un client reste un client : un vieux navigateur, un appel direct a l API ou une
-        /// conversion ratee enverront quand meme du HEIC. Le serveur doit donc refuser, et le
-        /// refus doit etre **lisible** — « format HEIC non accepte » plutot qu une erreur generique
-        /// que personne ne sait interpreter. Quinze mois de vignettes manquantes sont nes d un
-        /// echec muet ; on ne recommence pas.
+        /// But a client is still a client: an old browser, a direct API call or a failed
+        /// conversion will send HEIC anyway. The server must therefore refuse, and the refusal must
+        /// be **readable** — "HEIC format not accepted" rather than a generic error nobody can
+        /// interpret. Fifteen months of missing thumbnails were born of a mute failure; we are not
+        /// doing that again.
         ///
-        /// Douze octets suffisent : quatre de taille, la balise `ftyp`, puis la marque. C est du
-        /// code gere, sans dependance, et cela couvre les 124 fichiers refuses du portail.
+        /// Twelve bytes are enough: four of size, the `ftyp` tag, then the brand. It is managed
+        /// code, with no dependency, and it covers the 124 files the portal refused.
         /// </summary>
         public static string? NommerUnFormatNonSupporte(byte[] bytes)
         {
@@ -552,10 +550,10 @@ namespace cl2j.Image
         }
 
         /// <summary>
-        /// Vrai si le format est rendu par les navigateurs. Un HEIC decode correctement mais ne
-        /// s affiche ni sous Chrome ni sous Firefox : le stocker tel quel produit une annonce sans
-        /// image, ce qui est exactement la panne constatee sur 93 fichiers du portail. Ce qui n est
-        /// pas dans cette liste doit ressortir re-encode.
+        /// True if the format is rendered by browsers. A HEIC decodes correctly but displays in
+        /// neither Chrome nor Firefox: storing it as-is produces a listing with no image, which is
+        /// exactly the failure seen on 93 portal files. Anything not in this list must come back
+        /// re-encoded.
         /// </summary>
         public static bool EstUnFormatDuWeb(byte[] bytes)
         {

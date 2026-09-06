@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <!-- CA1707 : les noms de tests separes par des soulignes sont voulus, ils se lisent comme des
-         phrases dans le rapport de la CI. -->
+    <!-- CA1707: underscore-separated test names are intentional, they read as sentences in the
+         CI report. -->
     <NoWarn>$(NoWarn);CA1707</NoWarn>
   </PropertyGroup>
 

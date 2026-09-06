@@ -18,8 +18,9 @@ namespace cl2j.Image
 
         public static async Task UploadMediaAsync(IFileStorageProvider fileStorageProvider, string fileName, ImageRgba32 image, int max = 1280)
         {
-            //Corrige au passage, le 3 septembre 2026 : cette surcharge calculait l image nettoyee
-            //puis serialisait `image`, l originale. Le redimensionnement etait donc calcule et jete.
+            //Fixed in passing, on September 3rd 2026: this overload computed the cleaned image
+            //then serialized `image`, the original. The resize was therefore computed and thrown
+            //away.
             var imageModified = ImageUtils.CleanImage(image, max, out _);
             try
             {
@@ -29,8 +30,8 @@ namespace cl2j.Image
             }
             finally
             {
-                //CleanImage rend l originale quand il n y a rien a faire : ne liberer que ce qu il
-                //a cree.
+                //CleanImage returns the original when there is nothing to do: dispose only what it
+                //created.
                 if (!ReferenceEquals(imageModified, image))
                     imageModified.Dispose();
             }

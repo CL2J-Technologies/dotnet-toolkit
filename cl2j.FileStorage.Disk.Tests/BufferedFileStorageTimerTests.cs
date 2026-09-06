@@ -6,28 +6,28 @@ using Xunit;
 namespace cl2j.FileStorage.Disk.Tests
 {
     /// <summary>
-    /// Test de l independance des instances.
+    /// Test of instance independence.
     ///
-    /// Le minuteur qui declenche le depot periodique etait porte par un champ `static`. Deux
-    /// instances partageaient donc le meme : la seconde creee orphelinait le minuteur de la
-    /// premiere, et `Dispose` liberait celui de la derniere creee, pas le sien. **Disposer une
-    /// instance arretait le depot periodique d une autre**, sans exception ni trace — le buffer
-    /// continuait de se remplir et plus rien n arrivait sur le disque.
+    /// The timer that triggers the periodic flush was held in a `static` field. Two instances
+    /// therefore shared the same one: the second created orphaned the timer of the first, and
+    /// `Dispose` released the one belonging to the last created, not its own. **Disposing one
+    /// instance stopped the periodic flush of another**, with no exception and no trace — the
+    /// buffer kept filling and nothing reached the disk any more.
     ///
-    /// Le defaut n avait pas d effet en production : une application n a qu un `LoggerProvider`,
-    /// donc qu un `BufferedFileStorage`. Rien ne l imposait pour autant, et une seconde instance
-    /// aurait produit une perte de journal silencieuse — la famille de pannes la plus couteuse de
-    /// ce depot.
+    /// The defect had no effect in production: an application has a single `LoggerProvider`, and
+    /// therefore a single `BufferedFileStorage`. Nothing enforced that, though, and a second
+    /// instance would have produced a silent loss of log — the most expensive family of failures
+    /// in this repository.
     ///
-    /// ⚠️ **Ce test depend du temps**, contrairement aux autres du projet : le comportement teste
-    /// est celui d un minuteur. Il attend un depot en scrutant le fichier, avec une echeance large
-    /// pour ne pas devenir instable sur une machine chargee.
+    /// ⚠️ **This test depends on time**, unlike the others in the project: the behaviour under
+    /// test is that of a timer. It waits for a flush by polling the file, with a generous deadline
+    /// so it does not become flaky on a loaded machine.
     /// </summary>
     public sealed class BufferedFileStorageTimerTests : IDisposable
     {
         private const int MaxSize = 1024 * 1024;
         private static readonly TimeSpan Cadence = TimeSpan.FromMilliseconds(100);
-        private static readonly TimeSpan Echeance = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
 
         private readonly string root;
         private readonly FileStorageProviderDisk provider;
@@ -52,37 +52,37 @@ namespace cl2j.FileStorage.Disk.Tests
         }
 
         [Fact]
-        public async Task Disposer_une_instance_n_arrete_pas_le_depot_d_une_autre()
+        public async Task Disposing_one_instance_does_not_stop_the_flush_of_another()
         {
-            var premiere = new BufferedFileStorage(provider, "premiere_{0:yyyyMMdd}_{1:00}.log", MaxSize, Cadence, clearFile: true);
-            var seconde = new BufferedFileStorage(provider, "seconde_{0:yyyyMMdd}_{1:00}.log", MaxSize, Cadence, clearFile: true);
+            var first = new BufferedFileStorage(provider, "first_{0:yyyyMMdd}_{1:00}.log", MaxSize, Cadence, clearFile: true);
+            var second = new BufferedFileStorage(provider, "second_{0:yyyyMMdd}_{1:00}.log", MaxSize, Cadence, clearFile: true);
 
-            // Avec le champ static, ceci liberait le minuteur de `seconde`.
-            premiere.Dispose();
+            // With the static field, this released the timer belonging to `second`.
+            first.Dispose();
 
-            await seconde.AppendAsync("ecrit par le minuteur" + Environment.NewLine);
+            await second.AppendAsync("written by the timer" + Environment.NewLine);
 
-            // Volontairement sans `FlushAsync` : c est le depot **periodique** qu on teste. Un
-            // appel explicite ferait passer le test sur le code defectueux comme sur le corrige.
-            var chemin = Path.Combine(root, seconde.CurrentFileName);
-            var depose = await AttendreLeContenuAsync(chemin, "ecrit par le minuteur");
+            // Deliberately without `FlushAsync`: it is the **periodic** flush under test. An
+            // explicit call would make the test pass on the broken code as well as the fixed one.
+            var path = Path.Combine(root, second.CurrentFileName);
+            var flushed = await WaitForContentAsync(path, "written by the timer");
 
-            seconde.Dispose();
+            second.Dispose();
 
-            Assert.True(depose, $"Le minuteur de la seconde instance n a rien depose dans '{seconde.CurrentFileName}' en {Echeance.TotalSeconds} s.");
+            Assert.True(flushed, $"The timer of the second instance flushed nothing into '{second.CurrentFileName}' in {Deadline.TotalSeconds} s.");
         }
 
-        private static async Task<bool> AttendreLeContenuAsync(string chemin, string attendu)
+        private static async Task<bool> WaitForContentAsync(string path, string expected)
         {
-            var limite = DateTime.UtcNow.Add(Echeance);
+            var limite = DateTime.UtcNow.Add(Deadline);
             while (DateTime.UtcNow < limite)
             {
-                if (File.Exists(chemin))
+                if (File.Exists(path))
                 {
-                    // Lecture partagee : le fournisseur peut ecrire pendant qu on regarde.
-                    using var flux = new FileStream(chemin, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    // Shared read: the provider may write while we are looking.
+                    using var flux = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     using var lecteur = new StreamReader(flux);
-                    if ((await lecteur.ReadToEndAsync()).Contains(attendu, StringComparison.Ordinal))
+                    if ((await lecteur.ReadToEndAsync()).Contains(expected, StringComparison.Ordinal))
                         return true;
                 }
 

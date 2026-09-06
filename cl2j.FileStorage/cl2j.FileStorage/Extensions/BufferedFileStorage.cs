@@ -6,11 +6,11 @@ namespace cl2j.FileStorage.Extensions
 {
     public class BufferedFileStorage : IDisposable
     {
-        // Le minuteur etait `static`. Deux instances partageaient donc le champ : la seconde
-        // orphelinait le minuteur de la premiere, et `Dispose` liberait celui de la derniere
-        // creee — donc disposer une instance arretait silencieusement le depot periodique d une
-        // autre, sans exception ni trace. Sans effet tant qu une application n a qu un seul
-        // `LoggerProvider`, ce qui est le cas courant, mais rien ne l imposait.
+        // The timer used to be `static`, so two instances shared the field: the second orphaned
+        // the timer of the first, and `Dispose` released the one belonging to the last instance
+        // created — so disposing one instance silently stopped another instance periodic flush,
+        // with no exception and no trace. Harmless as long as an application has a single
+        // `LoggerProvider`, which is the common case, but nothing enforced it.
         private readonly Timer timer;
         private readonly StringBuilder buffer = new();
         private readonly string fileNamePattern;
@@ -23,24 +23,23 @@ namespace cl2j.FileStorage.Extensions
         private DateTime lastWrite;
 
         /// <param name="clock">
-        /// L horloge qui nomme les fichiers et decide de la bascule. Par defaut UTC, ce qui garde
-        /// le comportement des appelants existants.
+        /// The clock that names the files and decides when to roll over. UTC by default, which
+        /// preserves the behaviour of existing callers.
         ///
-        /// <para>Elle existe parce que le nom et le contenu divergeaient : le journal horodatait
-        /// ses lignes dans le fuseau configure par l application, pendant que le nom du fichier et
-        /// la bascule etaient en UTC en dur. Un fichier nomme pour le 6 septembre s ouvrait donc le
-        /// 5 a 19 h 59, et diagnostiquer une soiree demandait d ouvrir le fichier du lendemain.</para>
+        /// <para>It exists because the name and the content disagreed: the log stamped its lines
+        /// in the time zone the application configured, while the file name and the rollover were
+        /// hard-coded to UTC. A file named for September 6th therefore opened on the 5th at 19:59,
+        /// and diagnosing an evening meant opening the next day file.</para>
         ///
-        /// <para>⚠️ Les trois usages — le nom, les deux tests de bascule et la marque du dernier
-        /// ecrit — doivent partager la meme horloge. N en corriger qu un les fait diverger a
-        /// nouveau.</para>
+        /// <para>⚠️ All three uses — the name, the two rollover checks and the last-written mark —
+        /// must share the same clock. Fixing only one of them makes them diverge again.</para>
         /// </param>
         public BufferedFileStorage(IFileStorageProvider fileStorageProvider, string fileNamePattern, int maxSize, TimeSpan flushInterval, bool clearFile, Func<DateTime>? clock = null)
         {
             this.fileStorageProvider = fileStorageProvider;
             this.fileNamePattern = fileNamePattern;
             this.maxSize = maxSize;
-            // Assignee avant ClearFileAsync : ce dernier nomme deja un fichier.
+            // Assigned before ClearFileAsync: that call already names a file.
             this.clock = clock ?? (() => DateTime.UtcNow);
 
             lastWrite = DateTime.MinValue;

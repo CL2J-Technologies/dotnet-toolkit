@@ -7,17 +7,17 @@ namespace cl2j.Image
 {
     public static class ExifUtils
     {
-        //Porte sur ImageSharp le 3 septembre 2026, voir ImageResizer pour le pourquoi.
+        //Ported to ImageSharp on September 3rd 2026, see ImageResizer for why.
         //
-        //L ancienne version deroulait a la main les huit valeurs du tag 274 en RotateFlipType.
-        //ImageSharp fait exactement ce travail dans AutoOrient, y compris les quatre cas mirroir,
-        //et retire l etiquette derriere lui. On garde la valeur de retour — « l image a-t-elle ete
-        //modifiee » — que les appelants utilisent pour decider s il faut reencoder.
+        //The old version unrolled by hand the eight values of tag 274 into RotateFlipType.
+        //ImageSharp does exactly that work in AutoOrient, including the four mirrored cases, and
+        //strips the tag behind it. We keep the return value — "was the image modified" — which
+        //callers use to decide whether to re-encode.
         public static bool RotateFlipIfRequired(ImageRgba32 image)
         {
             var orientation = LireOrientation(image);
 
-            //1 = Horizontal (normal), rien a faire. Absente, rien a faire non plus.
+            //1 = Horizontal (normal), nothing to do. Absent, nothing to do either.
             if (orientation is null or 1)
                 return false;
 
