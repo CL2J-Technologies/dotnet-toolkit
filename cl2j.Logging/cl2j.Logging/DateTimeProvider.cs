@@ -4,10 +4,10 @@
     {
         public static DateTimeProvider Create(string? timeZone)
         {
-            // Un nom absent se comporte comme un nom inconnu : repli sur UTC avec un avertissement.
-            // TimeZoneName n a pas de valeur par defaut dans LoggerOptions, et lever ici ferait
-            // tomber le demarrage d une application qui ne l a jamais configuree — alors que le
-            // repli existait deja pour un nom errone.
+            // A missing name behaves like an unknown one: fall back to UTC with a warning.
+            // TimeZoneName has no default in LoggerOptions, and throwing here would bring down the
+            // startup of an application that never configured it — while the fallback already
+            // existed for a wrong name.
             if (string.IsNullOrWhiteSpace(timeZone))
             {
                 Console.WriteLine("DateTimeProvider: no time zone configured. Using UTC");

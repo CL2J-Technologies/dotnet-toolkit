@@ -39,7 +39,7 @@ namespace cl2j.WebTooling
 
         public static string GetBrowserLanguage(this HttpRequest request)
         {
-            //Mettre la liste dans le AppSettings.json
+            //Move this list into AppSettings.json
             var languagesSupported = new List<string> { "fr", "en" };
 
             var languages = request.GetTypedHeaders().AcceptLanguage.OrderByDescending(x => x.Quality);

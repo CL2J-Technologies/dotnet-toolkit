@@ -5,31 +5,31 @@ using Xunit;
 namespace cl2j.FileStorage.Disk.Tests
 {
     /// <summary>
-    /// Tests de l ecriture atomique du fournisseur disque.
+    /// Tests for the atomic write of the disk provider.
     ///
-    /// Ils existent a cause d un risque precis : `WriteAsync` ouvrait la cible en
-    /// `FileMode.Create`, qui la tronque a zero avant d ecrire. Sur Appartogo, la machine qui
-    /// agrege est desallouee tous les jours par une Logic App pendant que des cycles ecrivent
-    /// toutes les trois minutes — une coupure entre la troncature et la fin de l ecriture aurait
-    /// laisse un fichier vide ou partiel.
+    /// They exist because of a precise risk: `WriteAsync` opened the target with
+    /// `FileMode.Create`, which truncates it to zero before writing. On Appartogo, the machine
+    /// that aggregates is deallocated every day by a Logic App while cycles write every three
+    /// minutes — an interruption between the truncation and the end of the write would have left
+    /// an empty or partial file.
     ///
-    /// L atomicite elle-meme ne se teste pas de facon deterministe : il faudrait tuer le processus
-    /// a l instant precis. Ce qui se teste, et qui est ici, ce sont ses consequences observables —
-    /// aucun temporaire ne survit, aucun temporaire n apparait dans un listing, un remplacement
-    /// laisse exactement le nouveau contenu, et une lecture en cours ne bloque plus l ecriture.
+    /// Atomicity itself cannot be tested deterministically: it would take killing the process at
+    /// the exact instant. What can be tested, and is here, are its observable consequences — no
+    /// temporary survives, no temporary shows up in a listing, a replacement leaves exactly the
+    /// new content, and a read in progress no longer blocks the write.
     /// </summary>
     public sealed class FileStorageProviderDiskWriteTests : IDisposable
     {
-        private readonly string racine;
+        private readonly string root;
         private readonly FileStorageProviderDisk provider;
 
         public FileStorageProviderDiskWriteTests()
         {
-            racine = Path.Combine(Path.GetTempPath(), "cl2j-filestorage-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(racine);
+            root = Path.Combine(Path.GetTempPath(), "cl2j-filestorage-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
 
             var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?> { ["Disk:Path"] = racine })
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Disk:Path"] = root })
                 .Build();
 
             provider = new FileStorageProviderDisk();
@@ -38,129 +38,129 @@ namespace cl2j.FileStorage.Disk.Tests
 
         public void Dispose()
         {
-            try { Directory.Delete(racine, recursive: true); } catch { }
+            try { Directory.Delete(root, recursive: true); } catch { }
         }
 
         [Fact]
-        public async Task WriteAsync_puis_ReadAsync_rend_le_meme_contenu()
+        public async Task WriteAsync_then_ReadAsync_returns_the_same_content()
         {
-            var contenu = Contenu(5000);
+            var content = Content(5000);
 
-            await EcrireAsync("fichier.bin", contenu);
+            await WriteFileAsync("file.bin", content);
 
-            Assert.Equal(contenu, await LireAsync("fichier.bin"));
+            Assert.Equal(content, await ReadFileAsync("file.bin"));
         }
 
         [Fact]
-        public async Task WriteAsync_ne_laisse_aucun_temporaire()
+        public async Task WriteAsync_leaves_no_temporary_behind()
         {
-            await EcrireAsync("fichier.bin", Contenu(5000));
+            await WriteFileAsync("file.bin", Content(5000));
 
-            var temporaires = Directory.GetFiles(racine, "*.tmp");
+            var temporaires = Directory.GetFiles(root, "*.tmp");
             Assert.Empty(temporaires);
         }
 
         [Fact]
-        public async Task WriteAsync_remplace_entierement_un_fichier_plus_long()
+        public async Task WriteAsync_fully_replaces_a_longer_file()
         {
-            //Le piege classique d une ecriture qui n ecraserait pas toute la cible : la queue de
-            //l ancien contenu resterait collee au nouveau.
-            await EcrireAsync("fichier.bin", Contenu(20000));
-            var court = Contenu(300);
+            //The classic trap of a write that would not overwrite the whole target: the tail of
+            //the old content would stay stuck to the new one.
+            await WriteFileAsync("file.bin", Content(20000));
+            var shorter = Content(300);
 
-            await EcrireAsync("fichier.bin", court);
+            await WriteFileAsync("file.bin", shorter);
 
-            Assert.Equal(court, await LireAsync("fichier.bin"));
+            Assert.Equal(shorter, await ReadFileAsync("file.bin"));
         }
 
         [Fact]
-        public async Task WriteAsync_reussit_pendant_qu_une_lecture_tient_le_fichier()
+        public async Task WriteAsync_succeeds_while_a_read_holds_the_file()
         {
-            //Garde de non-regression : le remplacement par renommage echouerait sous Windows si le
-            //fichier remplace etait ouvert sans FileShare.Delete. La troncature, elle, ne demandait
-            //rien — ce test verifie qu on n a pas casse ce cas en gagnant l atomicite.
-            await EcrireAsync("fichier.bin", Contenu(1000));
+            //Regression guard: replacing by rename would fail on Windows if the file being
+            //replaced were open without FileShare.Delete. Truncation, for its part, required
+            //nothing — this test checks we did not break that case while gaining atomicity.
+            await WriteFileAsync("file.bin", Content(1000));
 
-            var chemin = Path.Combine(racine, "fichier.bin");
-            using (new FileStream(chemin, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            var path = Path.Combine(root, "file.bin");
+            using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             {
-                var nouveau = Contenu(2000);
-                await EcrireAsync("fichier.bin", nouveau);
-                Assert.Equal(nouveau, await LireAsync("fichier.bin"));
+                var updated = Content(2000);
+                await WriteFileAsync("file.bin", updated);
+                Assert.Equal(updated, await ReadFileAsync("file.bin"));
             }
         }
 
         [Fact]
-        public async Task ListFilesAsync_ecarte_les_temporaires()
+        public async Task ListFilesAsync_leaves_out_temporaries()
         {
-            //Un processus tue pendant une ecriture peut laisser un temporaire. Il ne doit jamais
-            //passer pour une donnee aux yeux d un appelant qui balaie le dossier.
-            await EcrireAsync("fichier.bin", Contenu(100));
-            await File.WriteAllTextAsync(Path.Combine(racine, "fichier.bin.abcdef.tmp"), "reliquat");
+            //A process killed mid-write can leave a temporary behind. It must never pass for data
+            //in the eyes of a caller scanning the folder.
+            await WriteFileAsync("file.bin", Content(100));
+            await File.WriteAllTextAsync(Path.Combine(root, "file.bin.abcdef.tmp"), "reliquat");
 
-            var fichiers = (await provider.ListFilesAsync(string.Empty)).ToList();
+            var files = (await provider.ListFilesAsync(string.Empty)).ToList();
 
-            Assert.Contains("fichier.bin", fichiers);
-            Assert.DoesNotContain(fichiers, f => f.EndsWith(".tmp", StringComparison.Ordinal));
+            Assert.Contains("file.bin", files);
+            Assert.DoesNotContain(files, f => f.EndsWith(".tmp", StringComparison.Ordinal));
         }
 
         [Fact]
-        public async Task WriteAsync_cree_les_dossiers_manquants()
+        public async Task WriteAsync_creates_missing_folders()
         {
-            var contenu = Contenu(200);
+            var content = Content(200);
 
-            await EcrireAsync("un/deux/trois.bin", contenu);
+            await WriteFileAsync("un/deux/trois.bin", content);
 
-            Assert.Equal(contenu, await LireAsync("un/deux/trois.bin"));
+            Assert.Equal(content, await ReadFileAsync("un/deux/trois.bin"));
         }
 
         [Fact]
-        public async Task WriteAsync_reussit_quand_un_tiers_tient_la_cible_puis_la_relache()
+        public async Task WriteAsync_succeeds_when_a_third_party_holds_the_target_then_releases_it()
         {
-            // Reproduit la panne du 4 septembre 2026, vue sur la VM du crawler :
-            // « Unable to remove the file to be replaced » — l erreur Windows 1175. File.Replace doit
-            // supprimer l ancienne cible, ce qui echoue tant qu un tiers la tient ouverte sans
-            // FileShare.Delete. Un antivirus qui scanne le fichier qu on vient d ecrire suffit, d ou
-            // le caractere intermittent.
+            // Reproduces the failure of September 4th 2026, seen on the crawler VM:
+            // "Unable to remove the file to be replaced" — Windows error 1175. File.Replace has to
+            // delete the old target, which fails as long as a third party holds it open without
+            // FileShare.Delete. An antivirus scanning the file just written is enough, hence the
+            // intermittent nature.
             //
-            // Le verrou est relache apres 120 ms — dans la fenetre des cinq tentatives, qui couvrent
-            // une demi-seconde. Sans le reessai, cet appel leve.
-            await EcrireAsync("fichier.bin", Contenu(1000));
-            var chemin = Path.Combine(racine, "fichier.bin");
+            // The lock is released after 120 ms — inside the window of five attempts, which cover
+            // half a second. Without the retry, this call throws.
+            await WriteFileAsync("file.bin", Content(1000));
+            var path = Path.Combine(root, "file.bin");
 
-            var verrou = new FileStream(chemin, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var fileLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             var relache = Task.Run(async () =>
             {
                 await Task.Delay(120);
-                verrou.Dispose();
+                fileLock.Dispose();
             });
 
-            var nouveau = Contenu(2000);
-            await EcrireAsync("fichier.bin", nouveau);
+            var updated = Content(2000);
+            await WriteFileAsync("file.bin", updated);
             await relache;
 
-            Assert.Equal(nouveau, await LireAsync("fichier.bin"));
-            Assert.Empty(Directory.GetFiles(racine, "*.tmp", SearchOption.AllDirectories));
+            Assert.Equal(updated, await ReadFileAsync("file.bin"));
+            Assert.Empty(Directory.GetFiles(root, "*.tmp", SearchOption.AllDirectories));
         }
 
-        private async Task EcrireAsync(string nom, byte[] contenu)
+        private async Task WriteFileAsync(string nom, byte[] content)
 
         {
-            using var source = new MemoryStream(contenu);
+            using var source = new MemoryStream(content);
             await provider.WriteAsync(nom, source, null);
         }
 
-        private async Task<byte[]> LireAsync(string nom)
+        private async Task<byte[]> ReadFileAsync(string nom)
         {
             using var destination = new MemoryStream();
             Assert.True(await provider.ReadAsync(nom, destination));
             return destination.ToArray();
         }
 
-        private static byte[] Contenu(int taille)
+        private static byte[] Content(int size)
         {
-            var bytes = new byte[taille];
-            for (var i = 0; i < taille; ++i)
+            var bytes = new byte[size];
+            for (var i = 0; i < size; ++i)
                 bytes[i] = (byte)(i % 251);
             return bytes;
         }

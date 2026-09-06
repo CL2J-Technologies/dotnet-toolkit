@@ -6,18 +6,17 @@ using Xunit;
 namespace cl2j.FileStorage.Disk.Tests
 {
     /// <summary>
-    /// Tests de l horloge qui nomme les fichiers et decide de la bascule.
+    /// Tests for the clock that names the files and decides when to roll over.
     ///
-    /// Ils existent a cause d un defaut observe en production le 6 septembre 2026 : le journal
-    /// horodatait ses lignes dans le fuseau configure par l application pendant que le nom du
-    /// fichier et la bascule etaient en UTC en dur. Le fichier
-    /// `appartogocrawler_20260906_01.log` s ouvrait sur une ligne datee du 5 a 19 h 59 — soit
-    /// minuit UTC. Diagnostiquer une soiree demandait donc d ouvrir le fichier du lendemain, sans
-    /// que rien ne le signale.
+    /// They exist because of a defect seen in production on September 6th 2026: the log stamped
+    /// its lines in the time zone the application configured while the file name and the rollover
+    /// were hard-coded to UTC. The file `appartogocrawler_20260906_01.log` opened on a line dated
+    /// the 5th at 19:59 — that is, midnight UTC. Diagnosing an evening therefore meant opening the
+    /// next day file, with nothing to say so.
     ///
-    /// Ce qui se teste ici, ce sont les deux consequences observables : le nom suit l horloge
-    /// fournie, et la bascule aussi. Les deux comptent — n en corriger qu une les ferait diverger
-    /// a nouveau, un fichier nomme pour le bon jour continuant de basculer au mauvais moment.
+    /// What is tested here are the two observable consequences: the name follows the clock it is
+    /// given, and so does the rollover. Both matter — fixing only one would make them diverge
+    /// again, a file named for the right day still rolling over at the wrong moment.
     /// </summary>
     public sealed class BufferedFileStorageClockTests : IDisposable
     {
@@ -46,12 +45,12 @@ namespace cl2j.FileStorage.Disk.Tests
                 Directory.Delete(root, true);
         }
 
-        // L instant du defaut : 20 h 30 le 5 septembre en heure de l Est, soit 00 h 30 le
-        // 6 septembre en UTC. Le nom doit porter le 5, comme les lignes qu il contiendra.
+        // The moment of the defect: 20:30 on September 5th Eastern time, that is 00:30 on
+        // September 6th UTC. The name must carry the 5th, like the lines it will contain.
         private static readonly DateTime SoireeLocale = new(2026, 9, 5, 20, 30, 0, DateTimeKind.Unspecified);
 
         [Fact]
-        public void Le_nom_du_fichier_suit_l_horloge_fournie()
+        public void The_file_name_follows_the_clock_it_is_given()
         {
             using var buffered = new BufferedFileStorage(provider, Pattern, MaxSize, TimeSpan.FromHours(1), clearFile: true, () => SoireeLocale);
 
@@ -59,43 +58,43 @@ namespace cl2j.FileStorage.Disk.Tests
         }
 
         [Fact]
-        public void Sans_horloge_le_nom_reste_en_utc()
+        public void Without_a_clock_the_name_stays_in_utc()
         {
-            // Le parametre est facultatif : les appelants qui ne le passent pas gardent le
-            // comportement d avant le correctif.
+            // The parameter is optional: callers that do not pass it keep the behaviour from
+            // before the fix.
             using var buffered = new BufferedFileStorage(provider, Pattern, MaxSize, TimeSpan.FromHours(1), clearFile: true);
 
             Assert.Equal($"test_{DateTime.UtcNow:yyyyMMdd}_01.log", buffered.CurrentFileName);
         }
 
         [Fact]
-        public async Task La_bascule_de_fichier_suit_l_horloge_fournie()
+        public async Task The_file_rollover_follows_the_clock_it_is_given()
         {
             var maintenant = SoireeLocale;
 
             using var buffered = new BufferedFileStorage(provider, Pattern, MaxSize, TimeSpan.FromHours(1), clearFile: true, () => maintenant);
 
-            await buffered.AppendAsync("le soir du 5" + Environment.NewLine);
+            await buffered.AppendAsync("the evening of the 5th" + Environment.NewLine);
             await buffered.FlushAsync();
             Assert.Equal("test_20260905_01.log", buffered.CurrentFileName);
 
-            // Minuit local franchi — trois heures et demie apres minuit UTC.
+            // Local midnight crossed — three and a half hours after midnight UTC.
             maintenant = SoireeLocale.AddHours(4);
 
-            await buffered.AppendAsync("le matin du 6" + Environment.NewLine);
+            await buffered.AppendAsync("the morning of the 6th" + Environment.NewLine);
             await buffered.FlushAsync();
             Assert.Equal("test_20260906_01.log", buffered.CurrentFileName);
 
-            // Et chaque ligne est bien allee dans le fichier de sa propre journee.
-            Assert.Contains("le soir du 5", await File.ReadAllTextAsync(Path.Combine(root, "test_20260905_01.log")), StringComparison.Ordinal);
-            Assert.Contains("le matin du 6", await File.ReadAllTextAsync(Path.Combine(root, "test_20260906_01.log")), StringComparison.Ordinal);
+            // And each line did go into the file for its own day.
+            Assert.Contains("the evening of the 5th", await File.ReadAllTextAsync(Path.Combine(root, "test_20260905_01.log")), StringComparison.Ordinal);
+            Assert.Contains("the morning of the 6th", await File.ReadAllTextAsync(Path.Combine(root, "test_20260906_01.log")), StringComparison.Ordinal);
         }
 
         [Fact]
-        public async Task Minuit_utc_ne_declenche_plus_de_bascule()
+        public async Task Midnight_utc_no_longer_triggers_a_rollover()
         {
-            // Le coeur du defaut : a 19 h 00 puis 21 h 00 heure locale, on traverse minuit UTC
-            // sans traverser minuit local. Avant le correctif, deux fichiers naissaient ici.
+            // The heart of the defect: at 19:00 then 21:00 local time, we cross midnight UTC
+            // without crossing local midnight. Before the fix, two files were born here.
             var maintenant = new DateTime(2026, 9, 5, 19, 0, 0, DateTimeKind.Unspecified);
 
             using var buffered = new BufferedFileStorage(provider, Pattern, MaxSize, TimeSpan.FromHours(1), clearFile: true, () => maintenant);

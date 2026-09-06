@@ -7,10 +7,10 @@ namespace cl2j.Image
 {
     public class ImageSerialization
     {
-        //Porte sur ImageSharp le 3 septembre 2026, voir ImageResizer pour le pourquoi.
+        //Ported to ImageSharp on September 3rd 2026, see ImageResizer for why.
         //
-        //`quality` reste un `long` pour ne pas casser les appelants, qui passent tous `75L`.
-        //ImageSharp attend un entier de 1 a 100, comme le faisait l encodeur JPEG de GDI+.
+        //`quality` stays a `long` so as not to break callers, which all pass `75L`. ImageSharp
+        //expects an integer from 1 to 100, as the GDI+ JPEG encoder did.
         public static void SaveJpeg(string path, ImageRgba32 image, long quality = 75L)
         {
             image.Save(path, Encoder(quality));

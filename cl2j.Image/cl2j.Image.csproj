@@ -4,18 +4,18 @@
     <PackageId>cl2j.Image</PackageId>
     <Description>Image utilities: EXIF data extraction, image comparison, and resizing. Cross-platform, on ImageSharp.</Description>
 
-    <!-- 3.0.0 : changement rupteur, la surface publique passe de System.Drawing.Bitmap a
-         SixLabors.ImageSharp.Image<Rgba32>. Le numero est surcharge ici plutot que dans
-         Directory.Build.props, qui porte la version commune a tous les paquets du depot.
-         Sans ce numero, la publication serait sautee par l option skip-duplicate du workflow :
-         2.0.0 existe deja sur nuget.org, et le correctif n atteindrait jamais le flux. -->
+    <!-- 3.0.0: breaking change, the public surface moves from System.Drawing.Bitmap to
+         SixLabors.ImageSharp.Image<Rgba32>. The number is overridden here rather than in
+         Directory.Build.props, which carries the version shared by every package in the
+         repository. Without it, publishing would be skipped by the workflow skip-duplicate
+         option: 2.0.0 already exists on nuget.org, and the fix would never reach the feed. -->
     <Version>3.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- System.Drawing.Common retire le 3 septembre 2026. Il leve
-         PlatformNotSupportedException hors Windows depuis .NET 6, ce qui rendait cette
-         bibliotheque muette et inoperante sous Linux. Ne pas le reintroduire. -->
+    <!-- System.Drawing.Common removed on September 3rd 2026. It throws
+         PlatformNotSupportedException off Windows since .NET 6, which left this library mute and
+         inoperative on Linux. Do not reintroduce it. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
 

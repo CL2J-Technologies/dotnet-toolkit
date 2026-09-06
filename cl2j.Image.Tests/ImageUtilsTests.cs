@@ -9,91 +9,91 @@ using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats
 namespace cl2j.Image.Tests
 {
     /// <summary>
-    /// Ces tests existent a cause d une panne precise : `cl2j.Image` reposait sur `System.Drawing`,
-    /// qui leve `PlatformNotSupportedException` hors Windows depuis .NET 6. Le site Appartogo
-    /// tourne sous Linux, et son portail n a donc produit **aucune vignette** entre juin 2025 et
-    /// septembre 2026 — 5 400 images, zero vignette, sans une ligne d erreur, parce que les points
-    /// d entree avalaient l exception pour rendre `null` ou les octets d origine.
+    /// These tests exist because of a precise failure: `cl2j.Image` relied on `System.Drawing`,
+    /// which throws `PlatformNotSupportedException` off Windows since .NET 6. The Appartogo site
+    /// runs on Linux, so its portal produced **no thumbnail at all** between June 2025 and
+    /// September 2026 — 5,400 images, zero thumbnails, without one line of error, because the
+    /// entry points swallowed the exception to return `null` or the original bytes.
     ///
-    /// La CI lance `dotnet test` sur `ubuntu-latest`. Ces tests s executent donc exactement sur le
-    /// systeme ou la panne se produisait : ils la rattraperaient au premier coup.
+    /// CI runs `dotnet test` on `ubuntu-latest`. These tests therefore execute on exactly the
+    /// system where the failure occurred: they would catch it on the first try.
     /// </summary>
     public class ImageUtilsTests
     {
         [Fact]
-        public void CleanImage_redimensionne_une_image_trop_grande()
+        public void CleanImage_resizes_an_oversized_image()
         {
-            var octets = Jpeg(4000, 2252);
+            var bytes = Jpeg(4000, 2252);
 
-            var nettoyee = ImageUtils.CleanImage(octets, 1280);
+            var cleaned = ImageUtils.CleanImage(bytes, 1280);
 
-            Assert.NotNull(nettoyee);
-            using var image = ImageUtils.ReadImage(nettoyee!);
+            Assert.NotNull(cleaned);
+            using var image = ImageUtils.ReadImage(cleaned!);
             Assert.NotNull(image);
             Assert.Equal(1280, image!.Width);
             Assert.True(image.Height <= 1280);
-            Assert.True(nettoyee!.Length < octets.Length, "l image nettoyee doit peser moins que l originale");
+            Assert.True(cleaned!.Length < bytes.Length, "the cleaned image must weigh less than the original");
         }
 
         [Fact]
-        public void CleanImage_laisse_les_dimensions_d_une_image_deja_petite()
+        public void CleanImage_leaves_the_dimensions_of_an_already_small_image()
         {
-            var octets = Jpeg(640, 480);
+            var bytes = Jpeg(640, 480);
 
-            var nettoyee = ImageUtils.CleanImage(octets, 1280);
+            var cleaned = ImageUtils.CleanImage(bytes, 1280);
 
-            using var image = ImageUtils.ReadImage(nettoyee!);
+            using var image = ImageUtils.ReadImage(cleaned!);
             Assert.Equal(640, image!.Width);
             Assert.Equal(480, image.Height);
         }
 
         [Fact]
-        public void CleanImage_leve_sur_des_octets_illisibles()
+        public void CleanImage_throws_on_unreadable_bytes()
         {
-            //Le silence etait le defaut : l ancienne version rendait les octets d origine, si bien
-            //qu une image illisible se stockait telle quelle sans que personne le sache.
+            //Silence was the defect: the old version returned the original bytes, so an unreadable
+            //image was stored as-is without anyone knowing.
             Assert.ThrowsAny<Exception>(() => ImageUtils.CleanImage([1, 2, 3, 4, 5], 1280));
         }
 
         [Fact]
-        public void CreateThumbnailCropped_rend_une_vignette_450x337_pour_du_640x480()
+        public void CreateThumbnailCropped_returns_a_thumbnail_450x337_pour_du_640x480()
         {
-            //Dimensions relevees le 3 septembre 2026 sur une vignette reelle du CDN, produite par
-            //l ancienne implementation System.Drawing depuis une source 640x480. Le port doit
-            //rendre exactement la meme geometrie.
+            //Dimensions taken on September 3rd 2026 from a real CDN thumbnail, produced by the old
+            //System.Drawing implementation from a 640x480 source. The port must return exactly the
+            //same geometry.
             using var source = new ImageRgba32(640, 480);
 
-            using var vignette = ImageUtils.CreateThumbnailCropped(source, 450, 338);
+            using var thumbnail = ImageUtils.CreateThumbnailCropped(source, 450, 338);
 
-            Assert.Equal(450, vignette.Width);
-            Assert.Equal(337, vignette.Height);
+            Assert.Equal(450, thumbnail.Width);
+            Assert.Equal(337, thumbnail.Height);
         }
 
         [Fact]
-        public void CreateThumbnailCropped_produit_un_jpeg_relisible()
+        public void CreateThumbnailCropped_produces_a_readable_jpeg()
         {
             using var source = ImageUtils.ReadImage(Jpeg(4000, 2252))!;
 
-            using var vignette = ImageUtils.CreateThumbnailCropped(source, 450, 338);
-            var octets = ImageSerialization.SaveJpegToBytes(vignette, 75L);
+            using var thumbnail = ImageUtils.CreateThumbnailCropped(source, 450, 338);
+            var bytes = ImageSerialization.SaveJpegToBytes(thumbnail, 75L);
 
-            Assert.NotEmpty(octets);
-            Assert.Equal("JPEG", SixLabors.ImageSharp.Image.Identify(octets).Metadata.DecodedImageFormat?.Name);
+            Assert.NotEmpty(bytes);
+            Assert.Equal("JPEG", SixLabors.ImageSharp.Image.Identify(bytes).Metadata.DecodedImageFormat?.Name);
 
-            using var relue = ImageUtils.ReadImage(octets);
+            using var relue = ImageUtils.ReadImage(bytes);
             Assert.NotNull(relue);
             Assert.Equal(450, relue!.Width);
             Assert.Equal(338, relue.Height);
         }
 
         [Fact]
-        public void ReadImage_rend_null_sur_des_octets_illisibles()
+        public void ReadImage_returns_null_on_unreadable_bytes()
         {
             Assert.Null(ImageUtils.ReadImage([1, 2, 3, 4, 5]));
         }
 
         [Fact]
-        public void IsImage_reconnait_un_jpeg()
+        public void IsImage_recognises_a_jpeg()
         {
             Assert.True(ImageUtils.IsImage(Jpeg(64, 48)));
         }
@@ -102,22 +102,22 @@ namespace cl2j.Image.Tests
         [InlineData("<!DOCTYPE html>\r\n<html lang=\"fr\"><head><title>LogisQuebec</title></head></html>")]
         [InlineData("")]
         [InlineData("not an image at all")]
-        public void IsImage_refuse_ce_qui_n_est_pas_une_image(string contenu)
+        public void IsImage_refuses_what_is_not_an_image(string content)
         {
-            //Le cas qui compte est le premier : une source qui redirige ses photos supprimees vers
-            //sa page d accueil rend du HTML avec un code 200, et HttpClient suit la redirection
-            //tout seul. Sans cette garde, la page est stockee sous un nom en .jpg.
-            Assert.False(ImageUtils.IsImage(System.Text.Encoding.UTF8.GetBytes(contenu)));
+            //The case that matters is the first: a source that redirects its deleted photos to its
+            //home page returns HTML with a 200, and HttpClient follows the redirect on its own.
+            //Without this guard, the page is stored under a .jpg name.
+            Assert.False(ImageUtils.IsImage(System.Text.Encoding.UTF8.GetBytes(content)));
         }
 
         [Fact]
-        public void IsImage_refuse_des_octets_absents()
+        public void IsImage_refuses_missing_bytes()
         {
             Assert.False(ImageUtils.IsImage(null!));
         }
 
         [Fact]
-        public void Strip_retire_le_profil_exif()
+        public void Strip_removes_the_exif_profile()
         {
             using var image = new ImageRgba32(10, 10);
             image.Metadata.ExifProfile = new ExifProfile();
@@ -130,9 +130,9 @@ namespace cl2j.Image.Tests
         }
 
         [Fact]
-        public void RotateFlipIfRequired_applique_l_orientation_puis_la_retire()
+        public void RotateFlipIfRequired_applies_the_orientation_then_removes_it()
         {
-            //Orientation 6 = rotation de 90 degres : une image large doit ressortir haute.
+            //Orientation 6 = 90 degree rotation: a wide image must come back tall.
             using var image = new ImageRgba32(100, 50);
             image.Metadata.ExifProfile = new ExifProfile();
             image.Metadata.ExifProfile.SetValue(ExifTag.Orientation, (ushort)6);
@@ -145,7 +145,7 @@ namespace cl2j.Image.Tests
         }
 
         [Fact]
-        public void RotateFlipIfRequired_ne_touche_pas_une_image_deja_droite()
+        public void RotateFlipIfRequired_leaves_an_already_upright_image_alone()
         {
             using var image = new ImageRgba32(100, 50);
 
@@ -153,41 +153,41 @@ namespace cl2j.Image.Tests
             Assert.Equal(100, image.Width);
         }
 
-        //Un degrade plutot qu une image unie : un JPEG uni se compresse a presque rien, et le test
-        //de reduction de taille ne prouverait alors pas grand-chose.
-        // --- Formats non rendus par les navigateurs ---------------------------------------------
+        //A gradient rather than a flat image: a flat JPEG compresses to almost nothing, and the
+        //size-reduction test would then prove very little.
+        // --- Formats not rendered by browsers ----------------------------------------------------
         //
-        // Contexte : sur 124 fichiers refuses par le rattrapage du portail le 4 septembre 2026,
-        // 93 etaient du HEIC et 2 de l AVIF — des photos d iPhone televersees telles quelles et
-        // stockees sous un nom en `.jpg`. Decision du client le meme jour : **aucune bibliotheque
-        // native** ne sera ajoutee pour les decoder ; la conversion se fera dans le navigateur.
-        // Le serveur, lui, doit refuser proprement et savoir *nommer* ce qu il refuse.
+        // Context: of the 124 files the portal backfill refused on September 4th 2026, 93 were
+        // HEIC and 2 were AVIF — iPhone photos uploaded as-is and stored under a `.jpg` name.
+        // Client decision the same day: **no native library** will be added to decode them; the
+        // conversion will happen in the browser. The server, for its part, must refuse cleanly and
+        // be able to *name* what it refuses.
         //
-        // Le TIFF sert ici de temoin : ImageSharp le lit, mais aucun navigateur ne l affiche. C est
-        // exactement le cas que la nouvelle regle de re-encodage doit attraper, et il se genere
-        // sans rien installer.
+        // TIFF serves as the control here: ImageSharp reads it, but no browser displays it. That
+        // is exactly the case the new re-encoding rule must catch, and it can be generated without
+        // installing anything.
 
         [Fact]
-        public void CleanImage_reencode_un_format_que_le_navigateur_ne_rend_pas()
+        public void CleanImage_reencodes_a_format_the_browser_does_not_render()
         {
-            // Le coeur du correctif. Une image de 320 x 240 ne depasse aucune dimension et n a pas
-            // d EXIF a redresser : l ancienne version rendait donc les octets d origine tels quels.
-            var octets = Tiff(320, 240);
+            // The heart of the fix. A 320 x 240 image exceeds no dimension and has no EXIF to
+            // straighten: the old version therefore returned the original bytes untouched.
+            var bytes = Tiff(320, 240);
 
-            var nettoyee = ImageUtils.CleanImage(octets, 1280);
+            var cleaned = ImageUtils.CleanImage(bytes, 1280);
 
-            Assert.NotNull(nettoyee);
-            Assert.Equal("JPEG", SixLabors.ImageSharp.Image.DetectFormat(nettoyee!).Name);
+            Assert.NotNull(cleaned);
+            Assert.Equal("JPEG", SixLabors.ImageSharp.Image.DetectFormat(cleaned!).Name);
         }
 
         [Fact]
-        public void CleanImage_ne_reencode_pas_un_JPEG_deja_conforme()
+        public void CleanImage_does_not_reencode_an_already_compliant_JPEG()
         {
-            // Le pendant du test precedent : la regle ne doit pas recompresser pour rien ce qui est
-            // deja servi correctement.
-            var octets = Jpeg(320, 240);
+            // The counterpart of the previous test: the rule must not needlessly recompress what is
+            // already served correctly.
+            var bytes = Jpeg(320, 240);
 
-            Assert.Same(octets, ImageUtils.CleanImage(octets, 1280));
+            Assert.Same(bytes, ImageUtils.CleanImage(bytes, 1280));
         }
 
         [Theory]
@@ -196,16 +196,16 @@ namespace cl2j.Image.Tests
         [InlineData("avif", "AVIF")]
         [InlineData("qt  ", "video QuickTime")]
         [InlineData("mp42", "video MP4")]
-        public void NommerUnFormatNonSupporte_reconnait_les_marques_du_portail(string marque, string attendu)
+        public void NameUnsupportedFormat_recognises_the_portal_brands(string marque, string expected)
         {
-            // Les cinq familles reellement trouvees dans listing-portal. Sans ce nom, le portail ne
-            // peut dire a l utilisateur pourquoi sa photo est refusee — et un refus muet est
-            // precisement ce qui a coute quinze mois de vignettes manquantes.
-            Assert.Equal(attendu, ImageUtils.NommerUnFormatNonSupporte(BoiteIsoBmff(marque)));
+            // The five families actually found in listing-portal. Without this name, the portal
+            // cannot tell the user why their photo was refused — and a mute refusal is precisely
+            // what cost fifteen months of missing thumbnails.
+            Assert.Equal(expected, ImageUtils.NommerUnFormatNonSupporte(BoiteIsoBmff(marque)));
         }
 
         [Fact]
-        public void NommerUnFormatNonSupporte_ne_nomme_pas_ce_qu_il_ne_reconnait_pas()
+        public void NameUnsupportedFormat_does_not_name_what_it_does_not_recognise()
         {
             Assert.Null(ImageUtils.NommerUnFormatNonSupporte(Jpeg(32, 32)));
             Assert.Null(ImageUtils.NommerUnFormatNonSupporte(BoiteIsoBmff("zzzz")));
@@ -215,31 +215,31 @@ namespace cl2j.Image.Tests
 
         private static byte[] BoiteIsoBmff(string marque)
         {
-            // Quatre octets de taille, la balise `ftyp`, puis la marque : l en-tete d un conteneur
-            // ISO-BMFF. Ce qui suit n a pas d importance, rien ne le decode.
-            var octets = new byte[16];
-            octets[3] = 16;
-            System.Text.Encoding.ASCII.GetBytes("ftyp").CopyTo(octets, 4);
-            System.Text.Encoding.ASCII.GetBytes(marque).CopyTo(octets, 8);
-            return octets;
+            // Four bytes of size, the `ftyp` tag, then the brand: the header of an ISO-BMFF
+            // container. What follows does not matter, nothing decodes it.
+            var bytes = new byte[16];
+            bytes[3] = 16;
+            System.Text.Encoding.ASCII.GetBytes("ftyp").CopyTo(bytes, 4);
+            System.Text.Encoding.ASCII.GetBytes(marque).CopyTo(bytes, 8);
+            return bytes;
         }
 
-        private static byte[] Tiff(int largeur, int hauteur)
+        private static byte[] Tiff(int width, int height)
         {
-            using var image = new ImageRgba32(largeur, hauteur);
+            using var image = new ImageRgba32(width, height);
             using var ms = new MemoryStream();
             image.Save(ms, new SixLabors.ImageSharp.Formats.Tiff.TiffEncoder());
             return ms.ToArray();
         }
 
-        private static byte[] Jpeg(int largeur, int hauteur)
+        private static byte[] Jpeg(int width, int height)
 
 
         {
-            using var image = new ImageRgba32(largeur, hauteur);
-            for (var y = 0; y < hauteur; ++y)
+            using var image = new ImageRgba32(width, height);
+            for (var y = 0; y < height; ++y)
             {
-                for (var x = 0; x < largeur; ++x)
+                for (var x = 0; x < width; ++x)
                     image[x, y] = new Rgba32((byte)(x % 256), (byte)(y % 256), (byte)((x + y) % 256));
             }
 

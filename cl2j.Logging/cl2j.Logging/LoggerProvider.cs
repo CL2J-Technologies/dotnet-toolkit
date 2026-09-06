@@ -11,9 +11,9 @@ namespace cl2j.Logging
         public readonly MemoryLogger MemoryLogger = null!;
         private readonly LoggerOptions options;
 
-        // Une seule instance, partagee par le nom du fichier et par les lignes. Deux instances
-        // donneraient le meme resultat, mais rien ne garantirait qu elles le donnent toujours :
-        // c est justement l ecart entre deux horloges qui a produit le defaut.
+        // A single instance, shared by the file name and by the lines. Two instances would give
+        // the same result, but nothing would guarantee they always do: the gap between two
+        // clocks is precisely what produced the defect.
         private readonly IDateTimeProvider dateTimeProvider;
 
         public LoggerProvider(IFileStorageFactory fileStorageFactory, IOptions<LoggerOptions> options, string fileStorageName = "Logger")
