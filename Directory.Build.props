@@ -23,8 +23,12 @@
          published during it — the highest being cl2j.Image 3.1.0.
 
          4.1.0: string keys bind as ANSI (#7). No API break, but a change in behaviour, hence the
-         minor rather than the patch. -->
-    <Version>4.1.0</Version>
+         minor rather than the patch.
+
+         4.1.1: CommandBuilderFactory no longer throws when a registration lands during a resolve
+         (#15). A defect fix with no API or behaviour change for correct callers, hence the
+         patch. -->
+    <Version>4.1.1</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
