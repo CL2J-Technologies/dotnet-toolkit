@@ -24,6 +24,27 @@ namespace cl2j.Database
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
+        /// <summary>
+        ///     <see cref="CommandBehavior.SequentialAccess"/> is deliberately absent from both.
+        ///
+        ///     <para>
+        ///     It requires columns to be read in ascending ordinal order and forbids going back,
+        ///     which is incompatible with binding by name: a SELECT that lists columns in an order
+        ///     other than the type declares makes descriptor order and ordinal order disagree, and
+        ///     the read fails with "you may only read from column ordinal N or greater". See issue
+        ///     #25.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     It also bought nothing here. Sequential access pays off when a reader skips columns
+        ///     or streams large ones without buffering the row; this library materialises every
+        ///     column of every row into an object, so it never skips and never streams.
+        ///     </para>
+        /// </summary>
+        private const CommandBehavior ReadBehavior = CommandBehavior.SingleResult;
+
+        private const CommandBehavior ReadSingleBehavior = CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+
         #region Helpers
 
         public static string ToJsonString<T>(T value)
@@ -307,7 +328,7 @@ namespace cl2j.Database
             await using var cmd = CreateExecuteCommand(connection, sql, transaction);
             if (param is not null)
                 cmd.CreateObjectParameters(param, commandBuilder);
-            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(ReadBehavior, cancellationToken);
 
             var results = await reader.Read<T>(tableDescriptor);
             return results;
@@ -326,7 +347,7 @@ namespace cl2j.Database
             await using var cmd = CreateExecuteCommand(connection, sql, transaction);
             if (param is not null)
                 cmd.CreateObjectParameters(param, commandBuilder);
-            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(ReadSingleBehavior, cancellationToken);
 
             return await reader.ReadSingle<T>(tableDescriptor);
         }
@@ -342,7 +363,7 @@ namespace cl2j.Database
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
             cmd.CreateObjectParameters(param, commandBuilder);
 
-            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(ReadSingleBehavior, cancellationToken);
 
             return await reader.ReadSingle<T>(statement.TableDescriptor);
         }
@@ -359,7 +380,7 @@ namespace cl2j.Database
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
             cmd.CreateKeyParameter<T>(key, statement.TableDescriptor);
-            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SingleRow | CommandBehavior.SequentialAccess, cancellationToken);
+            await using var reader = await cmd.ExecuteReaderAsync(ReadSingleBehavior, cancellationToken);
 
             return await reader.ReadSingle<T>(statement.TableDescriptor);
         }
@@ -379,7 +400,7 @@ namespace cl2j.Database
                 await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
                 cmd.CreateStatementParameters(statement);
 
-                await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
+                await using var reader = await cmd.ExecuteReaderAsync(ReadBehavior, cancellationToken);
 
                 results.AddRange(await reader.Read<T>(statement.TableDescriptor));
             }

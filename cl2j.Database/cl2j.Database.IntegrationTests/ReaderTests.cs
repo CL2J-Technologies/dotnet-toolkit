@@ -113,30 +113,67 @@ namespace cl2j.Database.IntegrationTests
         }
 
         [Fact]
-        public async Task A_reordered_select_throws_when_the_types_disagree()
+        public async Task A_reordered_select_still_lands_each_value_in_its_own_property()
         {
-            //When a reordering lands a plain string where a JSON column is expected, the generated
-            //reader tries to deserialize it and fails loudly. That is the lucky case.
+            //Before columns were bound by name this threw: the reordering put a plain string where
+            //the JSON column was expected and deserialisation failed. That was the lucky case —
+            //see the test below for the one that did not fail.
             await using var connection = await fixture.OpenAsync();
             var id = await connection.NewKey<ReaderShapesRow>();
-            await connection.Insert(new ReaderShapesRow { Id = id, Text = "text-value", Payload = "\"payload\"" });
+            await connection.Insert(new ReaderShapesRow { Id = id, Text = "text-value", Payload = "payload-value" });
 
-            await Assert.ThrowsAnyAsync<Exception>(() => connection.Query<ReaderShapesRow>(
+            var rows = await connection.Query<ReaderShapesRow>(
                 "SELECT [Id],[Payload],[Count],[Flag],[Moment],[Text] FROM [ReaderShapes] WHERE [Id] = @Id",
-                new { Id = id }));
+                new { Id = id });
+
+            var row = Assert.Single(rows);
+            Assert.Equal("text-value", row.Text);
+            Assert.Equal("payload-value", row.Payload);
         }
 
         [Fact]
-        public async Task Columns_are_bound_by_position_not_by_name()
+        public async Task A_select_that_omits_a_column_names_the_one_it_is_missing()
         {
-            //The dangerous case, and the reason this is worth a test. The generated reader
-            //addresses columns by ordinal in descriptor order. When a reordering swaps two columns
-            //whose handling is identical, nothing gives it away: no exception, no warning, just an
-            //object whose fields hold each other's values.
+            //Reading by name turns a misalignment into a failure that says which column it wanted,
+            //instead of an index that means nothing to the caller.
+            await using var connection = await fixture.OpenAsync();
+            var id = await connection.NewKey<ReaderShapesRow>();
+            await connection.Insert(new ReaderShapesRow { Id = id, Text = "value", Payload = "x" });
+
+            var exception = await Assert.ThrowsAnyAsync<Exception>(() => connection.Query<ReaderShapesRow>(
+                "SELECT [Id],[Count],[Flag],[Moment],[Payload] FROM [ReaderShapes] WHERE [Id] = @Id",
+                new { Id = id }));
+
+            Assert.Contains("Text", exception.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task Extra_columns_in_the_select_are_ignored()
+        {
+            await using var connection = await fixture.OpenAsync();
+            var id = await connection.NewKey<ReaderShapesRow>();
+            await connection.Insert(new ReaderShapesRow { Id = id, Text = "kept", Count = 4, Payload = "x" });
+
+            var rows = await connection.Query<ReaderShapesRow>(
+                "SELECT *, 1 AS [Unrelated] FROM [ReaderShapes] WHERE [Id] = @Id",
+                new { Id = id });
+
+            var row = Assert.Single(rows);
+            Assert.Equal("kept", row.Text);
+            Assert.Equal(4, row.Count);
+        }
+
+        [Fact]
+        public async Task Columns_are_bound_by_name_not_by_position()
+        {
+            //The case this was all about. The reader used to address columns by ordinal in
+            //descriptor order, so a reordering that swapped two columns of the same shape gave no
+            //sign at all: no exception, no warning, just an object whose fields held each other's
+            //values.
             //
-            //It matters because raw SQL is a supported entry point. A consumer writing SELECT *
-            //relies on the physical column order of the table matching the property order of the
-            //type — which nothing enforces, and which a later ALTER TABLE can change.
+            //It mattered because raw SQL is a supported entry point. A consumer writing SELECT *
+            //relied on the physical column order of the table matching the property order of the
+            //type — which nothing enforces, and which an ALTER TABLE can change. See issue #25.
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(TwoTextsRow), CancellationToken.None);
             await connection.CreateTable<TwoTextsRow>();
@@ -151,8 +188,8 @@ namespace cl2j.Database.IntegrationTests
 
                 var row = Assert.Single(rows);
 
-                Assert.Equal("two", row.First);
-                Assert.Equal("one", row.Second);
+                Assert.Equal("one", row.First);
+                Assert.Equal("two", row.Second);
             }
             finally
             {
