@@ -3,7 +3,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Database.SqlServer</PackageId>
     <Description>SQL Server provider for cl2j.Database.</Description>
-    <!-- La version vient de cl2j.Database/Directory.Build.props, partagee avec la librairie. -->
+    <!-- The version comes from cl2j.Database/Directory.Build.props, shared with the library. -->
   </PropertyGroup>
 
   <ItemGroup>

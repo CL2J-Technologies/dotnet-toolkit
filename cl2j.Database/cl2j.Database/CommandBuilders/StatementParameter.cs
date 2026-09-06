@@ -1,18 +1,17 @@
 ﻿namespace cl2j.Database.CommandBuilders
 {
     /// <summary>
-    ///     Une valeur que l enonce reference par un espace reserve plutot que de la porter en clair
-    ///     dans son texte.
+    ///     A value the statement refers to through a placeholder, rather than carrying it as text.
     ///
     ///     <para>
-    ///     Existe parce qu un enonce ne peut pas toujours se contenter des colonnes du type : un
-    ///     <c>IN</c> a autant d espaces reserves que la liste a d elements, et cette liste n est
-    ///     connue qu a l appel. Le constructeur d enonce nomme les espaces reserves, le code qui
-    ///     execute lie les valeurs — aucune valeur ne devient du texte SQL en chemin.
+    ///     Exists because a statement cannot always derive its parameters from the columns of a
+    ///     type: an <c>IN</c> clause has as many placeholders as the list has entries, and that
+    ///     list is only known at the call. The command builder names the placeholders, the code
+    ///     that executes binds the values — no value becomes SQL text along the way.
     ///     </para>
     /// </summary>
-    /// <param name="name">Le nom sans prefixe. Le formateur y ajoute le <c>@</c> pour le texte.</param>
-    /// <param name="value">La valeur liee telle quelle.</param>
+    /// <param name="name">The bare name. The formatter prepends the <c>@</c> for the text.</param>
+    /// <param name="value">The value, bound as-is.</param>
     public sealed class StatementParameter(string name, object value)
     {
         public string Name { get; } = name;

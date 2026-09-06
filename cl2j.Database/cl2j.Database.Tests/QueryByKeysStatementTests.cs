@@ -1,20 +1,19 @@
 ﻿using cl2j.Database.CommandBuilders;
-using cl2j.Database.SqlServer;
 using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace cl2j.Database.Tests
 {
     /// <summary>
-    ///     Ces tests ne touchent aucune base. Ils construisent l enonce et regardent ce qu il
-    ///     contient — c est la seule chose qui compte ici : ou finissent les valeurs de cle.
+    ///     These tests touch no database. They build the statement and look at what it contains —
+    ///     the only thing that matters here: where the key values end up.
     /// </summary>
     public class QueryByKeysStatementTests
     {
         private static ICommandBuilder Builder()
         {
-            //Register empile dans une liste statique. GetCommandBuilder rend le premier qui supporte
-            //la connexion, donc reenregistrer entre les tests est sans effet de bord.
+            //Register appends to a static list. GetCommandBuilder returns the first builder that
+            //supports the connection, so re-registering between tests has no side effect.
             cl2j.Database.SqlServer.SqlServer.Register();
             return CommandBuilderFactory.GetCommandBuilder(new SqlConnection());
         }
@@ -44,7 +43,7 @@ namespace cl2j.Database.Tests
             Assert.Equal(3, statement.Parameters.Count);
             Assert.Equal(["cust-1", "cust-2", "cust-3"], statement.Parameters.Select(p => p.Value));
 
-            //Chaque nom doit apparaitre dans le texte, sinon le parametre est lie a rien.
+            //Every name must appear in the text, otherwise the parameter is bound to nothing.
             foreach (var parameter in statement.Parameters)
                 Assert.Contains("@" + parameter.Name, statement.Text, StringComparison.Ordinal);
         }

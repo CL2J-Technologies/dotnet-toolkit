@@ -81,9 +81,9 @@ namespace cl2j.Database.SqlServer
             var sb = new StringBuilder();
             foreach (var column in columnKeys)
             {
-                //C est le separateur qui est conditionnel, pas le predicat. Les deux lignes
-                //etaient inversees, si bien que le tampon restait vide a tous les tours et que
-                //l enonce partait sans clause WHERE — donc sans filtre.
+                //The separator is what is conditional, not the predicate. The two lines were
+                //transposed, so the buffer stayed empty on every pass and the statement went out
+                //without a WHERE clause — that is, unfiltered.
                 if (sb.Length > 0)
                     sb.Append(" AND ");
 
@@ -112,9 +112,9 @@ namespace cl2j.Database.SqlServer
                 if (placeholders.Length > 0)
                     placeholders.Append(',');
 
-                //Le nom est genere, jamais derive de la valeur : une cle ne peut donc pas se
-                //deguiser en identifiant. La valeur voyage a cote de l enonce et sera liee par
-                //celui qui execute — elle ne devient pas du texte SQL.
+                //The name is generated, never derived from the value, so a key cannot pose as an
+                //identifier. The value travels beside the statement and is bound by whoever
+                //executes it — it never becomes SQL text.
                 var name = $"key{index++}";
                 placeholders.Append(FormatParameterName(name));
                 statement.Parameters.Add(new StatementParameter(name, value));
