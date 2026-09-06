@@ -9,8 +9,8 @@ namespace cl2j.Database.CommandBuilders
         public string Text { get; set; } = null!;
 
         /// <summary>
-        ///     Les valeurs que <see cref="Text"/> reference par un espace reserve. Vide pour les
-        ///     enonces dont tous les parametres se deduisent des colonnes du type.
+        ///     The values <see cref="Text"/> refers to through placeholders. Empty for statements
+        ///     whose parameters all derive from the columns of a type.
         /// </summary>
         public IList<StatementParameter> Parameters { get; } = [];
     }

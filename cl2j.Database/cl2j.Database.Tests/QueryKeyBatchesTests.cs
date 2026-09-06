@@ -5,9 +5,9 @@ using Xunit;
 namespace cl2j.Database.Tests
 {
     /// <summary>
-    ///     SQL Server refuse une commande au-dela de 2100 parametres. Une liste de cles assez
-    ///     longue doit donc devenir plusieurs enonces — sans qu aucune cle ne se perde ni ne se
-    ///     repete au passage, ce qui est la seule facon dont un decoupage peut mentir en silence.
+    ///     SQL Server refuses a command beyond 2100 parameters. A long enough key list must
+    ///     therefore become several statements — without a key being lost or repeated along the
+    ///     way, which is the only way a split can lie silently.
     /// </summary>
     public class QueryKeyBatchesTests
     {
@@ -51,7 +51,7 @@ namespace cl2j.Database.Tests
         [Fact]
         public void No_keys_produces_no_statement()
         {
-            //Un IN vide n est pas du SQL valide. Ne rien produire est la seule sortie correcte.
+            //An empty IN is not valid SQL. Producing nothing is the only correct way out.
             var statements = QueryKeyBatches.Build(Builder(), typeof(Customer), []).ToList();
 
             Assert.Empty(statements);

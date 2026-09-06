@@ -448,9 +448,9 @@ namespace cl2j.Database
         }
 
         /// <summary>
-        ///     Lie les valeurs que l enonce porte a cote de son texte. Sert aux enonces dont les
-        ///     parametres ne se deduisent pas des colonnes du type — la liste d un <c>IN</c>, dont
-        ///     la longueur n est connue qu a l appel.
+        ///     Binds the values the statement carries beside its text. Used by statements whose
+        ///     parameters do not derive from the columns of a type — the list of an <c>IN</c>,
+        ///     whose length is only known at the call.
         /// </summary>
         private static void CreateStatementParameters(this DbCommand command, TextStatement statement)
         {

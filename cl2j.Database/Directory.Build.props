@@ -1,19 +1,18 @@
 ﻿<Project>
 
-  <!-- Reprend le Directory.Build.props de la racine. Sans cet import, MSBuild s arrete au
-       premier fichier trouve en remontant et les projets de ce dossier perdraient le
-       TargetFramework, la licence et le reste des metadonnees communes. -->
+  <!-- Picks up the Directory.Build.props at the repository root. Without this import MSBuild
+       stops at the first file it finds walking up, and the projects in this folder would lose
+       the TargetFramework, the license and the rest of the shared metadata. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
   <PropertyGroup>
-    <!-- cl2j.Database et cl2j.Database.SqlServer se versionnent ensemble, toujours.
-         Le provider implemente le contrat de la librairie et n a pas de sens sans elle : deux
-         numeros distincts laisseraient un consommateur assembler une paire qui ne va pas
-         ensemble. Le numero vit donc ici, une seule fois, et aucun des deux .csproj ne
-         redefinit <Version> — ajouter un override local reintroduit exactement la derive que
-         ce fichier existe pour empecher.
+    <!-- cl2j.Database and cl2j.Database.SqlServer version together, always.
+         The provider implements the library's contract and is meaningless without it: two
+         separate numbers would let a consumer assemble a pair that does not belong together.
+         The number therefore lives here, once, and neither .csproj redefines <Version> —
+         adding a local override reintroduces exactly the drift this file exists to prevent.
 
-         3.0.0 : retrait de FormatParameterValue de IDatabaseFormatter. -->
+         3.0.0: FormatParameterValue removed from IDatabaseFormatter. -->
     <Version>3.0.0</Version>
   </PropertyGroup>
 

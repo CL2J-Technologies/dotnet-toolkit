@@ -5,9 +5,9 @@ using Xunit;
 namespace cl2j.Database.Tests
 {
     /// <summary>
-    ///     Un enonce de lecture par cle qui n a pas de clause WHERE ne leve rien : il rend la
-    ///     premiere ligne de la table, pour n importe quelle cle demandee. C est la forme d erreur
-    ///     la plus couteuse — une entite valide, mais la mauvaise.
+    ///     A read-by-key statement with no WHERE clause raises nothing: it returns the first row of
+    ///     the table, for whatever key was asked for. That is the most expensive shape of failure —
+    ///     a valid entity, but the wrong one.
     /// </summary>
     public class QueryByKeyStatementTests
     {

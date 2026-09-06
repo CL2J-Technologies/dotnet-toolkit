@@ -3,7 +3,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Database</PackageId>
     <Description>Database abstraction layer with connection and query extensions.</Description>
-    <!-- La version vient de cl2j.Database/Directory.Build.props, partagee avec le provider. -->
+    <!-- The version comes from cl2j.Database/Directory.Build.props, shared with the provider. -->
   </PropertyGroup>
 
   <ItemGroup>

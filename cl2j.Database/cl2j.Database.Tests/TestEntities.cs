@@ -3,8 +3,8 @@
 namespace cl2j.Database.Tests
 {
     /// <summary>
-    ///     Une table a cle unique de type string. C est la forme que QueryKeys accepte : le builder
-    ///     refuse tout type qui n a pas exactement une cle.
+    ///     A table with a single string key. This is the shape QueryKeys accepts: the builder
+    ///     refuses any type that does not have exactly one key.
     /// </summary>
     [Table("Customer")]
     public sealed class Customer
@@ -17,8 +17,8 @@ namespace cl2j.Database.Tests
     }
 
     /// <summary>
-    ///     Une table a cle composee. QueryKeys la refuse, mais la lecture par cle doit savoir
-    ///     joindre les colonnes.
+    ///     A table with a composite key. QueryKeys refuses it, but a read by key must know how to
+    ///     join the columns.
     /// </summary>
     [Table("TenantScopedRow")]
     public sealed class TenantScopedRow
