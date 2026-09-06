@@ -26,9 +26,20 @@
          minor rather than the patch.
 
          4.1.1: CommandBuilderFactory no longer throws when a registration lands during a resolve
-         (#15). A defect fix with no API or behaviour change for correct callers, hence the
-         patch. -->
-    <Version>4.1.1</Version>
+         (#15). A defect fix with no API or behaviour change for correct callers, hence the patch.
+
+         5.0.0: three correctness fixes in cl2j.Database (#25, #26, #27). No signature changed, so
+         nothing fails to compile — which is exactly why this is a major rather than a minor. A
+         caller relying on the old behaviour keeps building and starts behaving differently:
+
+           - results bind by column name, so a query whose column names do not match the type now
+             throws where it used to return values by position;
+           - a string key is written by INSERT instead of being dropped;
+           - CreateTable emits bigint, float, real and uniqueidentifier where it used to emit int,
+             decimal and varchar. Existing tables are not migrated.
+
+         A minor would let that arrive through a routine bump. -->
+    <Version>5.0.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
