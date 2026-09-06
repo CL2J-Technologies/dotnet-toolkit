@@ -350,3 +350,6 @@ MigrationBackup/
 .ionide/
 /.data/colors.json
 /.vs/**
+
+# Worktrees de sessions Claude Code
+.claude/worktrees/
