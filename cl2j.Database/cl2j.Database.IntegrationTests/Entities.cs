@@ -111,8 +111,22 @@ namespace cl2j.Database.IntegrationTests
     }
 
     /// <summary>
+    ///     An int primary key, which the DDL declares <c>IDENTITY(1,1)</c>. The server supplies the
+    ///     value, so the insert must leave the column out.
+    /// </summary>
+    [Table("IdentityKeyed")]
+    public sealed class IdentityKeyedRow
+    {
+        [Column(Name = "Id", Key = KeyType.Key)]
+        public int Id { get; set; }
+
+        [Column(Name = "Label", Length = 50)]
+        public string Label { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     ///     A string primary key declared <see cref="KeyType.Key"/>, which is the natural reading of
-    ///     the annotation and does not work. Kept to hold that behaviour in place.
+    ///     the annotation. Nobody generates that value, so the insert has to carry it.
     /// </summary>
     [Table("PlainKeyed")]
     public sealed class PlainKeyedRow

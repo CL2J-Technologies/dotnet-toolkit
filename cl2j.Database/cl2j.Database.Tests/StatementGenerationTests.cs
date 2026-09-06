@@ -23,11 +23,22 @@ namespace cl2j.Database.Tests
         private static string Normalise(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
 
         [Fact]
-        public void Insert_names_every_column_except_the_key()
+        public void Insert_carries_a_string_key_like_any_other_column()
         {
+            //Nothing generates a string key, so leaving it out of the insert sent NULL into a NOT
+            //NULL primary key. See issue #26.
             var statement = Builder().GetInsertStatement(typeof(Customer));
 
-            Assert.Equal("INSERT INTO [Customer] ([Name]) VALUES (@Name)", statement.Text);
+            Assert.Equal("INSERT INTO [Customer] ([Id],[Name]) VALUES (@Id,@Name)", statement.Text);
+        }
+
+        [Fact]
+        public void Insert_leaves_out_an_int_key_because_the_server_supplies_it()
+        {
+            //The DDL declares an int key IDENTITY(1,1); sending a value would be an error.
+            var statement = Builder().GetInsertStatement(typeof(Counter));
+
+            Assert.Equal("INSERT INTO [Counter] ([Label]) VALUES (@Label)", statement.Text);
         }
 
         [Fact]

@@ -76,7 +76,7 @@ namespace cl2j.Database.CommandBuilders
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, formatter);
 
-            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.Key);
+            var columns = tableDescriptor.Columns.Where(c => !IsSuppliedByTheServer(c));
             var fields = columns.Select(c => c.NameFormatted);
             var parameters = columns.Select(c => formatter.FormatParameterName(c.Name));
 
@@ -158,6 +158,41 @@ namespace cl2j.Database.CommandBuilders
                 statement.Text += " WHERE " + where;
 
             return statement;
+        }
+
+        /// <summary>
+        ///     True when the database fills the column in by itself, so an INSERT must leave it out.
+        ///
+        ///     <para>
+        ///     The test used to be <c>Key != KeyType.Key</c> — every declared key was left out.
+        ///     That is right for an <c>int</c> key, which the DDL declares <c>IDENTITY(1,1)</c>,
+        ///     and for a <c>Guid</c> one, declared <c>DEFAULT NEWID()</c>. It is wrong for a string
+        ///     key: nothing generates that value, so the column was dropped from the INSERT and the
+        ///     NOT NULL primary key this library had just created rejected the row.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     <c>KeyType.Key</c> is the obvious annotation to reach for on a primary key, so the
+        ///     failure landed on the most natural reading of the API — and the server named the
+        ///     column rather than the annotation, which made the trail back a long one. See issue
+        ///     #26.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     The CLR types listed here mirror what <c>GetColumnKeyType</c> emits. A provider that
+        ///     declares its keys differently would need this to follow.
+        ///     </para>
+        /// </summary>
+        private static bool IsSuppliedByTheServer(ColumnDescriptor column)
+        {
+            if (column.ColumnAtribute.Key != KeyType.Key)
+                return false;
+
+            var type = column.Property.PropertyType;
+
+            return type == Types.TypeInt
+                || type == Types.TypeLong
+                || type == Types.TypeGuid;
         }
 
         private static string GetColumnWhereClause(List<ColumnDescriptor> columns, IDatabaseFormatter formatter)

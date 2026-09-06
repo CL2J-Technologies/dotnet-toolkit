@@ -39,15 +39,37 @@ namespace cl2j.Database.IntegrationTests
         }
 
         [Fact]
-        public async Task A_string_key_declared_as_Key_is_dropped_from_the_insert()
+        public async Task A_string_key_declared_as_Key_is_written_like_any_other_column()
         {
             await using var connection = await fixture.OpenAsync();
 
-            var exception = await Assert.ThrowsAsync<SqlException>(
-                () => connection.Insert(new PlainKeyedRow { Code = "abc", Label = "anything" }));
+            await connection.Insert(new PlainKeyedRow { Code = "abc", Label = "anything" });
 
-            //The server complains about a NULL it was never sent a value for.
-            Assert.Contains("Cannot insert the value NULL into column 'Code'", exception.Message, StringComparison.Ordinal);
+            var read = await connection.QueryKey<PlainKeyedRow>("abc");
+            Assert.Equal("anything", read!.Label);
+        }
+
+        [Fact]
+        public async Task An_int_identity_key_is_still_left_to_the_server()
+        {
+            //The other half of the rule, and the reason the exclusion existed. An int key is
+            //declared IDENTITY(1,1), so sending a value for it is an error rather than a courtesy.
+            await using var connection = await fixture.OpenAsync();
+            await connection.DropTableIfExists(typeof(IdentityKeyedRow), CancellationToken.None);
+            await connection.CreateTable<IdentityKeyedRow>();
+            try
+            {
+                await connection.Insert(new IdentityKeyedRow { Label = "server picks the id" });
+
+                var rows = await connection.Query<IdentityKeyedRow>("SELECT [Id],[Label] FROM [IdentityKeyed]");
+
+                var row = Assert.Single(rows);
+                Assert.True(row.Id > 0);
+            }
+            finally
+            {
+                await connection.DropTableIfExists(typeof(IdentityKeyedRow), CancellationToken.None);
+            }
         }
 
         [Fact]
