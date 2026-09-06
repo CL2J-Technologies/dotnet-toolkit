@@ -1,8 +1,20 @@
 name: Publish NuGet Packages
 
+# Releases. Pull requests are validated by ci.yml, which is a separate workflow because this one
+# holds NUGET_API_KEY and should not run on branch contributions.
+#
+# The build and test steps below stay: this workflow must never pack an artifact it has not
+# compiled and tested itself. ci.yml having passed on the pull request is not a substitute — main
+# can differ from the branch that was reviewed.
 on:
   push:
     branches: [main]
+
+# Publishes are serialised rather than cancelled. Two merges in quick succession must not race on
+# `dotnet nuget push`, and cancelling a release mid-push would leave part of a version set live.
+concurrency:
+  group: publish-nuget
+  cancel-in-progress: false
 
 jobs:
   publish:

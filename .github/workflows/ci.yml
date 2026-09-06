@@ -1,0 +1,50 @@
+name: CI
+
+# Runs on pull requests, which publish.yml never did — it triggers only on push to main, so the
+# first time a branch was ever compiled was the run that published it to NuGet.org. A red branch
+# could merge green, and the failure then landed on main, during a release.
+#
+# No secrets are used here. This workflow only ever builds and tests, so it is safe to run on
+# any pull request.
+on:
+  pull_request:
+  workflow_dispatch:
+
+# A new push to a branch makes the run in progress for that branch pointless. Cancel it rather
+# than queueing behind it; main is excluded because its history is worth keeping intact.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - run: dotnet restore
+
+      - run: dotnet build --no-restore -c Release
+
+      # ubuntu-latest is deliberate rather than incidental: cl2j.Image shipped for fifteen months
+      # unable to produce a single thumbnail off Windows, and nobody noticed because nothing ever
+      # built it on Linux. Tests that run on the platform the failure occurs on are the point.
+      - run: dotnet test --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory ./test-results
+
+      # Uploaded on failure only. A green run's results are not worth the storage; a red one is
+      # read by whoever has to work out what broke.
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results
+          retention-days: 7

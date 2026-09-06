@@ -32,7 +32,20 @@ New behaviour and bug fixes come with tests, and the test is written before the 
 afterwards passes immediately, which proves that it runs — not that it would have caught anything.
 
 Test projects must be registered in `dotnet-toolkit.slnx`. A test project outside the solution is
-never built and never run.
+never built and never run — `cl2j.Scripting.Tests` and `cl2j.FileStorage.Tests` were in exactly
+that state and had never executed in CI.
+
+## CI
+
+`ci.yml` builds and tests every pull request on `ubuntu-latest`, and is a required check on
+`main`: a red branch cannot merge.
+
+That check is the point of the workflow, not a formality. It was added in September 2026 because
+`publish.yml` triggered only on push to `main`, so the first run that ever compiled a branch was
+the run that published it to NuGet.org — a failure arrived after the merge, during a release.
+
+Linux is deliberate. `cl2j.Image` shipped for fifteen months unable to produce a single thumbnail
+off Windows, and nothing ever built it on Linux to notice.
 
 ## Versioning
 
