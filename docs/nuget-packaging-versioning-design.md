@@ -48,7 +48,16 @@ Each publishable project adds to its `<PropertyGroup>`:
 
 `TestApp`, `Tests`, `Samples` and `Tools` projects inherit `IsPackable=false` and are never packaged.
 
-### 3. GitHub Actions — `.github/workflows/publish.yml`
+### 3. GitHub Actions
+
+Two workflows, split in September 2026 (issue #9). `ci.yml` runs on `pull_request` and holds no
+secrets; `publish.yml` runs on push to `main` and holds `NUGET_API_KEY`. Before the split there
+was only the second one, so nothing ever compiled a branch until the run that published it.
+
+`publish.yml` keeps its own build and test steps: it must never pack an artifact it has not
+compiled and tested itself, and ci.yml passing on the pull request does not prove main will.
+
+#### `.github/workflows/publish.yml`
 
 ```yaml
 name: Publish NuGet Packages
@@ -81,6 +90,10 @@ jobs:
 ```
 
 **`--skip-duplicate`**: if the version already exists on NuGet.org, the push is silently skipped. A push to `main` without a version bump publishes nothing.
+
+Note the failure mode this creates: a version number that is too low does not fail, it publishes
+nothing and reports success. Under shared versioning the bump has to clear every previously
+published version of every package.
 
 **Prerequisite**: add the `NUGET_API_KEY` secret under _GitHub → Settings → Secrets → Actions_.
 
