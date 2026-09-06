@@ -81,28 +81,33 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void A_long_is_declared_int_which_cannot_hold_it()
+        public void A_long_is_declared_bigint()
         {
-            //Characterisation, not endorsement. long and int share a branch, so a value past
-            //int.MaxValue overflows the column the library creates for it. Left as-is here because
-            //changing it alters the schema of every existing table; see the note on issue #15.
-            Assert.Equal("int", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Big")));
+            //long used to share the int branch, so any value past int.MaxValue overflowed the
+            //column the library had created for it. See issue #27.
+            Assert.Equal("bigint", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Big")));
         }
 
         [Fact]
-        public void A_double_is_declared_decimal_without_precision()
+        public void A_double_is_declared_float()
         {
-            //Same: double shares the decimal branch, and with no Length it lands on bare decimal,
-            //which SQL Server reads as decimal(18,0) — no fractional part at all.
-            Assert.Equal("decimal", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Ratio")));
+            //double used to share the decimal branch and, with no Length, landed on bare decimal —
+            //which SQL Server reads as decimal(18,0), so 1.5 was stored as 2.
+            Assert.Equal("float", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Ratio")));
         }
 
         [Fact]
-        public void A_non_key_guid_falls_through_to_varchar()
+        public void A_single_is_declared_real()
         {
-            //GetColumnKeyType knows about Guid; GetColumnDataType does not, so a Guid that is not a
-            //key becomes text. Characterised so a fix is a visible change rather than a surprise.
-            Assert.Equal("varchar(MAX)", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Ref")));
+            Assert.Equal("real", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Rate")));
+        }
+
+        [Fact]
+        public void A_guid_is_declared_uniqueidentifier()
+        {
+            //GetColumnKeyType always knew about Guid; GetColumnDataType did not, so a Guid that was
+            //not a key became text — 36 bytes instead of 16, with none of the type semantics.
+            Assert.Equal("uniqueidentifier", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Ref")));
         }
 
         [Fact]

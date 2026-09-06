@@ -117,6 +117,9 @@ namespace cl2j.Database.Tests
         [Column(Name = "Ratio")]
         public double Ratio { get; set; }
 
+        [Column(Name = "Rate")]
+        public float Rate { get; set; }
+
         [Column(Name = "Bounded", Length = 64)]
         public string Bounded { get; set; } = string.Empty;
 

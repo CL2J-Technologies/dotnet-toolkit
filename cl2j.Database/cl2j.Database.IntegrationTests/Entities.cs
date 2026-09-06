@@ -72,6 +72,27 @@ namespace cl2j.Database.IntegrationTests
         public string? Second { get; set; }
     }
 
+    /// <summary>
+    ///     The three types whose column declarations could not hold their values: a long declared
+    ///     int, a double declared decimal without precision, and a Guid declared varchar. See
+    ///     issue #27.
+    /// </summary>
+    [Table("WideValues")]
+    public sealed class WideValuesRow
+    {
+        [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "Big")]
+        public long Big { get; set; }
+
+        [Column(Name = "Ratio")]
+        public double Ratio { get; set; }
+
+        [Column(Name = "Ref")]
+        public Guid Ref { get; set; }
+    }
+
     [Table("Transacted")]
     public sealed class TransactedRow
     {

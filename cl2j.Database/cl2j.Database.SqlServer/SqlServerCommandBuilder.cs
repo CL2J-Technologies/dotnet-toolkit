@@ -181,15 +181,30 @@ namespace cl2j.Database.SqlServer
                     propertyTypeDesc = "bit";
                 else if (propertyInfo.PropertyType == Types.TypeShort)
                     propertyTypeDesc = "smallint";
-                else if (propertyInfo.PropertyType == Types.TypeInt || propertyInfo.PropertyType == Types.TypeLong)
+                else if (propertyInfo.PropertyType == Types.TypeInt)
                     propertyTypeDesc = "int";
-                else if (propertyInfo.PropertyType == Types.TypeDecimal || propertyInfo.PropertyType == Types.TypeFloat || propertyInfo.PropertyType == Types.TypeDouble)
+                //long used to share the int branch, so anything past int.MaxValue overflowed the
+                //column this library had created for it. See issue #27.
+                else if (propertyInfo.PropertyType == Types.TypeLong)
+                    propertyTypeDesc = "bigint";
+                //double and float used to share the decimal branch. With no Length that landed on
+                //bare decimal, which SQL Server reads as decimal(18,0) — so 1.5 was stored as 2.
+                //These are floating-point values and the server has floating-point types for them.
+                else if (propertyInfo.PropertyType == Types.TypeDouble)
+                    propertyTypeDesc = "float";
+                else if (propertyInfo.PropertyType == Types.TypeFloat)
+                    propertyTypeDesc = "real";
+                else if (propertyInfo.PropertyType == Types.TypeDecimal)
                 {
                     if (columnAttr.Length > 0)
                         propertyTypeDesc = $"decimal({columnAttr.Length},{columnAttr.Decimals})";
                     else
                         propertyTypeDesc = "decimal";
                 }
+                //GetColumnKeyType always knew about Guid; this did not, so a Guid that was not a
+                //key fell through to the varchar(MAX) default and was stored as text.
+                else if (propertyInfo.PropertyType == Types.TypeGuid)
+                    propertyTypeDesc = "uniqueidentifier";
                 else if (propertyInfo.PropertyType == Types.TypeString)
                 {
                     if (columnAttr.Length > 0)
