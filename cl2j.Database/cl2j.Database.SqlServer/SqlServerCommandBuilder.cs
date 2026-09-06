@@ -81,8 +81,13 @@ namespace cl2j.Database.SqlServer
             var sb = new StringBuilder();
             foreach (var column in columnKeys)
             {
+                //C est le separateur qui est conditionnel, pas le predicat. Les deux lignes
+                //etaient inversees, si bien que le tampon restait vide a tous les tours et que
+                //l enonce partait sans clause WHERE — donc sans filtre.
                 if (sb.Length > 0)
-                    sb.Append($"{column.NameFormatted}={FormatParameterName(column.Name)}");
+                    sb.Append(" AND ");
+
+                sb.Append($"{column.NameFormatted}={FormatParameterName(column.Name)}");
             }
             if (sb.Length > 0)
                 statement.Text += " WHERE " + sb.ToString();
