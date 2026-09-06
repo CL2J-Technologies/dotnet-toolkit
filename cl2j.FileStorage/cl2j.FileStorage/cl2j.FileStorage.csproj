@@ -9,7 +9,7 @@
          est surcharge ici parce que Directory.Build.props porte la version commune du depot :
          sans lui, l option skip-duplicate du workflow sauterait la publication, 2.0.0 existant
          deja, et le correctif n atteindrait jamais cooperius ni TourDuChapeau. -->
-    <Version>2.1.1</Version>
+    <Version>2.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
