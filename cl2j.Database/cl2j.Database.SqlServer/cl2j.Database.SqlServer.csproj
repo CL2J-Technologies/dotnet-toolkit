@@ -3,6 +3,9 @@
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Database.SqlServer</PackageId>
     <Description>SQL Server provider for cl2j.Database.</Description>
+
+    <!-- Suit la majeure de cl2j.Database, dont il implemente le contrat. -->
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
