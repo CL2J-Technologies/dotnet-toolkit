@@ -99,23 +99,25 @@ namespace cl2j.Database.SqlServer
                 throw new DatabaseException("Only one Key must be defined for QueryByKeys");
 
             var key = columnKeys.First();
-            var inClause = GenerateInClause(values);
-            statement.Text += $" WHERE {key.NameFormatted} IN ({inClause}) ";
 
-            return statement;
-        }
-
-        private string GenerateInClause(IEnumerable<object> values)
-        {
-            var sb = new StringBuilder();
+            var placeholders = new StringBuilder();
+            var index = 0;
             foreach (var value in values)
             {
-                if (sb.Length > 0) sb.Append(',');
+                if (placeholders.Length > 0)
+                    placeholders.Append(',');
 
-                var formattedValue = DatabaseFormatter.FormatParameterValue(value);
-                sb.Append(formattedValue);
+                //Le nom est genere, jamais derive de la valeur : une cle ne peut donc pas se
+                //deguiser en identifiant. La valeur voyage a cote de l enonce et sera liee par
+                //celui qui execute — elle ne devient pas du texte SQL.
+                var name = $"key{index++}";
+                placeholders.Append(FormatParameterName(name));
+                statement.Parameters.Add(new StatementParameter(name, value));
             }
-            return sb.ToString();
+
+            statement.Text += $" WHERE {key.NameFormatted} IN ({placeholders}) ";
+
+            return statement;
         }
 
 
@@ -219,13 +221,6 @@ namespace cl2j.Database.SqlServer
         public string FormatParameterName(string name)
         {
             return "@" + name;
-        }
-
-        public string FormatParameterValue(object value)
-        {
-            if (value is string)
-                return $"'{value}'";
-            return value?.ToString() ?? string.Empty;
         }
 
         #endregion

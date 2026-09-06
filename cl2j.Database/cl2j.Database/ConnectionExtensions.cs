@@ -372,15 +372,18 @@ namespace cl2j.Database
             await EnsureConnectionOpen(connection, cancellationToken);
 
             var commandBuilder = CommandBuilderFactory.GetCommandBuilder(connection);
-            var tableDescriptor = TableDescriptorFactory.Create(typeof(T), commandBuilder.DatabaseFormatter);
-            var statement = commandBuilder.GetQueryByKeysStatement(typeof(T), keys);
 
-            //TODO - Split in batches
+            var results = new List<T>();
+            foreach (var statement in QueryKeyBatches.Build(commandBuilder, typeof(T), keys))
+            {
+                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+                cmd.CreateStatementParameters(statement);
 
-            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
+                await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleResult | CommandBehavior.SequentialAccess, cancellationToken);
 
-            var results = await reader.Read<T>(tableDescriptor);
+                results.AddRange(await reader.Read<T>(statement.TableDescriptor));
+            }
+
             return results;
         }
 
@@ -442,6 +445,22 @@ namespace cl2j.Database
             parameter.ParameterName = column.Name;
             parameter.Value = key;
             command.Parameters.Add(parameter);
+        }
+
+        /// <summary>
+        ///     Lie les valeurs que l enonce porte a cote de son texte. Sert aux enonces dont les
+        ///     parametres ne se deduisent pas des colonnes du type — la liste d un <c>IN</c>, dont
+        ///     la longueur n est connue qu a l appel.
+        /// </summary>
+        private static void CreateStatementParameters(this DbCommand command, TextStatement statement)
+        {
+            foreach (var statementParameter in statement.Parameters)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = statementParameter.Name;
+                parameter.Value = statementParameter.Value;
+                command.Parameters.Add(parameter);
+            }
         }
 
         private static void CreateParameters(this DbCommand command, object t, IEnumerable<ColumnDescriptor> columns)

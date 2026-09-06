@@ -10,7 +10,5 @@
         string GetColumnKeyType(ColumnDescriptor column);
 
         string FormatParameterName(string name);
-
-        string FormatParameterValue(object value);
     }
 }

@@ -14,4 +14,8 @@
     <ProjectReference Include="..\..\cl2j.Scripting\cl2j.Scripting\cl2j.Scripting.csproj" />
     <ProjectReference Include="..\..\cl2j.Tooling\cl2j.Tooling.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="cl2j.Database.Tests" />
+  </ItemGroup>
 </Project>
