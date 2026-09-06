@@ -35,6 +35,20 @@ Test projects must be registered in `dotnet-toolkit.slnx`. A test project outsid
 never built and never run — `cl2j.Scripting.Tests` and `cl2j.FileStorage.Tests` were in exactly
 that state and had never executed in CI.
 
+### Integration tests need Docker
+
+`cl2j.Database.IntegrationTests` starts a real SQL Server in a container, through Testcontainers.
+`dotnet test` on the solution therefore needs Docker running. Install Docker Desktop and it works
+with no further configuration; the CI runner already has it.
+
+Those tests **fail** rather than skip when Docker is unavailable, on purpose. A skipped test reads
+as a passing one in a summary line, and the skip becomes permanent — which is how a suite ends up
+green without having exercised anything.
+
+They exist because everything in `cl2j.Database.Tests` stops at the text of a statement. The
+sixteen public operations on `ConnectionExtensions`, and the whole of `DbReaderExtensions`, are
+only reachable with a server.
+
 ## CI
 
 `ci.yml` builds and tests every pull request on `ubuntu-latest`, and is a required check on
