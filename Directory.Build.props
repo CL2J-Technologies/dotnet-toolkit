@@ -41,7 +41,10 @@
              column types rather than varchar, and refuses a type it cannot map instead of falling
              back to varchar(MAX). A decimal must declare its precision;
            - TableExists no longer reads every failure as "the table does not exist", and DropTable
-             no longer swallows a failed drop.
+             no longer swallows a failed drop;
+           - registering a provider twice replaces it rather than appending, so the later
+             registration is the one that answers. It used to be the first, which made a custom
+             IIdentifierGenerator passed on a second call silently do nothing.
 
          Existing tables are not migrated: CreateTableIfRequired checks existence, not shape.
 

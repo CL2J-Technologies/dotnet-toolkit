@@ -40,11 +40,6 @@ namespace cl2j.Database.Tests
         [Fact]
         public void Registering_twice_still_resolves()
         {
-            //Characterisation. Register appends on every call with no check for a builder that is
-            //already there, so the registry grows without bound — a suite like this one keeps
-            //adding duplicates. Harmless for resolution, since the first supporting builder wins,
-            //but nothing ever removes them. Noted rather than fixed: the growth is not observable
-            //through the public API, which is its own problem.
             cl2j.Database.SqlServer.SqlServer.Register();
             cl2j.Database.SqlServer.SqlServer.Register();
 
@@ -54,15 +49,36 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void A_custom_identifier_generator_reaches_the_builder()
+        public void The_last_registration_of_a_provider_is_the_one_that_answers()
         {
-            var generator = new FixedIdentifierGenerator();
+            //Register used to append with no check, so the registry grew without bound and
+            //resolution returned the first entry — which meant a second call with a custom
+            //identifier generator was silently ignored. The parameter exists to be used, so the
+            //later registration replaces the earlier one. See issue #29.
+            var first = new FixedIdentifierGenerator("first");
+            var second = new FixedIdentifierGenerator("second");
+
+            cl2j.Database.SqlServer.SqlServer.Register(first);
+            cl2j.Database.SqlServer.SqlServer.Register(second);
+
+            var builder = CommandBuilderFactory.GetCommandBuilder(new SqlConnection());
+
+            Assert.Same(second, builder.IdentifierGenerator);
+        }
+
+        [Fact]
+        public void Registering_the_same_provider_again_does_not_add_a_second_entry()
+        {
+            //Not directly observable — nothing exposes the registry — so this asserts the effect
+            //that is: after any number of registrations, the one that answers is the last.
+            var generator = new FixedIdentifierGenerator("kept");
+
+            for (var i = 0; i < 50; i++)
+                cl2j.Database.SqlServer.SqlServer.Register();
+
             cl2j.Database.SqlServer.SqlServer.Register(generator);
 
-            //Resolution returns the first supporting builder, which is the one registered first by
-            //an earlier test, so this asserts the generator is carried rather than which instance
-            //wins. The default is used when none is supplied.
-            Assert.Equal("fixed", generator.GenerateKey(null!));
+            Assert.Same(generator, CommandBuilderFactory.GetCommandBuilder(new SqlConnection()).IdentifierGenerator);
         }
 
         [Fact]
@@ -125,9 +141,9 @@ namespace cl2j.Database.Tests
             }
         }
 
-        private sealed class FixedIdentifierGenerator : IIdentifierGenerator
+        private sealed class FixedIdentifierGenerator(string key) : IIdentifierGenerator
         {
-            public string GenerateKey(Descriptors.ColumnDescriptor columnDescriptor) => "fixed";
+            public string GenerateKey(Descriptors.ColumnDescriptor columnDescriptor) => key;
         }
     }
 }
