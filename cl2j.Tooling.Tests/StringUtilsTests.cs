@@ -56,21 +56,48 @@ namespace cl2j.Tooling.Tests
         }
 
         [Theory]
-        [InlineData("Ærøskøbing", "Aroskobing")]   //AE truncated to A
-        [InlineData("я", "y")]                     //ya truncated to y
-        [InlineData("Я", "Y")]                     //Ya truncated to Y
-        [InlineData("ю", "y")]                     //yu truncated to y
-        public void A_transliteration_of_more_than_one_letter_keeps_only_its_first(string input, string expected)
+        [InlineData("Ærøskøbing", "AEroskobing")]
+        [InlineData("cœur", "coeur")]
+        [InlineData("Straße", "Strasse")]
+        [InlineData("Düsseldorf", "Duesseldorf")]
+        [InlineData("Ärger", "Aerger")]
+        [InlineData("я", "ya")]
+        [InlineData("Я", "Ya")]
+        [InlineData("ю", "yu")]
+        [InlineData("Щука", "Shchuka")]
+        public void A_transliteration_of_more_than_one_letter_keeps_all_of_it(string input, string expected)
         {
-            //Characterisation, not endorsement. The table maps "Æ" to "AE" and "я" to "ya", but the
-            //char overload returns entry.Value[0] — one character — and the string overload calls
-            //it per character. So the second letter of every multi-character transliteration is
-            //dropped, silently.
-            //
-            //Held in place rather than fixed because this output ends up in URLs: correcting it
-            //changes the address of anything already published whose title contains one of these.
-            //See the issue raised alongside these tests.
+            //The table maps "Æ" to "AE" and "щ" to "shch". It used to give back only the first
+            //letter of each, because the per-character overload returned a char and so had nowhere
+            //to put the second. See issue #31.
             Assert.Equal(expected, input.RemoveDiacritics());
+        }
+
+        [Theory]
+        [InlineData("Ъ")]
+        [InlineData("ъ")]
+        [InlineData("Ь")]
+        [InlineData("ь")]
+        public void A_character_that_transliterates_to_nothing_disappears(string input)
+        {
+            //The Cyrillic hard and soft signs map to the empty string. Reading the first letter of
+            //that threw IndexOutOfRangeException, which reached anything that normalised text
+            //arriving from outside — a search box, a route value.
+            Assert.Equal(string.Empty, input.RemoveDiacritics());
+        }
+
+        [Fact]
+        public void A_city_whose_name_has_a_ligature_keeps_both_letters_in_its_slug()
+        {
+            //Contrecœur is a real municipality and the only affected value in the data of the one
+            //site that generates slugs with this. It used to be "contrecour".
+            Assert.Equal("contrecoeur", "Contrecœur".NormalizeComponentForUri());
+        }
+
+        [Fact]
+        public void A_route_value_that_transliterates_to_nothing_does_not_throw()
+        {
+            Assert.Equal("test", StringUtils.ToInvariant("тьест"));
         }
 
         [Fact]

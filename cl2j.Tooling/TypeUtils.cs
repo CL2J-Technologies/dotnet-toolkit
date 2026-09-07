@@ -47,7 +47,13 @@ namespace cl2j.Tooling
             if (t.IsGenericType)
             {
                 var genericArgs = t.GetGenericArguments().ToList();
-                return GetCSharpRepresentation(t, trimArgCount, genericArgs);
+                var representation = GetCSharpRepresentation(t, trimArgCount, genericArgs);
+
+                //A generic argument used to fall through here without its namespace, because
+                //addNamespace was only honoured on the non-generic branch below. Callers write
+                //this straight into source they compile, so a bare name is only ever a compile
+                //error inside generated code. See issue #31.
+                return addNamespace ? GetTypeNameWithNamespace(representation, t.Namespace) : representation;
             }
 
             if (addNamespace)

@@ -33,19 +33,34 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
-        public void A_generic_argument_that_is_itself_generic_loses_its_namespace()
+        public void A_generic_argument_that_is_itself_generic_keeps_its_namespace()
         {
-            //Characterisation, not endorsement. The outer type is fully qualified and the inner one
-            //is not: GetCSharpRepresentation passes addNamespace: true, but that flag is only read
-            //on the non-generic branch, so a generic argument comes back as a bare name.
-            //
-            //It compiles today only because the callers that write this into source also add
-            //System.Collections.Generic to the usings — cl2j.Database's reader does. A generic
-            //argument from a namespace nobody thought to add would be a compile error inside
-            //generated code, which is the least pleasant place to read one.
+            //It used to come back as "List<List<System.Int32>>" with the inner name bare:
+            //GetCSharpRepresentation passed addNamespace: true, but that flag was only read on the
+            //non-generic branch. See issue #31.
             Assert.Equal(
-                "System.Collections.Generic.List<List<System.Int32>>",
+                "System.Collections.Generic.List<System.Collections.Generic.List<System.Int32>>",
                 TypeUtils.GetTypeName<List<List<int>>>());
+        }
+
+        [Fact]
+        public void A_generic_argument_from_another_namespace_keeps_it_too()
+        {
+            //The case that actually breaks a caller: cl2j.Database writes this into the source of
+            //the reader it compiles, and only adds System, System.Data, System.Collections.Generic
+            //and the entity's own namespace to the usings. A JSON column typed List<Localized<T>>
+            //therefore produced source referring to a bare "Localized<>" that nothing declared.
+            Assert.Equal(
+                "System.Collections.Generic.List<cl2j.Tooling.Localized<System.String>>",
+                TypeUtils.GetTypeName<List<Localized<string>>>());
+        }
+
+        [Fact]
+        public void A_dictionary_of_generics_qualifies_both_of_them()
+        {
+            Assert.Equal(
+                "System.Collections.Generic.Dictionary<System.String, System.Collections.Generic.List<System.Int32>>",
+                TypeUtils.GetTypeName<Dictionary<string, List<int>>>());
         }
 
         [Fact]
@@ -213,24 +228,50 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
-        public async Task A_subscriber_that_throws_makes_the_others_hear_it_twice()
+        public async Task A_subscriber_that_throws_does_not_make_the_others_hear_it_twice()
         {
-            //Characterisation, not endorsement. NotifyAsync catches around the whole loop and then
-            //runs the whole loop again, so a subscriber that already succeeded is notified a second
-            //time — and the second attempt is swallowed whole, so the failure is never reported.
-            //
-            //An observer with a side effect therefore performs it twice whenever any other observer
-            //fails, and nothing anywhere says so.
+            //NotifyAsync used to catch around the whole loop and then run the whole loop again, so
+            //a subscriber that had already succeeded was notified a second time — its side effect
+            //performed twice — whenever some *other* subscriber failed. See issue #31.
             var observable = new Observers.Observable<string>();
             var recorder = new Recorder();
             var thrower = new Thrower();
             observable.Subscribe(recorder);
             observable.Subscribe(thrower);
 
-            await observable.NotifyAsync("event");
+            await Assert.ThrowsAsync<AggregateException>(() => observable.NotifyAsync("event"));
 
-            Assert.Equal(2, recorder.Seen.Count);
-            Assert.Equal(2, thrower.Calls);
+            Assert.Single(recorder.Seen);
+            Assert.Equal(1, thrower.Calls);
+        }
+
+        [Fact]
+        public async Task A_subscriber_that_throws_does_not_stop_the_ones_after_it()
+        {
+            var observable = new Observers.Observable<string>();
+            var thrower = new Thrower();
+            var recorder = new Recorder();
+            observable.Subscribe(thrower);
+            observable.Subscribe(recorder);
+
+            await Assert.ThrowsAsync<AggregateException>(() => observable.NotifyAsync("event"));
+
+            Assert.Equal("event", Assert.Single(recorder.Seen));
+        }
+
+        [Fact]
+        public async Task Every_failure_is_reported_rather_than_swallowed()
+        {
+            //The second pass used to run inside a bare catch { }, so a permanently broken observer
+            //was invisible: no exception, no log line, nothing.
+            var observable = new Observers.Observable<string>();
+            observable.Subscribe(new Thrower());
+            observable.Subscribe(new Thrower());
+
+            var exception = await Assert.ThrowsAsync<AggregateException>(() => observable.NotifyAsync("event"));
+
+            Assert.Equal(2, exception.InnerExceptions.Count);
+            Assert.All(exception.InnerExceptions, e => Assert.IsType<InvalidOperationException>(e));
         }
     }
 }

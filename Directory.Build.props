@@ -48,6 +48,24 @@
 
          Existing tables are not migrated: CreateTableIfRequired checks existence, not shape.
 
+         The same release also corrects three things in cl2j.Tooling (#31), two of which change
+         what a caller sees:
+
+           - a transliteration of more than one letter keeps all of it. "Ærøskøbing" was
+             "Aroskobing" and is now "AEroskobing"; the four Cyrillic characters that transliterate
+             to nothing threw IndexOutOfRangeException and now disappear as intended. Slugs built
+             from a name containing æ, œ, ä, ö, ü, ß, ð or Cyrillic therefore change: check for
+             published addresses before upgrading. RemoveDiacritics(char) returns a string, which
+             is the one signature change in this release — the char it returned had nowhere to put
+             the second letter;
+           - a generic type argument that is itself generic is written with its namespace. This
+             output goes straight into source that cl2j.Database and cl2j.Scripting compile, so
+             the bare name was a compile error inside generated code;
+           - Observable.NotifyAsync notifies each observer exactly once and throws an
+             AggregateException listing what failed. It used to re-run the whole loop on any
+             failure — performing other observers' side effects twice — and then swallow
+             everything.
+
          Everything breaking was gathered here on purpose, so the next release does not have to be
          a major too. A minor would let all of it arrive through a routine bump. -->
     <Version>5.0.0</Version>
