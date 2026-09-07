@@ -99,21 +99,21 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task A_store_that_accepts_a_duplicate_insert_leaves_the_two_disagreeing()
+        public async Task A_store_that_accepts_a_duplicate_insert_is_agreed_with()
         {
-            //Characterisation, and the sharp edge of the ordering above. When the store upserts —
-            //plenty do — the write succeeds and then cache.Add throws on the key it already has.
-            //The store now holds the new value, the cache still holds the old one, and the caller
-            //sees an exception that says nothing about either.
+            //`cache.Add` used to throw on the key it already held — after the store had accepted
+            //the write. The store went on holding the new value, the cache the old one, and the
+            //caller got an exception that said nothing about either. Whatever the store accepted is
+            //what the cache now holds. See issue #32.
             var store = Seeded(new Person("1", "Renée"));
             store.UpsertOnInsert = true;
             using var cache = Cache(store);
             await cache.GetAllAsync();
 
-            await Assert.ThrowsAsync<ArgumentException>(() => cache.InsertAsync("1", new Person("1", "Someone else")));
+            await cache.InsertAsync("1", new Person("1", "Someone else"));
 
             Assert.Equal("Someone else", store.Contents["1"].Name);
-            Assert.Equal("Renée", (await cache.GetByIdAsync("1"))?.Name);
+            Assert.Equal("Someone else", (await cache.GetByIdAsync("1"))?.Name);
         }
 
         [Fact]
@@ -255,18 +255,29 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task A_source_that_cannot_be_read_leaves_an_empty_cache_and_a_critical_log()
+        public async Task A_source_that_cannot_be_read_is_reported_rather_than_answered_as_empty()
         {
-            //The failure mode a caller has to know about: the load swallows the exception, so
-            //GetAllAsync answers "nothing" rather than failing. An empty answer and an unavailable
-            //source look identical from the outside.
+            //The load still swallows the exception and logs it Critical — a refresh that fails must
+            //not take the process down, and a cache that has data should go on serving it. What
+            //changed is the first load: answering "nothing" when the source could not be read is a
+            //lie a caller cannot see through, and every caller here believed it. See issue #32.
             var logger = new RecordingLogger();
             using var cache = new UnreadableCache(logger);
 
-            var all = await cache.GetAllAsync();
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => cache.GetAllAsync());
 
-            Assert.Empty(all);
+            Assert.Contains("broken", failure.Message, StringComparison.Ordinal);
+            Assert.IsType<InvalidOperationException>(failure.InnerException);
             Assert.Contains(logger.Entries, e => e.Level == LogLevel.Critical && e.Exception is not null);
+        }
+
+        [Fact]
+        public async Task A_source_that_is_genuinely_empty_answers_empty()
+        {
+            //The other side of it, and the reason the two had to stop looking alike.
+            using var cache = Cache(Seeded());
+
+            Assert.Empty(await cache.GetAllAsync());
         }
 
         private sealed class UnreadableCache(ILogger logger)

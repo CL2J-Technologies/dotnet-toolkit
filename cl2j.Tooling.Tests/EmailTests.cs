@@ -80,17 +80,54 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
-        public async Task A_send_that_fails_returns_false_and_is_logged()
+        public async Task A_send_that_fails_says_so_and_is_logged()
         {
-            //Worth being explicit about, because it is the contract every caller inherits: this
-            //class never throws on a delivery failure. The bool is the only signal, and the reason
-            //exists only in the log.
+            //The contract every caller inherits: this class does not throw on a delivery failure.
             var (service, logger) = Build(Unreachable());
 
-            var sent = await service.SendEmailAsync("subject", "body", "to@example.invalid");
+            var result = await service.SendEmailAsync("subject", "body", "to@example.invalid");
 
-            Assert.False(sent);
+            Assert.False(result.Sent);
             Assert.Contains(logger.Entries, e => e.Level == LogLevel.Error && e.Exception is not null);
+        }
+
+        [Fact]
+        public async Task A_send_that_fails_hands_back_the_reason()
+        {
+            //The point of returning EmailResult rather than bool. These methods used to answer
+            //`false` and nothing else, so a wrong password, an unreachable server and a rejected
+            //recipient were the same value and the reason lived only in a log line. See issue #33.
+            var (service, logger) = Build(Unreachable());
+
+            var result = await service.SendEmailAsync("subject", "body", "to@example.invalid");
+
+            Assert.NotNull(result.Failure);
+            //The same exception that was logged, not a description of it.
+            Assert.Same(logger.Entries.First(e => e.Level == LogLevel.Error).Exception, result.Failure);
+        }
+
+        [Fact]
+        public async Task Two_different_failures_are_told_apart()
+        {
+            //What `false` could never do.
+            var (unreachable, _) = Build(Unreachable());
+            var badAddress = await unreachable.SendEmailAsync("subject", "body", "not an address");
+            var noServer = await unreachable.SendEmailAsync("subject", "body", "to@example.invalid");
+
+            Assert.IsType<FormatException>(badAddress.Failure);
+            Assert.IsNotType<FormatException>(noServer.Failure);
+        }
+
+        [Fact]
+        public async Task A_result_that_succeeded_carries_no_failure()
+        {
+            //Asserted on the type rather than through a send, since a send cannot succeed here
+            //without a server. It is the invariant a caller reads `Failure` against.
+            await Task.CompletedTask;
+
+            Assert.True(EmailResult.Success().Sent);
+            Assert.Null(EmailResult.Success().Failure);
+            Assert.False(EmailResult.Failed(new InvalidOperationException()).Sent);
         }
 
         [Fact]
@@ -100,9 +137,9 @@ namespace cl2j.Tooling.Tests
             //form. It stays a false.
             var (service, logger) = Build(Unreachable());
 
-            var sent = await service.SendEmailAsync("subject", "body", "not an address");
+            var result = await service.SendEmailAsync("subject", "body", "not an address");
 
-            Assert.False(sent);
+            Assert.False(result.Sent);
             Assert.Contains(logger.Entries, e => e.Level == LogLevel.Error);
         }
 
@@ -132,7 +169,7 @@ namespace cl2j.Tooling.Tests
                 systemTo: "ops@example.invalid",
                 errorTo: "errors@example.invalid"));
 
-            Assert.False(await service.SendSystemAsync("subject", "details"));
+            Assert.False((await service.SendSystemAsync("subject", "details")).Sent);
 
             var failure = Assert.Single(logger.Entries, e => e.Level == LogLevel.Error);
             Assert.Contains("ops@example.invalid", failure.Message, StringComparison.Ordinal);
@@ -147,7 +184,7 @@ namespace cl2j.Tooling.Tests
                 systemTo: "ops@example.invalid",
                 errorTo: "errors@example.invalid"));
 
-            Assert.False(await service.SendErrorAsync(new InvalidOperationException("boom"), "subject", "details"));
+            Assert.False((await service.SendErrorAsync(new InvalidOperationException("boom"), "subject", "details")).Sent);
 
             Assert.Contains(logger.Entries, e =>
                 e.Level == LogLevel.Error && e.Message.Contains("errors@example.invalid", StringComparison.Ordinal));
@@ -287,13 +324,13 @@ namespace cl2j.Tooling.Tests
 
         private sealed class NoopEmailService : IEmailService
         {
-            public Task<bool> SendEmailAsync(string subject, string body, string toEmail, bool isBodyHtml = false) => Task.FromResult(true);
+            public Task<EmailResult> SendEmailAsync(string subject, string body, string toEmail, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
 
-            public Task<bool> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false) => Task.FromResult(true);
+            public Task<EmailResult> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
 
-            public Task<bool> SendSystemAsync(string subject, string details, bool isBodyHtml = false) => Task.FromResult(true);
+            public Task<EmailResult> SendSystemAsync(string subject, string details, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
 
-            public Task<bool> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false) => Task.FromResult(true);
+            public Task<EmailResult> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
         }
     }
 }

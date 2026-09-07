@@ -104,18 +104,70 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task An_insert_lands_at_the_end_whatever_the_ordering_asked_for()
+        public async Task An_insert_lands_where_the_ordering_puts_it()
         {
-            //Characterisation. The ordering predicate is applied when the cache loads and never
-            //again, so a row inserted afterwards sits at the end until the next refresh. Reads
-            //between the two see an order that is neither the one asked for nor the store's.
+            //The predicate used to be applied when the cache loaded and never again, so anything
+            //inserted afterwards sat at the end until the next refresh, and reads in between saw an
+            //order that was neither the one asked for nor the store's. See issue #32.
             var store = Seeded(new Person("1", "Bea"), new Person("2", "Cléo"));
             using var cache = Cache(store, orderBy: p => p.Name);
             await cache.GetAllAsync();
 
             await cache.InsertAsync(new Person("3", "Ari"));
 
-            Assert.Equal(["Bea", "Cléo", "Ari"], (await cache.GetAllAsync()).Select(p => p.Name));
+            Assert.Equal(["Ari", "Bea", "Cléo"], (await cache.GetAllAsync()).Select(p => p.Name));
+        }
+
+        [Fact]
+        public async Task An_update_that_changes_the_sort_key_moves_the_item()
+        {
+            var store = Seeded(new Person("1", "Ari"), new Person("2", "Bea"));
+            using var cache = Cache(store, orderBy: p => p.Name);
+            await cache.GetAllAsync();
+
+            await cache.UpdateAsync(new Person("1", "Zoé"));
+
+            Assert.Equal(["Bea", "Zoé"], (await cache.GetAllAsync()).Select(p => p.Name));
+        }
+
+        [Fact]
+        public async Task Ordering_is_kept_when_it_was_asked_for_descending()
+        {
+            var store = Seeded(new Person("1", "Bea"));
+            using var cache = Cache(store, orderBy: p => p.Name, ascending: false);
+            await cache.GetAllAsync();
+
+            await cache.InsertAsync(new Person("2", "Zoé"));
+
+            Assert.Equal(["Zoé", "Bea"], (await cache.GetAllAsync()).Select(p => p.Name));
+        }
+
+        [Fact]
+        public async Task With_no_ordering_asked_for_an_insert_goes_to_the_end()
+        {
+            //The other half: without a predicate there is no order to keep, and the store's is what
+            //the cache reflects.
+            var store = Seeded(new Person("1", "Zoé"));
+            using var cache = Cache(store);
+            await cache.GetAllAsync();
+
+            await cache.InsertAsync(new Person("2", "Ari"));
+
+            Assert.Equal(["Zoé", "Ari"], (await cache.GetAllAsync()).Select(p => p.Name));
+        }
+
+        [Fact]
+        public async Task A_store_that_accepts_a_duplicate_insert_is_agreed_with()
+        {
+            //The list equivalent of the dictionary cache's case: an insert of a key the cache
+            //already holds replaces it rather than appending a second copy.
+            var store = Seeded(new Person("1", "Renée"));
+            using var cache = Cache(store);
+            await cache.GetAllAsync();
+
+            await cache.InsertAsync(new Person("1", "Someone else"));
+
+            Assert.Equal("Someone else", Assert.Single(await cache.GetAllAsync()).Name);
         }
 
         [Fact]
@@ -268,13 +320,15 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task A_source_that_cannot_be_read_leaves_an_empty_cache_and_a_critical_log()
+        public async Task A_source_that_cannot_be_read_is_reported_rather_than_answered_as_empty()
         {
             var logger = new RecordingLogger();
             var store = new UnreadableListStore<Person>();
             using var cache = new DataStoreListLoadCache<Person>("broken", store, NoRefresh, logger);
 
-            Assert.Empty(await cache.GetAllAsync());
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => cache.GetAllAsync());
+
+            Assert.Contains("broken", failure.Message, StringComparison.Ordinal);
             Assert.Contains(logger.Entries, e => e.Level == LogLevel.Critical && e.Exception is not null);
             Assert.True(store.Attempts >= 1);
         }

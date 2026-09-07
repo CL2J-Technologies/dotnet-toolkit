@@ -13,8 +13,17 @@ namespace cl2j.DataStore.List
 
         private readonly Tooling.Observers.Observable<IReadOnlyList<TValue>> observable = new();
 
+        //Kept so GetAllAsync can say which store, and why, rather than answering empty.
+        private readonly string name;
+        //Set only where a load actually succeeded. CacheLoader.WaitAsync cannot answer this:
+        //the callback below catches its own failures, so it returns normally and the loader
+        //marks itself loaded either way.
+        private volatile bool loadedSuccessfully;
+        private Exception? lastLoadFailure;
+
         public DataStoreListLoadCache(string name, IDataStoreListLoad<TValue> dataStore, TimeSpan refreshInterval, ILogger logger)
         {
+            this.name = name;
             cacheLoader = new CacheLoader(name, refreshInterval, async () =>
             {
                 try
@@ -35,11 +44,16 @@ namespace cl2j.DataStore.List
                         semaphore.Release();
                     }
 
+                    lastLoadFailure = null;
+                    loadedSuccessfully = true;
+
                     if (logger.IsEnabled(LogLevel.Debug))
                         logger.LogDebug($"DataStoreListLoadCache<{name}> --> {cache.Count} {name}(s) in {sw.ElapsedMilliseconds}ms");
                 }
                 catch (Exception ex)
                 {
+                    lastLoadFailure = ex;
+
                     if (logger.IsEnabled(LogLevel.Critical))
                         logger.LogCritical(ex, $"DataStoreListLoadCache<{name}> --> Unable to read the entities");
                 }
@@ -48,8 +62,32 @@ namespace cl2j.DataStore.List
 
         public async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
-            await cacheLoader.WaitAsync();
+            await WaitForFirstLoadAsync();
             return cache.AsReadOnly();
+        }
+
+
+        /// <summary>
+        ///     Blocks until the cache has loaded once, and refuses to answer if it never did.
+        ///
+        ///     <para>
+        ///     A refresh that fails is caught, logged Critical and left there: a cache that has
+        ///     data should go on serving it, and a transient outage must not take the process
+        ///     down. But before the *first* successful load there is nothing to serve, and
+        ///     answering "nothing" is a lie the caller cannot see through — an unreadable source
+        ///     and an empty one were indistinguishable, and every caller read them as empty. See
+        ///     issue #32.
+        ///     </para>
+        /// </summary>
+        private async Task WaitForFirstLoadAsync()
+        {
+            await cacheLoader.WaitAsync();
+            if (loadedSuccessfully)
+                return;
+
+            throw new InvalidOperationException(
+                $"The data store '{name}' has not loaded, so there is nothing to answer with. This is not the same as it being empty.",
+                lastLoadFailure);
         }
 
         public bool Subscribe(Tooling.Observers.IObserver<IReadOnlyList<TValue>> observer)

@@ -11,7 +11,7 @@ namespace cl2j.Tooling.Email
     {
         private readonly SmtpSettings smtpSettings = smtpSettings.Value;
 
-        public async Task<bool> SendEmailAsync(string subject, string body, string toEmail, bool isBodyHtml = false)
+        public async Task<EmailResult> SendEmailAsync(string subject, string body, string toEmail, bool isBodyHtml = false)
         {
             if (smtpSettings.From == null)
                 throw new ValidationException("'From' Smtp configuration is missing");
@@ -19,7 +19,7 @@ namespace cl2j.Tooling.Email
             return await SendEmailAsync(smtpSettings.From, subject, body, toEmail, isBodyHtml);
         }
 
-        public async Task<bool> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false)
+        public async Task<EmailResult> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false)
         {
             try
             {
@@ -29,7 +29,7 @@ namespace cl2j.Tooling.Email
 
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation($"Sent email sent to '{toEmail}' (from={from})");
-                return true;
+                return EmailResult.Success();
             }
             //Only what a delivery attempt can legitimately produce: the server refusing or being
             //unreachable, and an address that is not one. Those are conditions, not defects, and
@@ -42,11 +42,11 @@ namespace cl2j.Tooling.Email
             {
                 if (logger.IsEnabled(LogLevel.Error))
                     logger.LogError(ex, $"Unexpected error while sending email to '{toEmail}'");
-                return false;
+                return EmailResult.Failed(ex);
             }
         }
 
-        public async Task<bool> SendSystemAsync(string subject, string details, bool isBodyHtml = false)
+        public async Task<EmailResult> SendSystemAsync(string subject, string details, bool isBodyHtml = false)
         {
             if (smtpSettings.From == null)
                 throw new ValidationException("'From' Smtp configuration is missing");
@@ -56,7 +56,7 @@ namespace cl2j.Tooling.Email
             return await SendEmailAsync(smtpSettings.From, subject, details, smtpSettings.SystemTo, isBodyHtml);
         }
 
-        public async Task<bool> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false)
+        public async Task<EmailResult> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false)
         {
             if (smtpSettings.From == null)
                 throw new ValidationException("'From' Smtp configuration is missing");

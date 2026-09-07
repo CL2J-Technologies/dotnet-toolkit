@@ -97,8 +97,27 @@
            - EmailService catches only what a delivery attempt can produce (SmtpException,
              FormatException, IOException, SocketException, OperationCanceledException) instead of
              every exception. A defect in this class used to be indistinguishable from the server
-             being down: both returned false. A malformed address is still false — that is data,
-             not a defect.
+             being down: both returned false. A malformed address is still a reported failure —
+             that is data, not a defect.
+
+         And the four that were left standing after those, so that nothing breaking is carried
+         forward:
+
+           - a cache serves whatever the store accepted on insert, instead of throwing on a key it
+             already holds. A store that refuses duplicates refuses them itself, so the only case
+             the old cache.Add ever caught was a store that upserts — and there it left the store
+             holding the new value and the cache the old one;
+           - the ordering predicate is applied after every write, not only at load. Anything
+             written between two refreshes used to sit at the end, in an order that was neither the
+             one asked for nor the store's;
+           - GetAllAsync throws when the cache has never loaded, rather than answering "nothing".
+             An unreadable source and an empty one were indistinguishable, and every caller read
+             them as empty. A refresh that fails after a successful load is still caught and
+             logged: a cache with data goes on serving it;
+           - IEmailService returns EmailResult rather than bool, carrying the failure. A wrong
+             password, an unreachable server and a rejected recipient used to be the same value,
+             with the reason only in a log line. There is deliberately no implicit conversion to
+             bool: the callers who most need to read Failure are the ones who would never look.
 
          Everything breaking was gathered here on purpose, so the next release does not have to be
          a major too. A minor would let all of it arrive through a routine bump. -->

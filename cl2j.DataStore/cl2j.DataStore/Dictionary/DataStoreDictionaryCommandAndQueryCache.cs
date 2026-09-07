@@ -6,19 +6,31 @@ namespace cl2j.DataStore.Dictionary
     {
         public async Task<TValue?> GetByIdAsync(TKey key)
         {
-            await cacheLoader.WaitAsync();
+            await WaitForFirstLoadAsync();
 
             cache.TryGetValue(key, out var value);
             return value;
         }
 
+        /// <summary>
+        ///     Writes through, then makes the cache hold whatever the store accepted.
+        ///
+        ///     <para>
+        ///     This used to be <c>cache.Add</c>, which throws on a key the cache already holds —
+        ///     after the store had accepted the write. A store that enforces what the interface
+        ///     says refuses the insert itself and this line is never reached, so the only case
+        ///     <c>Add</c> ever caught was a store that upserts, and there it was exactly wrong: the
+        ///     store went on holding the new value, the cache the old one, and the caller got an
+        ///     exception about a duplicate key that described neither. See issue #32.
+        ///     </para>
+        /// </summary>
         public async Task InsertAsync(TKey key, TValue entity)
         {
             await semaphore.WaitAsync();
             try
             {
                 await dataStore.InsertAsync(key, entity);
-                cache.Add(key, entity);
+                cache[key] = entity;
                 await NotifyAsync(AsReadOnly(cache));
             }
             finally
