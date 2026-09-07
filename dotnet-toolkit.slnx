@@ -23,6 +23,7 @@
   <Folder Name="/FileStorage/">
     <Project Path="cl2j.FileStorage/cl2j.FileStorage.Provider.AzureBlobStorage/cl2j.FileStorage.Provider.AzureBlobStorage.csproj" />
     <Project Path="cl2j.FileStorage/cl2j.FileStorage/cl2j.FileStorage.csproj" />
+    <Project Path="cl2j.FileStorage/cl2j.FileStorage.Tests/cl2j.FileStorage.Tests.csproj" />
     <Project Path="cl2j.FileStorage.Disk.Tests/cl2j.FileStorage.Disk.Tests.csproj" />
   </Folder>
   <Folder Name="/Logging/">
@@ -30,6 +31,7 @@
   </Folder>
   <Folder Name="/Scripting/">
     <Project Path="cl2j.Scripting/cl2j.Scripting/cl2j.Scripting.csproj" />
+    <Project Path="cl2j.Scripting/cl2j.Scripting.Tests/cl2j.Scripting.Tests.csproj" />
   </Folder>
   <Project Path="cl2j.Image/cl2j.Image.csproj" />
   <Project Path="cl2j.Image.Tests/cl2j.Image.Tests.csproj" />
