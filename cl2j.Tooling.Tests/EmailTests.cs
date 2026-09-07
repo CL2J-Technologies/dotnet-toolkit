@@ -23,21 +23,6 @@ namespace cl2j.Tooling.Tests
     /// </summary>
     public class EmailServiceTests
     {
-        /// <summary>Keeps what was logged, so a test can assert that a failure was reported.</summary>
-        private sealed class RecordingLogger<T> : ILogger<T>
-        {
-            public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = [];
-
-            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-            {
-                Entries.Add((logLevel, formatter(state, exception), exception));
-            }
-        }
-
         //Nothing is listening here, so a send fails immediately rather than waiting on a timeout.
         //A hostname would cost a DNS lookup; a loopback address costs a refused connection.
         private static SmtpSettings Unreachable(string? from = "sender@example.invalid", string? systemTo = null, string? errorTo = null)
