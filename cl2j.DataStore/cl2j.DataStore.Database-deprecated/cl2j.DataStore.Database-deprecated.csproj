@@ -10,7 +10,18 @@
 		<PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
 		<PackageReference Include="Dapper" Version="2.1.72" />
 		<PackageReference Include="Dapper.Contrib" Version="2.0.78" />
-		<PackageReference Include="cl2j.DataStore" Version="2.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- A ProjectReference, like every other dependency between packages here, because
+		     `dotnet pack` turns one into a PackageReference at the referenced project's current
+		     version. It used to be a PackageReference pinned at 2.0.0, which followed neither 4.x
+		     nor 5.x: NuGet resolves the lowest version satisfying a constraint, so a consumer that
+		     referenced this package and nothing else silently got cl2j.DataStore 2.0.0 — three
+		     majors behind the assembly it was built against, with no warning and a green build.
+		     This was the last hardcoded one in the repository; see issue #17 for the sweep it
+		     escaped. -->
+		<ProjectReference Include="..\cl2j.DataStore\cl2j.DataStore.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
