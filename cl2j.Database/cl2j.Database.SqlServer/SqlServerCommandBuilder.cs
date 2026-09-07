@@ -65,9 +65,47 @@ namespace cl2j.Database.SqlServer
             return CommandBuilderHelpers.GetCreateTableStatement(type, this);
         }
 
+        /// <summary>
+        ///     The insert, followed by a request for the identity the server just picked.
+        ///
+        ///     <para>
+        ///     <c>Insert</c> ends in <c>ExecuteScalarAsync</c> and returns what it gets, and
+        ///     <c>Insert&lt;TIn, TOut&gt;</c> exists to hand that value back typed. A plain
+        ///     <c>INSERT ... VALUES</c> produces no result set, so both returned nothing — always
+        ///     <c>null</c>, always <c>default</c>. The one thing a caller wants after inserting a
+        ///     row with a generated key was the one thing they could not get.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     Only for an <c>int</c> or <c>long</c> key, which is what the DDL declares
+        ///     <c>IDENTITY</c>. A string key is carried by the insert itself and a Guid one comes
+        ///     from <c>DEFAULT NEWID()</c>, which <c>SCOPE_IDENTITY</c> does not report.
+        ///     </para>
+        /// </summary>
         public TextStatement GetInsertStatement(Type type)
         {
-            return CommandBuilderHelpers.GetInsertStatement(type, this);
+            var statement = CommandBuilderHelpers.GetInsertStatement(type, this);
+
+            var identity = statement.TableDescriptor.Keys.FirstOrDefault(IsIdentity);
+            if (identity is not null)
+            {
+                //SCOPE_IDENTITY returns numeric(38,0); cast it back to the type the caller declared
+                //so ExecuteScalar hands over an int rather than a decimal.
+                var cast = identity.Property.PropertyType == Types.TypeLong ? "bigint" : "int";
+                statement.Text += $";SELECT CAST(SCOPE_IDENTITY() AS {cast})";
+            }
+
+            return statement;
+        }
+
+        private static bool IsIdentity(ColumnDescriptor column)
+        {
+            if (column.ColumnAtribute.Key != KeyType.Key)
+                return false;
+
+            var type = column.Property.PropertyType;
+
+            return type == Types.TypeInt || type == Types.TypeLong;
         }
 
         public TextStatement GetUpdateStatement(Type type)

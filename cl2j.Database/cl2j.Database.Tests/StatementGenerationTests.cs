@@ -35,10 +35,23 @@ namespace cl2j.Database.Tests
         [Fact]
         public void Insert_leaves_out_an_int_key_because_the_server_supplies_it()
         {
-            //The DDL declares an int key IDENTITY(1,1); sending a value would be an error.
+            //The DDL declares an int key IDENTITY(1,1); sending a value would be an error. And
+            //since the server picks it, the statement asks for it back.
             var statement = Builder().GetInsertStatement(typeof(Counter));
 
-            Assert.Equal("INSERT INTO [Counter] ([Label]) VALUES (@Label)", statement.Text);
+            Assert.Equal(
+                "INSERT INTO [Counter] ([Label]) VALUES (@Label);SELECT CAST(SCOPE_IDENTITY() AS int)",
+                statement.Text);
+        }
+
+        [Fact]
+        public void Insert_does_not_ask_for_an_identity_that_does_not_exist()
+        {
+            //A string key is carried by the insert, so there is nothing for the server to hand
+            //back and SCOPE_IDENTITY would be null.
+            var statement = Builder().GetInsertStatement(typeof(Customer));
+
+            Assert.DoesNotContain("SCOPE_IDENTITY", statement.Text, StringComparison.Ordinal);
         }
 
         [Fact]
