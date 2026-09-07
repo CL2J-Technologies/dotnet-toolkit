@@ -39,6 +39,7 @@ namespace cl2j.Tooling.Tests
         [InlineData("Déjà vu", "deja-vu")]
         [InlineData("Trailing spaces   ", "trailing-spaces")]
         [InlineData("a/b", "a-b")]
+        [InlineData("3 1/2", "3-1-2")]
         public void A_component_has_no_separators_and_no_trailing_dash(string input, string expected)
         {
             //A component is one segment, so a slash is punctuation like any other and a dash left

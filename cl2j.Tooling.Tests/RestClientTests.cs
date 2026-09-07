@@ -160,6 +160,28 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public void A_client_built_without_a_handler_gets_one_of_its_own()
+        {
+            //The constructor every real caller uses. It opens no connection until something is
+            //requested, so this only asserts that it builds and disposes — which is the part the
+            //handler overload could have broken when it was added.
+            using var client = new RestClient(BaseUrl, new Dictionary<string, string> { ["X-Api-Key"] = "secret" });
+
+            Assert.NotNull(client);
+        }
+
+        [Fact]
+        public async Task A_post_with_no_expected_answer_sends_the_payload()
+        {
+            var handler = StubHandler.Returning(string.Empty, HttpStatusCode.NoContent);
+            using var client = new RestClient(handler, BaseUrl);
+
+            await client.PostAsync("things", new Payload { FirstName = "Renée" });
+
+            Assert.Contains("\"firstName\": \"Renée\"", Assert.Single(handler.Bodies), StringComparison.Ordinal);
+        }
+
+        [Fact]
         public async Task A_post_with_no_expected_answer_still_raises_a_failure()
         {
             var handler = StubHandler.Returning(string.Empty, HttpStatusCode.BadRequest);

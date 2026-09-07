@@ -105,6 +105,54 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public async Task A_system_message_goes_to_the_system_recipient()
+        {
+            //Not a coverage exercise: this is the only assertion anywhere that SendSystemAsync
+            //routes to SystemTo rather than to one of the other two configured addresses. The send
+            //cannot succeed without a server, but the error log names the recipient it tried —
+            //which is enough to prove where it was addressed.
+            var (service, logger) = Build(Unreachable(
+                from: "sender@example.invalid",
+                systemTo: "ops@example.invalid",
+                errorTo: "errors@example.invalid"));
+
+            Assert.False(await service.SendSystemAsync("subject", "details"));
+
+            var failure = Assert.Single(logger.Entries, e => e.Level == LogLevel.Error);
+            Assert.Contains("ops@example.invalid", failure.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("errors@example.invalid", failure.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task An_error_message_goes_to_the_error_recipient()
+        {
+            var (service, logger) = Build(Unreachable(
+                from: "sender@example.invalid",
+                systemTo: "ops@example.invalid",
+                errorTo: "errors@example.invalid"));
+
+            Assert.False(await service.SendErrorAsync(new InvalidOperationException("boom"), "subject", "details"));
+
+            Assert.Contains(logger.Entries, e =>
+                e.Level == LogLevel.Error && e.Message.Contains("errors@example.invalid", StringComparison.Ordinal));
+            Assert.DoesNotContain(logger.Entries, e =>
+                e.Message.Contains("ops@example.invalid", StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public async Task An_error_report_carries_the_original_message_into_the_body()
+        {
+            //SendErrorAsync appends ex.Message to the details. Nothing else asserts that the
+            //exception being reported actually reaches the message rather than only the log.
+            var (service, logger) = Build(Unreachable(errorTo: "errors@example.invalid"));
+
+            await service.SendErrorAsync(new InvalidOperationException("the original failure"), "subject", "details");
+
+            Assert.Contains(logger.Entries, e =>
+                e.Exception is InvalidOperationException { Message: "the original failure" });
+        }
+
+        [Fact]
         public async Task An_error_report_is_logged_before_it_is_sent()
         {
             //SendErrorAsync logs the exception itself, so a failure to deliver the report does not
