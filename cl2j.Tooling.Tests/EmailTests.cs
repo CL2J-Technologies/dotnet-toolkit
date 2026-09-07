@@ -96,12 +96,28 @@ namespace cl2j.Tooling.Tests
         [Fact]
         public async Task A_recipient_that_is_not_an_address_is_a_failure_rather_than_a_crash()
         {
+            //A malformed address is data, not a defect: the caller may well have taken it from a
+            //form. It stays a false.
             var (service, logger) = Build(Unreachable());
 
             var sent = await service.SendEmailAsync("subject", "body", "not an address");
 
             Assert.False(sent);
             Assert.Contains(logger.Entries, e => e.Level == LogLevel.Error);
+        }
+
+        [Fact]
+        public async Task A_defect_is_raised_rather_than_reported_as_a_delivery_failure()
+        {
+            //The catch used to be `catch (Exception)`, so a NullReferenceException in this class,
+            //an OutOfMemoryException, or a caller passing nothing at all were all indistinguishable
+            //from the server being down: every one of them became `false`, and the bug lived on in
+            //a log line nobody reads. Only what a delivery attempt can legitimately produce is
+            //caught now. See issue #33.
+            var (service, _) = Build(Unreachable());
+
+            await Assert.ThrowsAnyAsync<ArgumentException>(
+                () => service.SendEmailAsync("subject", "body", string.Empty));
         }
 
         [Fact]
@@ -206,13 +222,14 @@ namespace cl2j.Tooling.Tests
             Assert.False(EmailExtensions.IsEmailValid(email));
         }
 
-        [Fact]
-        public void An_address_ending_in_a_newline_is_accepted()
+        [Theory]
+        [InlineData("user@example.com\n")]
+        [InlineData("user@example.com\r\n")]
+        public void An_address_ending_in_a_newline_is_refused(string email)
         {
-            //Characterisation, not endorsement. \Z matches at the end of the input *or* just before
-            //a trailing newline — \z is the strict one — so a single trailing line break survives
-            //validation. Reported in issue #31.
-            Assert.True(EmailExtensions.IsEmailValid("user@example.com\n"));
+            //It used to be accepted: \Z matches at the end of the input *or* just before a single
+            //trailing newline. \z is the strict anchor. See issue #33.
+            Assert.False(EmailExtensions.IsEmailValid(email));
         }
 
         [Fact]

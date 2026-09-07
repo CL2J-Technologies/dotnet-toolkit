@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using System.Net.Sockets;
 using cl2j.Tooling.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +31,14 @@ namespace cl2j.Tooling.Email
                     logger.LogInformation($"Sent email sent to '{toEmail}' (from={from})");
                 return true;
             }
-            catch (Exception ex)
+            //Only what a delivery attempt can legitimately produce: the server refusing or being
+            //unreachable, and an address that is not one. Those are conditions, not defects, and
+            //`false` is the right answer for them.
+            //
+            //This used to be `catch (Exception)`, which made a NullReferenceException in this class
+            //indistinguishable from the server being down — both became `false`, and the defect
+            //survived in a log line nobody reads. See issue #33.
+            catch (Exception ex) when (ex is SmtpException or FormatException or IOException or SocketException or OperationCanceledException)
             {
                 if (logger.IsEnabled(LogLevel.Error))
                     logger.LogError(ex, $"Unexpected error while sending email to '{toEmail}'");

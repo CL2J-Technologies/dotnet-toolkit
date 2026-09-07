@@ -75,6 +75,31 @@
          (so it can be tested, and so a handler can be shared the way IHttpClientFactory expects),
          and the archive decorator takes an optional clock.
 
+         Finally, the five behaviour changes from #32 and #33 that were characterised rather than
+         fixed. They are here deliberately: each one would have needed its own major release, and
+         gathering them means the next one does not have to be. Three of the five are a compile
+         error rather than a silent change, which is the kinder half.
+
+           - GetAllAsync returns IReadOnlyDictionary / IReadOnlyList instead of the concrete types.
+             It used to hand back the cache itself, so a caller that changed the result changed the
+             cache — outside the semaphore, with no observer told. A read-only *view*, not a copy:
+             wrapping is O(1), and consumers call this on the request path. The observable is typed
+             the same way, so an IObserver<List<T>> becomes IObserver<IReadOnlyList<T>>. This is
+             the compile break, and it reaches every implementation of IDataStoreDictionaryLoad and
+             IDataStoreListLoad;
+           - the dictionary cache copies what ReplaceAllByAsync is given rather than keeping the
+             caller's own dictionary as the cache. The list cache already copied; they now agree;
+           - an update whose key the cache has not seen is cached and announced rather than written
+             to the store and dropped. A row that reached the store after the last refresh —
+             another process, another instance — was exactly that case;
+           - IsEmailValid uses \z rather than \Z, so an address with a trailing newline is refused.
+             \Z matches before one;
+           - EmailService catches only what a delivery attempt can produce (SmtpException,
+             FormatException, IOException, SocketException, OperationCanceledException) instead of
+             every exception. A defect in this class used to be indistinguishable from the server
+             being down: both returned false. A malformed address is still false — that is data,
+             not a defect.
+
          Everything breaking was gathered here on purpose, so the next release does not have to be
          a major too. A minor would let all of it arrive through a routine bump. -->
     <Version>5.0.0</Version>

@@ -26,7 +26,7 @@ namespace cl2j.DataStore.Json.Dictionary
     {
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
-        public async Task<Dictionary<TKey, TValue>> GetAllAsync()
+        public async Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync()
         {
             return await fileStorageProvider.GetDictionaryValuesAsync<TKey, TValue>(filename, logger);
         }

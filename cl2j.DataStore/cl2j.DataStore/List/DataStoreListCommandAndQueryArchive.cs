@@ -23,7 +23,7 @@ namespace cl2j.DataStore.List
     {
         private readonly Func<DateTimeOffset> now = now ?? (() => DateTimeOffset.UtcNow);
 
-        public async Task<List<TValue>> GetAllAsync()
+        public async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             return await dataStore.GetAllAsync();
         }

@@ -130,21 +130,26 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task An_update_of_a_key_the_cache_never_saw_is_written_but_not_cached()
+        public async Task An_update_of_a_key_the_cache_never_saw_is_cached_as_well_as_written()
         {
-            //Characterisation. UpdateAsync only touches the cache when the key is already in it, so
-            //a row that appeared in the store after the last refresh — inserted by another process,
-            //or by another instance of this application — is written and then stays invisible until
-            //the next refresh. No exception, no notification.
+            //UpdateAsync used to touch the cache only when the key was already in it, so a row that
+            //appeared in the store after the last refresh — inserted by another process, or by
+            //another instance of this application — was written and then stayed invisible until the
+            //next refresh, with no exception and no notification. The store accepted the write, so
+            //the cache now reflects it. See issue #32.
             var store = Seeded();
             using var cache = Cache(store);
             await cache.GetAllAsync();
+
+            var observer = new RecordingObserver<IReadOnlyDictionary<string, Person>>();
+            cache.Subscribe(observer);
 
             store.Seed("2", new Person("2", "Arrived elsewhere"));
             await cache.UpdateAsync("2", new Person("2", "Updated"));
 
             Assert.Equal("Updated", store.Contents["2"].Name);
-            Assert.Null(await cache.GetByIdAsync("2"));
+            Assert.Equal("Updated", (await cache.GetByIdAsync("2"))?.Name);
+            Assert.Single(observer.Notifications);
         }
 
         [Fact]
@@ -175,11 +180,11 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task The_dictionary_handed_to_ReplaceAll_becomes_the_cache_itself()
+        public async Task The_dictionary_handed_to_ReplaceAll_is_copied_rather_than_kept()
         {
-            //Characterisation. `cache = items` keeps the caller's own dictionary rather than a copy
-            //of it, so whoever passed it can still change what the cache holds — without the
-            //semaphore, and without anyone being notified.
+            //`cache = items` used to keep the caller's own dictionary, so whoever passed it could
+            //still change what the cache held — outside the semaphore, and without anyone being
+            //notified. See issue #32.
             var store = Seeded();
             using var cache = Cache(store);
             await cache.GetAllAsync();
@@ -189,22 +194,28 @@ namespace cl2j.DataStore.Tests
 
             passed["2"] = new Person("2", "Added behind the cache's back");
 
-            Assert.Equal(2, (await cache.GetAllAsync()).Count);
+            Assert.Single(await cache.GetAllAsync());
             Assert.Single(store.Contents);
         }
 
         [Fact]
-        public async Task What_GetAll_returns_is_the_cache_and_not_a_copy_of_it()
+        public async Task What_GetAll_returns_cannot_be_used_to_change_the_cache()
         {
-            //Characterisation, and the same hole seen from the other side: a caller that mutates
-            //the returned dictionary is mutating the cache.
+            //It used to hand back the cache itself, so a caller that mutated the result was
+            //mutating the cache — outside the semaphore, with no notification. The type is now
+            //read-only, which says so at compile time, and the instance is a genuine read-only
+            //view rather than the dictionary upcast, so casting round it fails too.
+            //
+            //A view, not a copy: wrapping is O(1), and RedirectMiddleware calls GetAllAsync on
+            //every single request.
             var store = Seeded(new Person("1", "Renée"));
             using var cache = Cache(store);
 
-            (await cache.GetAllAsync()).Remove("1");
+            var all = await cache.GetAllAsync();
 
-            Assert.Null(await cache.GetByIdAsync("1"));
-            Assert.True(store.Contents.ContainsKey("1"));
+            Assert.IsNotType<Dictionary<string, Person>>(all);
+            Assert.Throws<NotSupportedException>(() => ((IDictionary<string, Person>)all).Remove("1"));
+            Assert.NotNull(await cache.GetByIdAsync("1"));
         }
 
         [Fact]
@@ -214,7 +225,7 @@ namespace cl2j.DataStore.Tests
             using var cache = Cache(store);
             await cache.GetAllAsync();
 
-            var observer = new RecordingObserver<Dictionary<string, Person>>();
+            var observer = new RecordingObserver<IReadOnlyDictionary<string, Person>>();
             cache.Subscribe(observer);
 
             await cache.InsertAsync("1", new Person("1", "Renée"));
@@ -234,7 +245,7 @@ namespace cl2j.DataStore.Tests
             using var cache = Cache(store);
             await cache.GetAllAsync();
 
-            var observer = new RecordingObserver<Dictionary<string, Person>>();
+            var observer = new RecordingObserver<IReadOnlyDictionary<string, Person>>();
             cache.Subscribe(observer);
 
             await cache.DeleteAsync("never-there");

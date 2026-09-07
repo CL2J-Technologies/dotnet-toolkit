@@ -50,7 +50,7 @@ namespace cl2j.DataStore.Tests
                 await Gate();
         }
 
-        public async Task<Dictionary<TKey, TValue>> GetAllAsync()
+        public async Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync()
         {
             Calls.Add("GetAll");
             await PassGate();
@@ -113,10 +113,10 @@ namespace cl2j.DataStore.Tests
 
         public List<string> Calls { get; } = [];
 
-        public Task<List<TValue>> GetAllAsync()
+        public Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             Calls.Add("GetAll");
-            return Task.FromResult(new List<TValue>(items));
+            return Task.FromResult<IReadOnlyList<TValue>>(new List<TValue>(items));
         }
 
         public Task<TValue?> GetByIdAsync(TKey key)
@@ -166,7 +166,7 @@ namespace cl2j.DataStore.Tests
     {
         public int Attempts { get; private set; }
 
-        public Task<List<TValue>> GetAllAsync()
+        public Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             Attempts++;
             throw new InvalidOperationException("the source is unavailable");
@@ -175,7 +175,7 @@ namespace cl2j.DataStore.Tests
 
     public sealed class UnreadableDictionaryStore<TKey, TValue> : IDataStoreDictionaryLoad<TKey, TValue> where TKey : notnull
     {
-        public Task<Dictionary<TKey, TValue>> GetAllAsync() => throw new InvalidOperationException("the source is unavailable");
+        public Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync() => throw new InvalidOperationException("the source is unavailable");
     }
 
     public sealed class RecordingObserver<T> : Tooling.Observers.IObserver<T>

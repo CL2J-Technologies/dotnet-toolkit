@@ -7,7 +7,9 @@ namespace cl2j.Tooling.Email
 {
     public static partial class EmailExtensions
     {
-        const string emailRex = @"\A(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\Z";
+        //\z, not \Z: \Z also matches immediately before a single trailing newline, so
+        //"user@example.com\n" validated. See issue #33.
+        const string emailRex = @"\A(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)\z";
 
         [GeneratedRegex(emailRex, RegexOptions.IgnoreCase, "en-CA")]
         private static partial Regex EmailRegex();

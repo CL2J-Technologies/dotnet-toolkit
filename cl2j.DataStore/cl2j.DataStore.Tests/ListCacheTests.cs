@@ -132,19 +132,37 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task An_update_of_an_item_the_cache_never_saw_is_written_but_not_cached()
+        public async Task An_update_of_an_item_the_cache_never_saw_is_cached_as_well_as_written()
         {
-            //Characterisation, the same shape as the dictionary cache: the write goes through and
-            //the cache is left as it was, with nothing said.
+            //Same shape as the dictionary cache, and the same fix: the write went through and the
+            //cache was left as it was, with nothing said. It is appended now, because the store
+            //accepted it. See issue #32.
             var store = Seeded();
             using var cache = Cache(store);
             await cache.GetAllAsync();
+
+            var observer = new RecordingObserver<IReadOnlyList<Person>>();
+            cache.Subscribe(observer);
 
             store.Seed(new Person("2", "Arrived elsewhere"));
             await cache.UpdateAsync(new Person("2", "Updated"));
 
             Assert.Equal("Updated", store.Contents[0].Name);
-            Assert.Null(await cache.GetByIdAsync("2"));
+            Assert.Equal("Updated", (await cache.GetByIdAsync("2"))?.Name);
+            Assert.Single(observer.Notifications);
+        }
+
+        [Fact]
+        public async Task What_GetAll_returns_cannot_be_used_to_change_the_cache()
+        {
+            var store = Seeded(new Person("1", "Renée"));
+            using var cache = Cache(store);
+
+            var all = await cache.GetAllAsync();
+
+            Assert.IsNotType<List<Person>>(all);
+            Assert.Throws<NotSupportedException>(() => ((IList<Person>)all).Clear());
+            Assert.NotNull(await cache.GetByIdAsync("1"));
         }
 
         [Fact]
@@ -186,7 +204,7 @@ namespace cl2j.DataStore.Tests
             using var cache = Cache(store);
             await cache.GetAllAsync();
 
-            var observer = new RecordingObserver<List<Person>>();
+            var observer = new RecordingObserver<IReadOnlyList<Person>>();
             cache.Subscribe(observer);
 
             await cache.InsertAsync(new Person("1", "Renée"));
@@ -204,7 +222,7 @@ namespace cl2j.DataStore.Tests
             using var cache = Cache(store);
             await cache.GetAllAsync();
 
-            var observer = new RecordingObserver<List<Person>>();
+            var observer = new RecordingObserver<IReadOnlyList<Person>>();
             cache.Subscribe(observer);
 
             await cache.DeleteAsync("never-there");
@@ -238,7 +256,7 @@ namespace cl2j.DataStore.Tests
         {
             var store = new InMemoryListStore<string, Person>(p => p.Id);
             store.Seed(new Person("1", "Renée"));
-            var observer = new RecordingObserver<List<Person>>();
+            var observer = new RecordingObserver<IReadOnlyList<Person>>();
 
             using var cache = new DataStoreListLoadCache<Person>("people", store, NoRefresh, new RecordingLogger());
             cache.Subscribe(observer);

@@ -10,7 +10,7 @@ namespace cl2j.DataStore.Json.List
         private readonly string filename = filename;
         private readonly ILogger logger = logger;
 
-        public async Task<List<TValue>> GetAllAsync()
+        public async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             return await fileStorageProvider.GetListValuesAsync<TValue>(filename, this.logger);
         }

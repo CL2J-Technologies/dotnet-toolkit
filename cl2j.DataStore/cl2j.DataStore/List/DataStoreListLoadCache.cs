@@ -4,14 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListLoadCache<TValue> : IDataStoreListLoad<TValue>, Tooling.Observers.IObservable<List<TValue>>, IDisposable
+    public class DataStoreListLoadCache<TValue> : IDataStoreListLoad<TValue>, Tooling.Observers.IObservable<IReadOnlyList<TValue>>, IDisposable
     {
         private readonly CacheLoader cacheLoader;
         private List<TValue> cache = [];
 
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
-        private readonly Tooling.Observers.Observable<List<TValue>> observable = new();
+        private readonly Tooling.Observers.Observable<IReadOnlyList<TValue>> observable = new();
 
         public DataStoreListLoadCache(string name, IDataStoreListLoad<TValue> dataStore, TimeSpan refreshInterval, ILogger logger)
         {
@@ -20,13 +20,15 @@ namespace cl2j.DataStore.List
                 try
                 {
                     var sw = Stopwatch.StartNew();
-                    var tmpCache = await dataStore.GetAllAsync();
+                    //Materialised into a list this cache owns: what the store hands back is
+                    //read-only, and the cache has to be able to change its own copy.
+                    var tmpCache = new List<TValue>(await dataStore.GetAllAsync());
 
                     await semaphore.WaitAsync();
                     try
                     {
                         cache = tmpCache;
-                        await NotifyAsync(cache);
+                        await NotifyAsync(cache.AsReadOnly());
                     }
                     finally
                     {
@@ -44,18 +46,18 @@ namespace cl2j.DataStore.List
             }, logger);
         }
 
-        public async Task<List<TValue>> GetAllAsync()
+        public async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             await cacheLoader.WaitAsync();
-            return cache;
+            return cache.AsReadOnly();
         }
 
-        public bool Subscribe(Tooling.Observers.IObserver<List<TValue>> observer)
+        public bool Subscribe(Tooling.Observers.IObserver<IReadOnlyList<TValue>> observer)
         {
             return observable.Subscribe(observer);
         }
 
-        public async Task NotifyAsync(List<TValue> t)
+        public async Task NotifyAsync(IReadOnlyList<TValue> t)
         {
             await observable.NotifyAsync(t);
         }

@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListCommandAndQueryCache<TKey, TValue> : DataStoreListCommandAndQueryBase<TKey, TValue>, Tooling.Observers.IObservable<List<TValue>>, IDisposable
+    public class DataStoreListCommandAndQueryCache<TKey, TValue> : DataStoreListCommandAndQueryBase<TKey, TValue>, Tooling.Observers.IObservable<IReadOnlyList<TValue>>, IDisposable
     {
         private readonly CacheLoader cacheLoader;
         private readonly IDataStoreListCommandAndQuery<TKey, TValue> dataStore;
         private List<TValue> cache = [];
 
-        private readonly Tooling.Observers.Observable<List<TValue>> observable = new();
+        private readonly Tooling.Observers.Observable<IReadOnlyList<TValue>> observable = new();
 
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
@@ -24,7 +24,7 @@ namespace cl2j.DataStore.List
                 try
                 {
                     var sw = Stopwatch.StartNew();
-                    var tmpCache = await dataStore.GetAllAsync();
+                    var tmpCache = new List<TValue>(await dataStore.GetAllAsync());
 
                     if (orderbyPredicate != null)
                     {
@@ -38,7 +38,7 @@ namespace cl2j.DataStore.List
                     try
                     {
                         cache = tmpCache;
-                        await NotifyAsync(cache);
+                        await NotifyAsync(cache.AsReadOnly());
                     }
                     finally
                     {
@@ -56,10 +56,10 @@ namespace cl2j.DataStore.List
             }, logger);
         }
 
-        public override async Task<List<TValue>> GetAllAsync()
+        public override async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             await cacheLoader.WaitAsync();
-            return cache;
+            return cache.AsReadOnly();
         }
 
         public override async Task<TValue?> GetByIdAsync(TKey key)
@@ -75,7 +75,7 @@ namespace cl2j.DataStore.List
             {
                 await dataStore.InsertAsync(entity);
                 cache.Add(entity);
-                await NotifyAsync(cache);
+                await NotifyAsync(cache.AsReadOnly());
             }
             finally
             {
@@ -90,12 +90,16 @@ namespace cl2j.DataStore.List
             {
                 await dataStore.UpdateAsync(entity);
 
+                //Appended when the cache has never seen it. It used to be dropped: the write went
+                //through and the item stayed invisible here until the next refresh, with nothing
+                //said. An item that reached the store after the last refresh — put there by
+                //another process, or another instance — was exactly that case. See issue #32.
                 var index = FindIndex(cache, entity);
                 if (index >= 0)
-                {
                     cache[index] = entity;
-                    await NotifyAsync(cache);
-                }
+                else
+                    cache.Add(entity);
+                await NotifyAsync(cache.AsReadOnly());
             }
             finally
             {
@@ -114,7 +118,7 @@ namespace cl2j.DataStore.List
                 if (index >= 0)
                 {
                     cache.RemoveAt(index);
-                    await NotifyAsync(cache);
+                    await NotifyAsync(cache.AsReadOnly());
                 }
             }
             finally
@@ -130,7 +134,7 @@ namespace cl2j.DataStore.List
             {
                 await dataStore.ReplaceAllByAsync(items);
                 cache = [.. items];
-                await NotifyAsync(cache);
+                await NotifyAsync(cache.AsReadOnly());
             }
             finally
             {
@@ -138,12 +142,12 @@ namespace cl2j.DataStore.List
             }
         }
 
-        public bool Subscribe(Tooling.Observers.IObserver<List<TValue>> observer)
+        public bool Subscribe(Tooling.Observers.IObserver<IReadOnlyList<TValue>> observer)
         {
             return observable.Subscribe(observer);
         }
 
-        public async Task NotifyAsync(List<TValue> t)
+        public async Task NotifyAsync(IReadOnlyList<TValue> t)
         {
             await observable.NotifyAsync(t);
         }
