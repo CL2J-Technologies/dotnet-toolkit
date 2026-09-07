@@ -102,6 +102,64 @@ namespace cl2j.Database.Tests
             Assert.Equal("real", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Rate")));
         }
 
+        [Theory]
+        [InlineData("MaybeCount", "int")]
+        [InlineData("MaybeWhen", "datetime2")]
+        [InlineData("MaybeMoment", "datetimeoffset")]
+        [InlineData("MaybeRef", "uniqueidentifier")]
+        [InlineData("MaybeFlag", "bit")]
+        public void A_nullable_value_type_is_declared_like_the_type_it_wraps(string column, string expected)
+        {
+            //Nullable<int> is not int, so every one of these fell through to the varchar(MAX)
+            //default — a perfectly ordinary nullable column, stored as text. See issue #27.
+            Assert.Equal(expected, Formatter().GetColumnDataType(Column(typeof(NullablesRow), column)));
+        }
+
+        [Theory]
+        [InlineData("Payload", "varbinary(max)")]
+        [InlineData("Elapsed", "time")]
+        [InlineData("Day", "date")]
+        [InlineData("Tiny", "tinyint")]
+        public void The_remaining_ordinary_types_have_a_mapping_of_their_own(string column, string expected)
+        {
+            Assert.Equal(expected, Formatter().GetColumnDataType(Column(typeof(NullablesRow), column)));
+        }
+
+        [Fact]
+        public void A_decimal_without_a_declared_precision_is_refused()
+        {
+            //Bare decimal is decimal(18,0) to SQL Server, so an amount of 12.34 was stored as 12,
+            //rounded on the way in with nothing to say so. Refusing is louder than guessing a
+            //precision the caller did not choose. See issue #27.
+            var formatter = Formatter();
+            var column = Column(typeof(ImpreciseRow), "Amount");
+
+            var exception = Assert.Throws<DatabaseException>(() => formatter.GetColumnDataType(column));
+
+            Assert.Contains("Decimals", exception.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void A_decimal_with_a_declared_precision_keeps_it()
+        {
+            Assert.Equal("decimal(18,2)", Formatter().GetColumnDataType(Column(typeof(AllTypesRow), "Price")));
+        }
+
+        [Fact]
+        public void A_type_with_no_mapping_is_refused_rather_than_stored_as_text()
+        {
+            //The varchar(MAX) fallback is how a Guid ended up as text without anyone noticing. A
+            //type nobody mapped is now a failure at schema creation, which is the cheapest moment
+            //to find it. TypeName remains the escape hatch.
+            var formatter = Formatter();
+            var column = Column(typeof(UnmappableRow), "Thing");
+
+            var exception = Assert.Throws<DatabaseException>(() => formatter.GetColumnDataType(column));
+
+            Assert.Contains("Uri", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("TypeName", exception.Message, StringComparison.Ordinal);
+        }
+
         [Fact]
         public void A_guid_is_declared_uniqueidentifier()
         {

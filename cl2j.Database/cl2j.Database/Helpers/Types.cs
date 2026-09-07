@@ -4,7 +4,9 @@
     {
 #pragma warning disable CA2211 // Non-constant fields should not be visible
         public static Type TypeBool = typeof(bool);
+        public static Type TypeChar = typeof(char);
 
+        public static Type TypeByte = typeof(byte);
         public static Type TypeShort = typeof(short);
         public static Type TypeInt = typeof(int);
         public static Type TypeLong = typeof(long);
@@ -14,9 +16,13 @@
         public static Type TypeDouble = typeof(double);
 
         public static Type TypeString = typeof(string);
+        public static Type TypeByteArray = typeof(byte[]);
 
         public static Type TypeDateTime = typeof(DateTime);
         public static Type TypeDateTimeOffset = typeof(DateTimeOffset);
+        public static Type TypeDateOnly = typeof(DateOnly);
+        public static Type TypeTimeOnly = typeof(TimeOnly);
+        public static Type TypeTimeSpan = typeof(TimeSpan);
 
         public static Type TypeGuid = typeof(Guid);
 

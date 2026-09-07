@@ -93,6 +93,25 @@ namespace cl2j.Database.IntegrationTests
         public Guid Ref { get; set; }
     }
 
+    /// <summary>
+    ///     Nullable value types, which every branch of the type mapping used to miss. See #27.
+    /// </summary>
+    [Table("Nullable")]
+    public sealed class NullableRow
+    {
+        [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "MaybeCount")]
+        public int? MaybeCount { get; set; }
+
+        [Column(Name = "MaybeWhen")]
+        public DateTime? MaybeWhen { get; set; }
+
+        [Column(Name = "MaybeRef")]
+        public Guid? MaybeRef { get; set; }
+    }
+
     [Table("Transacted")]
     public sealed class TransactedRow
     {
