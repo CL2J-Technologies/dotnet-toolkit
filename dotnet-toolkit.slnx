@@ -13,6 +13,7 @@
   <Folder Name="/cl2j.DataStore/">
     <Project Path="cl2j.DataStore/cl2j.DataStore.Database-deprecated/cl2j.DataStore.Database-deprecated.csproj" />
     <Project Path="cl2j.DataStore/cl2j.DataStore.Json/cl2j.DataStore.Json.csproj" />
+    <Project Path="cl2j.DataStore/cl2j.DataStore.Json.Tests/cl2j.DataStore.Json.Tests.csproj" />
   </Folder>
   <Folder Name="/cl2j.FileStorage/" />
   <Folder Name="/cl2j.Scripting/" />
