@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using cl2j.Tooling;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -10,16 +11,14 @@ namespace cl2j.Tooling.Tests
     ///     so it is written down here rather than rediscovered there.
     ///
     ///     <para>
-    ///     One class on purpose: the semaphore inside CacheLoader is static on a non-generic type,
-    ///     so it is shared by every loader in the process, and tests that hold it must not run
-    ///     beside each other. xUnit runs the tests of a class one at a time.
+    ///     Several of these hold a load open to watch what happens around it, so they live in one
+    ///     class: xUnit runs the tests of a class one at a time.
     ///     </para>
     /// </summary>
     public class CacheLoaderTests
     {
-        //Long enough that the loader never refreshes during a test, short enough that a test which
-        //has gone wrong fails in seconds instead of blocking a thread for ten minutes: WaitAsync
-        //spins on Thread.Sleep for up to one interval.
+        //Long enough that the loader never refreshes during a test, short enough that a test
+        //which has gone wrong fails in seconds: WaitAsync gives up after one interval.
         private static readonly TimeSpan NoRefresh = TimeSpan.FromSeconds(5);
 
         [Fact]
@@ -53,9 +52,10 @@ namespace cl2j.Tooling.Tests
         [Fact]
         public async Task A_load_that_throws_is_logged_and_leaves_it_unloaded()
         {
-            //And this is what the caller then sees: WaitAsync returns false. Every caller in
-            //cl2j.DataStore ignores that return and serves an empty cache, so an unreadable source
-            //and an empty source are indistinguishable from the outside.
+            //A callback that lets its exception out leaves the loader unloaded, and WaitAsync says
+            //so. A callback that catches its own — as the cl2j.DataStore caches do — returns
+            //normally and is indistinguishable from a success here, which is exactly why those
+            //caches track their own first load rather than trusting this.
             var logger = new RecordingLogger();
             using var loader = new CacheLoader("broken", TimeSpan.FromMilliseconds(200),
                 () => throw new InvalidOperationException("the source is unavailable"), logger);
@@ -84,7 +84,7 @@ namespace cl2j.Tooling.Tests
             }
             finally
             {
-                //Held on a process-wide semaphore, so it has to be given back before the next test.
+                //Let the load finish, so the loader disposes cleanly.
                 release.SetResult();
             }
         }
@@ -127,12 +127,13 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
-        public async Task One_loader_refreshing_holds_up_every_other_loader_in_the_process()
+        public async Task One_loader_refreshing_does_not_hold_up_another()
         {
-            //Characterisation, not endorsement. The semaphore is `private static readonly` on a
-            //class with no type parameters, so there is exactly one for the whole process. Every
-            //cache refresh in an application is therefore serialised against every other, each one
-            //holding the lock for as long as its own I/O takes.
+            //The semaphore used to be `private static readonly` on a class with no type parameters,
+            //so there was exactly one for the whole process — held across each refresh's I/O. Every
+            //cache refresh in an application was serialised against every other: ten stores on a
+            //five-minute refresh queued behind each other, and one slow source stalled all of them.
+            //It is one per loader now, which is the only thing it ever needed to guard. See #35.
             var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var slowIsInside = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -144,20 +145,54 @@ namespace cl2j.Tooling.Tests
 
             await slowIsInside.Task;
 
-            var unrelatedRan = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var unrelated = new CacheLoader("unrelated", NoRefresh, () =>
-            {
-                unrelatedRan.TrySetResult();
-                return Task.CompletedTask;
-            }, new RecordingLogger());
+            //A second loader, built while the first is still inside its load and holding its lock.
+            using var unrelated = new CacheLoader("unrelated", NoRefresh, () => Task.CompletedTask, new RecordingLogger());
 
-            var first = await Task.WhenAny(unrelatedRan.Task, Task.Delay(TimeSpan.FromMilliseconds(400)));
-            Assert.NotSame(unrelatedRan.Task, first);
+            Assert.True(await unrelated.WaitAsync());
 
             release.SetResult();
+            Assert.True(await slow.WaitAsync());
+        }
 
-            await unrelatedRan.Task;
-            Assert.True(await unrelated.WaitAsync());
+        [Fact]
+        public async Task Waiting_ends_when_the_load_does_rather_than_on_the_next_poll()
+        {
+            //WaitAsync used to spin on Thread.Sleep(100), which cost two things: a thread pool
+            //thread held for the whole wait, and up to a tenth of a second of latency after the
+            //load had already finished. It waits on the load itself now. See #35.
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var loader = new CacheLoader("gated", NoRefresh, async () => await release.Task, new RecordingLogger());
+
+            var waiting = loader.WaitAsync();
+            var started = Stopwatch.StartNew();
+            release.SetResult();
+
+            Assert.True(await waiting);
+            Assert.True(started.ElapsedMilliseconds < 60, $"waited {started.ElapsedMilliseconds}ms after the load finished");
+        }
+
+        [Fact]
+        public async Task Disposing_it_while_a_load_is_in_flight_is_not_an_error()
+        {
+            //RefreshAsync is `async void`, so anything escaping it takes the process down rather
+            //than failing a call. Disposing the loader disposes its semaphore, which a refresh
+            //already queued on would otherwise walk into.
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var inside = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var loader = new CacheLoader("disposed-mid-flight", TimeSpan.FromMilliseconds(50), async () =>
+            {
+                inside.TrySetResult();
+                await release.Task;
+            }, new RecordingLogger());
+
+            await inside.Task;
+            loader.Dispose();
+            release.SetResult();
+
+            //Give any refresh that was queued behind the first one a chance to reach the disposed
+            //semaphore. Nothing should escape.
+            await Task.Delay(TimeSpan.FromMilliseconds(200));
         }
     }
 }
