@@ -1,6 +1,6 @@
 ﻿namespace cl2j.DataStore.Dictionary
 {
-    public interface IDataStoreDictionaryFactory
+    public interface IDataStoreDictionaryFactory : IDataStoreWarmableSource
     {
         void AddDataStoreDictionaryCommandAndQuery<TKey, TValue>(string name, IDataStoreDictionaryCommandAndQuery<TKey, TValue> dataStore) where TKey : notnull;
 

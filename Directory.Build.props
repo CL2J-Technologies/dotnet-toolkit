@@ -148,8 +148,30 @@
          WaitAsync still cannot tell a successful load from a callback that swallowed its own
          exception, and still returns false only for a timeout. That is unchanged, documented on
          the method, and already handled by the caches in cl2j.DataStore, which track their own
-         first load. -->
-    <Version>5.1.0</Version>
+         first load.
+
+         5.2.0: a non-generic handle for warming the caches (#34). Additive; nothing changes for a
+         caller that ignores it.
+
+         A registry already knows every store it was given, but the load interfaces are generic, so
+         warming everything meant naming each store again with its type arguments — a second copy of
+         what registration already said, which rots silently the first time somebody adds a store and
+         forgets the line. IDataStoreWarmable carries a Name and a WarmAsync, both registries expose
+         GetWarmable(), and a store registered without a cache is not offered.
+
+         Deliberately no policy. When to warm, how long to wait, and whether a store that cannot be
+         read should stop an application from starting are decisions only the application can make:
+         one consumer has a store whose emptiness turns six hundred redirects into six hundred 404s,
+         and another whose emptiness is covered by a fallback list. That is why WarmAsync raises
+         rather than swallowing, and why Name is on the interface — it is what lets a caller hold a
+         policy per store.
+
+         For the same reason there is no hosted service here. An application that wants to be warm
+         before it serves waits on these from IHostedLifecycleService.StartingAsync; StartAsync is
+         too late, because the web host opens its port from a StartAsync of its own, and the fact
+         that an ordinary StartAsync appears to work is an artefact of registration order rather
+         than a contract. -->
+    <Version>5.2.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
