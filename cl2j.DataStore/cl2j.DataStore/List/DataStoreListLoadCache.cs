@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListLoadCache<TValue> : IDataStoreListLoad<TValue>, Tooling.Observers.IObservable<IReadOnlyList<TValue>>, IDisposable
+    public class DataStoreListLoadCache<TValue> : IDataStoreListLoad<TValue>, Tooling.Observers.IObservable<IReadOnlyList<TValue>>, IDataStoreWarmable, IDisposable
     {
         private readonly CacheLoader cacheLoader;
         private List<TValue> cache = [];
@@ -59,6 +59,10 @@ namespace cl2j.DataStore.List
                 }
             }, logger);
         }
+
+        public string Name => name;
+
+        public Task WarmAsync() => GetAllAsync();
 
         public async Task<IReadOnlyList<TValue>> GetAllAsync()
         {

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Dictionary
 {
-    public abstract class DataStoreDictionaryLoadCache<TKey, TValue> : Tooling.Observers.IObservable<IReadOnlyDictionary<TKey, TValue>>, IDisposable where TKey : notnull
+    public abstract class DataStoreDictionaryLoadCache<TKey, TValue> : Tooling.Observers.IObservable<IReadOnlyDictionary<TKey, TValue>>, IDataStoreWarmable, IDisposable where TKey : notnull
     {
         protected readonly CacheLoader cacheLoader;
         protected Dictionary<TKey, TValue> cache = [];
@@ -71,6 +71,10 @@ namespace cl2j.DataStore.Dictionary
         ///     the wrapper refuses mutation rather than silently absorbing it. See issue #32.
         ///     </para>
         /// </summary>
+        public string Name => name;
+
+        public Task WarmAsync() => GetAllAsync();
+
         public async Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync()
         {
             await WaitForFirstLoadAsync();

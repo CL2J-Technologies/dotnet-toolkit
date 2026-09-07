@@ -5,9 +5,16 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore
 {
-    public abstract class DataStoreDictionaryFactoryBase(ILogger logger)
+    public abstract class DataStoreDictionaryFactoryBase(ILogger logger) : IDataStoreWarmableSource
     {
         private readonly ConcurrentDictionary<string, object> dict = new();
+
+        /// <summary>
+        ///     The registered stores that hold a cache. The registry already knows all of them;
+        ///     this is the only thing that was missing to warm them without naming each one again
+        ///     with its type arguments. See issue #34.
+        /// </summary>
+        public IReadOnlyCollection<IDataStoreWarmable> GetWarmable() => [.. dict.Values.OfType<IDataStoreWarmable>()];
 
         protected void AddDataStore(string name, object dataStore)
         {

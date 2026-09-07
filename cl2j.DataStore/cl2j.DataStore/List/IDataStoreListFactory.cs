@@ -1,6 +1,6 @@
 ﻿namespace cl2j.DataStore.List
 {
-    public interface IDataStoreListFactory
+    public interface IDataStoreListFactory : IDataStoreWarmableSource
     {
         void AddDataStoreListLoad<TValue>(string name, IDataStoreListLoad<TValue> dataStore);
         void AddDataStoreListCommandAndQuery<TKey, TValue>(string name, IDataStoreListCommandAndQuery<TKey, TValue> dataStore);
