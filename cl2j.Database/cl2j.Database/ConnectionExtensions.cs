@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -67,16 +68,16 @@ namespace cl2j.Database
             var statement = commandBuilder.GetTableExistsStatement(type);
             Trace(statement.Text);
 
-            try
-            {
-                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            //No catch. This asks the catalog a question and reports the answer; a dropped
+            //connection, a timeout or a permission problem is not an answer and must not be
+            //reported as "the table does not exist". Swallowing them meant CreateTableIfRequired
+            //would try to create a table that was already there.
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            cmd.CreateStatementParameters(statement);
+
+            var result = await cmd.ExecuteScalarAsync(cancellationToken);
+
+            return result is not null && Convert.ToInt32(result, CultureInfo.InvariantCulture) == 1;
         }
 
         public static async Task CreateTable<T>(this DbConnection connection)
@@ -111,14 +112,11 @@ namespace cl2j.Database
             var statement = commandBuilder.GetDropTableStatement(type);
             Trace(statement.Text);
 
-            try
-            {
-                await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-                await cmd.ExecuteNonQueryAsync(cancellationToken);
-            }
-            catch
-            {
-            }
+            //No catch either. An empty one made a failed drop indistinguishable from a successful
+            //one, so a table that could not be dropped — held by another session, or not there at
+            //all — reported success. DropTableIfExists is where "only if it is there" belongs.
+            await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
 
         public static async Task DropTableIfExists<T>(this DbConnection connection)

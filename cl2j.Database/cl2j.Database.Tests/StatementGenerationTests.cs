@@ -115,11 +115,31 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void Table_exists_probes_the_table_without_reading_it()
+        public void Table_exists_asks_the_catalog_rather_than_the_table()
+        {
+            //It used to be SELECT TOP 1 * against the table, with the caller reading any exception
+            //as "no". A dropped connection or a missing SELECT permission therefore answered "the
+            //table does not exist", and CreateTableIfRequired went on to create one that was there.
+            var statement = Builder().GetTableExistsStatement(typeof(Customer));
+
+            Assert.Contains("INFORMATION_SCHEMA.TABLES", statement.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("[Customer]", statement.Text, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void Table_exists_carries_the_name_and_schema_as_parameters()
         {
             var statement = Builder().GetTableExistsStatement(typeof(Customer));
 
-            Assert.Equal("SELECT TOP 1 * FROM [Customer]", statement.Text);
+            Assert.Equal(["Customer", "dbo"], statement.Parameters.Select(p => p.Value));
+        }
+
+        [Fact]
+        public void Table_exists_uses_the_declared_schema_when_there_is_one()
+        {
+            var statement = Builder().GetTableExistsStatement(typeof(Invoice));
+
+            Assert.Equal(["Invoice", "billing"], statement.Parameters.Select(p => p.Value));
         }
 
         [Fact]

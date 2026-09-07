@@ -22,15 +22,37 @@ namespace cl2j.Database.SqlServer
 
         public IIdentifierGenerator IdentifierGenerator => identifierGenerator;
 
+        /// <summary>
+        ///     Asks the catalog whether the table is there.
+        ///
+        ///     <para>
+        ///     It used to be <c>SELECT TOP 1 *</c> against the table itself, with the caller
+        ///     catching every exception and reading one as "no". Anything that went wrong therefore
+        ///     came back as "the table does not exist": a dropped connection, a timeout, a missing
+        ///     SELECT permission. <c>CreateTableIfRequired</c> would then try to create a table that
+        ///     was already there. See issue #27's neighbours.
+        ///     </para>
+        /// </summary>
         public TextStatement GetTableExistsStatement(Type type)
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, this);
 
-            return new TextStatement
+            var statement = new TextStatement
             {
                 TableDescriptor = tableDescriptor,
-                Text = $"SELECT TOP 1 * FROM {tableDescriptor.NameFormatted}"
+                Text = """
+                    SELECT CASE WHEN EXISTS (
+                        SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME = @tableName AND TABLE_SCHEMA = @tableSchema
+                    ) THEN 1 ELSE 0 END
+                    """
             };
+
+            statement.Parameters.Add(new StatementParameter("tableName", tableDescriptor.Name));
+            //dbo is what SQL Server puts a table in when the type names no schema.
+            statement.Parameters.Add(new StatementParameter("tableSchema", tableDescriptor.Schema ?? "dbo"));
+
+            return statement;
         }
 
         public TextStatement GetDropTableStatement(Type type)

@@ -37,6 +37,7 @@ namespace cl2j.Database.Descriptors
             {
                 Name = tableMetaData.Table,
                 NameFormatted = formatter.FormatTableName(tableMetaData.Table, tableMetaData.Schema),
+                Schema = tableMetaData.Schema,
                 Keys = columnsDescriptors.GetKeys(),
                 Columns = columnsDescriptors
             };
