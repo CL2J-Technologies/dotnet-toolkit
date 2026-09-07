@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Database
 {
+    [Obsolete("cl2j.DataStore.Database is deprecated. Use cl2j.Database, which maps by attribute rather than by Dapper.Contrib convention. It is not a drop-in: entities declare their columns with [Column] and their key with KeyType.Key, and queries go through ConnectionExtensions instead of a repository base class.")]
     public abstract class DatabaseRepository(ILogger logger)
     {
         protected readonly ILogger logger = logger;
