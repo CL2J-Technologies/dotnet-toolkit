@@ -120,8 +120,36 @@
              bool: the callers who most need to read Failure are the ones who would never look.
 
          Everything breaking was gathered here on purpose, so the next release does not have to be
-         a major too. A minor would let all of it arrive through a routine bump. -->
-    <Version>5.0.0</Version>
+         a major too. A minor would let all of it arrive through a routine bump.
+
+         5.1.0: CacheLoader stops serialising the whole application (#35). No signature changed and
+         no caller has to do anything, but what an application does at startup changes materially,
+         which is why this is a minor and not a patch.
+
+         Its semaphore was static on a class with no type parameters — one for the entire process,
+         held across each refresh's I/O. Every cache refresh was therefore serialised against every
+         other: ten stores registered back to back loaded strictly one at a time, and one slow
+         source stalled all of them. It is one per loader now.
+
+         WaitAsync waits on the load instead of spinning on Thread.Sleep(100). It was an async
+         method that held a thread pool thread for the whole wait — bounded by the refresh interval,
+         so up to five minutes at the intervals applications actually use. On a cold start those
+         held threads are the ones the loads themselves needed, and the thread pool grows by about
+         one thread a second, so arriving requests made the loads they were waiting for slower. It
+         also cost up to a tenth of a second after the load had already finished.
+
+         Two consequences worth knowing. Making the semaphore an instance field means it is disposed
+         with the loader, and Release() on a disposed semaphore throws from inside an `async void`
+         timer callback — which terminates the process rather than failing a call. RefreshAsync is
+         now guarded so nothing escapes it; removing `static` without that restructuring is a
+         process crash on shutdown, verified by mutation. And the `loaded` bool, written from a
+         timer callback and read without a lock, is gone: a TaskCompletionSource does that job.
+
+         WaitAsync still cannot tell a successful load from a callback that swallowed its own
+         exception, and still returns false only for a timeout. That is unchanged, documented on
+         the method, and already handled by the caches in cl2j.DataStore, which track their own
+         first load. -->
+    <Version>5.1.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
