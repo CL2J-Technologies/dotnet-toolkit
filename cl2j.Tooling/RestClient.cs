@@ -7,11 +7,30 @@ namespace cl2j.Tooling
         private readonly HttpClient client;
 
         public RestClient(string baseUrl, Dictionary<string, string>? defaultHeaders = null)
+            : this(new HttpClient(), baseUrl, defaultHeaders)
         {
-            client = new HttpClient
-            {
-                BaseAddress = new Uri(baseUrl)
-            };
+        }
+
+        /// <summary>
+        ///     Builds a client on a handler the caller supplies, rather than on one this class
+        ///     creates and hides.
+        ///
+        ///     <para>
+        ///     It is what makes the class testable — a handler that answers in the process needs no
+        ///     port and no server — and it is also how a caller shares one handler across clients,
+        ///     which is what <c>IHttpClientFactory</c> exists to arrange. The handler is not
+        ///     disposed with this instance: whoever passed it owns it.
+        ///     </para>
+        /// </summary>
+        public RestClient(HttpMessageHandler handler, string baseUrl, Dictionary<string, string>? defaultHeaders = null)
+            : this(new HttpClient(handler, disposeHandler: false), baseUrl, defaultHeaders)
+        {
+        }
+
+        private RestClient(HttpClient httpClient, string baseUrl, Dictionary<string, string>? defaultHeaders)
+        {
+            client = httpClient;
+            client.BaseAddress = new Uri(baseUrl);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             if (defaultHeaders != null)
