@@ -1,7 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<IsPackable>true</IsPackable>
+		<!-- 5.2.1 is the last published version of this package, and deliberately so.
+		     `IsPackable` is per project — the other twelve go on publishing at every shared
+		     version bump; only this one stops.
+
+		     It stops on a good version rather than a convenient one: 5.2.1 is the first to declare
+		     an honest dependency floor, and the first to carry [Obsolete] on every type. Freezing
+		     before that would have left consumers on 5.2.0, which claims to work with
+		     cl2j.DataStore 2.0.0 and warns about nothing.
+
+		     Nothing breaks for whoever is on it. A floor is a minimum, not a pin, so a consumer
+		     stays on this package and still moves cl2j.DataStore forward on its own.
+
+		     What is given up: no fix can ever ship inside this package again. That is the point.
+		     It contains a SQL concatenation with no escaping and an identifier generator that is
+		     31 bits of shared, non-thread-safe Random — neither is worth repairing in a library
+		     whose replacement already exists. They are marked, and the way out is cl2j.Database.
+
+		     The project stays in the solution so it keeps compiling, which is what keeps those
+		     obsolete messages honest until it can be deleted outright. -->
+		<IsPackable>false</IsPackable>
 		<PackageId>cl2j.DataStore.Database-deprecated</PackageId>
 		<Description>Deprecated SQL database repository implementation for cl2j.DataStore. Kept for backward compatibility during migration to cl2j.Database.</Description>
 	</PropertyGroup>

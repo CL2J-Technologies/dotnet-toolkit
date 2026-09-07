@@ -178,7 +178,13 @@
          behind the assembly it was built against, with no warning and a green build. It is a
          ProjectReference now, like every other dependency between packages here, so pack emits the
          current version and it cannot drift again. It was the last hardcoded one; see issue #17
-         for the sweep it escaped. -->
+         for the sweep it escaped.
+
+         The version is not bumped past 5.2.1 for the change that stops publishing
+         cl2j.DataStore.Database-deprecated. That change removes a package from the set and alters
+         nothing inside the twelve that remain, so republishing them under a new number would say
+         a version happened when none did. The publish that follows it pushes nothing, and the
+         skip-duplicate flag on the push makes that silent rather than a failure. -->
     <Version>5.2.1</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
