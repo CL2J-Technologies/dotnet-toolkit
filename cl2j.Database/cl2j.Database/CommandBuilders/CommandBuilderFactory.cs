@@ -27,13 +27,45 @@ namespace cl2j.Database.CommandBuilders
 
         private static ICommandBuilder[] builders = [];
 
+        /// <summary>
+        ///     Registers a command builder, replacing one of the same kind if it is already there.
+        ///
+        ///     <para>
+        ///     It used to append with no check at all, so the registry grew for as long as anything
+        ///     kept calling — and since resolution returns the first entry that supports the
+        ///     connection, every registration after the first was unreachable. A second call
+        ///     passing a custom <see cref="IIdentifierGenerator"/> therefore did nothing, silently,
+        ///     which makes a parameter that exists to be used easy to lose. See issue #29.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     Replacing rather than appending also stops the growth, and the copy-on-write below
+        ///     made that growth costly: a new array per call is O(n²) over n registrations. That is
+        ///     the right trade for a registry written a handful of times at startup, and the wrong
+        ///     one for a registry written in a loop, which nothing prevented.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     Kind means the concrete type. A provider package registers one builder type, so two
+        ///     instances of it are two configurations of the same provider and the later one wins.
+        ///     Builders of different types sit side by side, which is how more than one provider
+        ///     works.
+        ///     </para>
+        /// </summary>
         public static void Register(ICommandBuilder commandBuilder)
         {
+            ArgumentNullException.ThrowIfNull(commandBuilder);
+
             lock (RegistrationLock)
             {
                 //A new array each time rather than a mutation, so no reader is ever looking at the
                 //one being changed.
-                Volatile.Write(ref builders, [.. builders, commandBuilder]);
+                var replaced = builders
+                    .Where(b => b.GetType() != commandBuilder.GetType())
+                    .Append(commandBuilder)
+                    .ToArray();
+
+                Volatile.Write(ref builders, replaced);
             }
         }
 

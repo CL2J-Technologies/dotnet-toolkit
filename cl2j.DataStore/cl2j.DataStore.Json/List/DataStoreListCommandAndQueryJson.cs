@@ -10,7 +10,7 @@ namespace cl2j.DataStore.Json.List
     {
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
-        public override async Task<List<TValue>> GetAllAsync()
+        public override async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             return await fileStorageProvider.GetListValuesAsync<TValue>(filename, logger);
         }
@@ -26,7 +26,7 @@ namespace cl2j.DataStore.Json.List
             await semaphore.WaitAsync();
             try
             {
-                var list = await GetAllAsync();
+                var list = new List<TValue>(await GetAllAsync());
 
                 int index = FindIndex(list, entity);
                 if (index >= 0)
@@ -51,7 +51,7 @@ namespace cl2j.DataStore.Json.List
             await semaphore.WaitAsync();
             try
             {
-                var list = await GetAllAsync();
+                var list = new List<TValue>(await GetAllAsync());
 
                 int index = FindIndex(list, entity);
                 if (index < 0)
@@ -76,7 +76,7 @@ namespace cl2j.DataStore.Json.List
             await semaphore.WaitAsync();
             try
             {
-                var list = await GetAllAsync();
+                var list = new List<TValue>(await GetAllAsync());
 
                 var nb = RemoveAll(list, key);
                 if (nb <= 0)

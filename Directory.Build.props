@@ -26,9 +26,102 @@
          minor rather than the patch.
 
          4.1.1: CommandBuilderFactory no longer throws when a registration lands during a resolve
-         (#15). A defect fix with no API or behaviour change for correct callers, hence the
-         patch. -->
-    <Version>4.1.1</Version>
+         (#15). A defect fix with no API or behaviour change for correct callers, hence the patch.
+
+         5.0.0: the correctness pass on cl2j.Database (#25, #26, #27 and their neighbours). No
+         signature changed, so nothing fails to compile — which is exactly why this is a major
+         rather than a minor. A caller relying on the old behaviour keeps building and starts
+         behaving differently:
+
+           - results bind by column name, so a query whose column names do not match the type now
+             throws where it used to return values by position;
+           - a string key is written by INSERT instead of being dropped;
+           - INSERT hands back the identity the server picked, where it returned null before;
+           - CreateTable maps nullable value types, byte[], TimeSpan, DateOnly and Guid to real
+             column types rather than varchar, and refuses a type it cannot map instead of falling
+             back to varchar(MAX). A decimal must declare its precision;
+           - TableExists no longer reads every failure as "the table does not exist", and DropTable
+             no longer swallows a failed drop;
+           - registering a provider twice replaces it rather than appending, so the later
+             registration is the one that answers. It used to be the first, which made a custom
+             IIdentifierGenerator passed on a second call silently do nothing.
+
+         Existing tables are not migrated: CreateTableIfRequired checks existence, not shape.
+
+         The same release also corrects three things in cl2j.Tooling (#31), two of which change
+         what a caller sees:
+
+           - a transliteration of more than one letter keeps all of it. "Ærøskøbing" was
+             "Aroskobing" and is now "AEroskobing"; the four Cyrillic characters that transliterate
+             to nothing threw IndexOutOfRangeException and now disappear as intended. Slugs built
+             from a name containing æ, œ, ä, ö, ü, ß, ð or Cyrillic therefore change: check for
+             published addresses before upgrading. RemoveDiacritics(char) returns a string, which
+             is the one signature change in this release — the char it returned had nowhere to put
+             the second letter;
+           - a generic type argument that is itself generic is written with its namespace. This
+             output goes straight into source that cl2j.Database and cl2j.Scripting compile, so
+             the bare name was a compile error inside generated code;
+           - Observable.NotifyAsync notifies each observer exactly once and throws an
+             AggregateException listing what failed. It used to re-run the whole loop on any
+             failure — performing other observers' side effects twice — and then swallow
+             everything.
+
+         And one in cl2j.DataStore (#32): DataStoreListCommandAndQueryArchive named its snapshots
+         with the twelve-hour clock, so the 13:45 archive overwrote the 01:45 one — every day, for
+         half of every day. Names are now on the 24-hour clock, which means existing archives keep
+         theirs and new ones stop colliding.
+
+         Two additions, neither of which breaks a caller: RestClient takes an HttpMessageHandler
+         (so it can be tested, and so a handler can be shared the way IHttpClientFactory expects),
+         and the archive decorator takes an optional clock.
+
+         Finally, the five behaviour changes from #32 and #33 that were characterised rather than
+         fixed. They are here deliberately: each one would have needed its own major release, and
+         gathering them means the next one does not have to be. Three of the five are a compile
+         error rather than a silent change, which is the kinder half.
+
+           - GetAllAsync returns IReadOnlyDictionary / IReadOnlyList instead of the concrete types.
+             It used to hand back the cache itself, so a caller that changed the result changed the
+             cache — outside the semaphore, with no observer told. A read-only *view*, not a copy:
+             wrapping is O(1), and consumers call this on the request path. The observable is typed
+             the same way, so an IObserver<List<T>> becomes IObserver<IReadOnlyList<T>>. This is
+             the compile break, and it reaches every implementation of IDataStoreDictionaryLoad and
+             IDataStoreListLoad;
+           - the dictionary cache copies what ReplaceAllByAsync is given rather than keeping the
+             caller's own dictionary as the cache. The list cache already copied; they now agree;
+           - an update whose key the cache has not seen is cached and announced rather than written
+             to the store and dropped. A row that reached the store after the last refresh —
+             another process, another instance — was exactly that case;
+           - IsEmailValid uses \z rather than \Z, so an address with a trailing newline is refused.
+             \Z matches before one;
+           - EmailService catches only what a delivery attempt can produce (SmtpException,
+             FormatException, IOException, SocketException, OperationCanceledException) instead of
+             every exception. A defect in this class used to be indistinguishable from the server
+             being down: both returned false. A malformed address is still a reported failure —
+             that is data, not a defect.
+
+         And the four that were left standing after those, so that nothing breaking is carried
+         forward:
+
+           - a cache serves whatever the store accepted on insert, instead of throwing on a key it
+             already holds. A store that refuses duplicates refuses them itself, so the only case
+             the old cache.Add ever caught was a store that upserts — and there it left the store
+             holding the new value and the cache the old one;
+           - the ordering predicate is applied after every write, not only at load. Anything
+             written between two refreshes used to sit at the end, in an order that was neither the
+             one asked for nor the store's;
+           - GetAllAsync throws when the cache has never loaded, rather than answering "nothing".
+             An unreadable source and an empty one were indistinguishable, and every caller read
+             them as empty. A refresh that fails after a successful load is still caught and
+             logged: a cache with data goes on serving it;
+           - IEmailService returns EmailResult rather than bool, carrying the failure. A wrong
+             password, an unreachable server and a rejected recipient used to be the same value,
+             with the reason only in a log line. There is deliberately no implicit conversion to
+             bool: the callers who most need to read Failure are the ones who would never look.
+
+         Everything breaking was gathered here on purpose, so the next release does not have to be
+         a major too. A minor would let all of it arrive through a routine bump. -->
+    <Version>5.0.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>

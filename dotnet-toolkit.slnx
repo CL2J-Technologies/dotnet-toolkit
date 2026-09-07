@@ -13,6 +13,8 @@
   <Folder Name="/cl2j.DataStore/">
     <Project Path="cl2j.DataStore/cl2j.DataStore.Database-deprecated/cl2j.DataStore.Database-deprecated.csproj" />
     <Project Path="cl2j.DataStore/cl2j.DataStore.Json/cl2j.DataStore.Json.csproj" />
+    <Project Path="cl2j.DataStore/cl2j.DataStore.Json.Tests/cl2j.DataStore.Json.Tests.csproj" />
+    <Project Path="cl2j.DataStore/cl2j.DataStore.Tests/cl2j.DataStore.Tests.csproj" />
   </Folder>
   <Folder Name="/cl2j.FileStorage/" />
   <Folder Name="/cl2j.Scripting/" />
@@ -22,6 +24,7 @@
   <Folder Name="/FileStorage/">
     <Project Path="cl2j.FileStorage/cl2j.FileStorage.Provider.AzureBlobStorage/cl2j.FileStorage.Provider.AzureBlobStorage.csproj" />
     <Project Path="cl2j.FileStorage/cl2j.FileStorage/cl2j.FileStorage.csproj" />
+    <Project Path="cl2j.FileStorage/cl2j.FileStorage.Tests/cl2j.FileStorage.Tests.csproj" />
     <Project Path="cl2j.FileStorage.Disk.Tests/cl2j.FileStorage.Disk.Tests.csproj" />
   </Folder>
   <Folder Name="/Logging/">
@@ -29,10 +32,12 @@
   </Folder>
   <Folder Name="/Scripting/">
     <Project Path="cl2j.Scripting/cl2j.Scripting/cl2j.Scripting.csproj" />
+    <Project Path="cl2j.Scripting/cl2j.Scripting.Tests/cl2j.Scripting.Tests.csproj" />
   </Folder>
   <Project Path="cl2j.Image/cl2j.Image.csproj" />
   <Project Path="cl2j.Image.Tests/cl2j.Image.Tests.csproj" />
   <Project Path="cl2j.Smapper/cl2j.Smapper.csproj" />
   <Project Path="cl2j.Tooling/cl2j.Tooling.csproj" />
+  <Project Path="cl2j.Tooling.Tests/cl2j.Tooling.Tests.csproj" />
   <Project Path="cl2j.WebTooling/cl2j.WebTooling.csproj" />
 </Solution>

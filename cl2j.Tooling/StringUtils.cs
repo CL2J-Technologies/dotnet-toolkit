@@ -97,6 +97,25 @@ namespace cl2j.Tooling
             { "я", "ya" },
         };
 
+        //The table above is grouped by replacement, because that is the shape a human can read and
+        //maintain. A lookup wants it the other way round, so it is inverted once here rather than
+        //scanned — eighty-nine string searches per character was the cost before.
+        //
+        //TryAdd, not the indexer: a few characters appear in two entries ("Ä" has its own entry and
+        //is also in the "A" group), and the scan this replaces returned the first match.
+        private static readonly Dictionary<char, string> Transliterations = BuildTransliterations();
+
+        private static Dictionary<char, string> BuildTransliterations()
+        {
+            var map = new Dictionary<char, string>();
+            foreach (var (characters, replacement) in foreign_characters)
+            {
+                foreach (var c in characters)
+                    map.TryAdd(c, replacement);
+            }
+            return map;
+        }
+
         public static string Crop(this string text, int maxLength)
         {
             ArgumentNullException.ThrowIfNull(text);
@@ -116,8 +135,14 @@ namespace cl2j.Tooling
             {
                 if (char.IsLetter(c))
                 {
-                    sb.Append(char.ToLower(c).RemoveDiacritics());
-                    dashInserted = false;
+                    //A letter can transliterate to nothing, and a letter that produced nothing must
+                    //not clear the flag: otherwise "a ь b" would emit two dashes in a row.
+                    var replacement = char.ToLower(c).RemoveDiacritics();
+                    if (replacement.Length > 0)
+                    {
+                        sb.Append(replacement);
+                        dashInserted = false;
+                    }
                 }
                 else if (char.IsDigit(c))
                 {
@@ -159,8 +184,12 @@ namespace cl2j.Tooling
             {
                 if (char.IsLetter(c))
                 {
-                    sb.Append(char.ToLower(c).RemoveDiacritics());
-                    dashInserted = false;
+                    var replacement = char.ToLower(c).RemoveDiacritics();
+                    if (replacement.Length > 0)
+                    {
+                        sb.Append(replacement);
+                        dashInserted = false;
+                    }
                 }
                 else if (char.IsDigit(c))
                 {
@@ -184,14 +213,22 @@ namespace cl2j.Tooling
             return uri;
         }
 
-        public static char RemoveDiacritics(this char c)
+        /// <summary>
+        ///     The transliteration of a single character, which is not always a single character:
+        ///     <c>æ</c> becomes <c>ae</c>, <c>щ</c> becomes <c>shch</c>, and the Cyrillic hard and
+        ///     soft signs become nothing at all.
+        ///
+        ///     <para>
+        ///     This used to return a <see cref="char"/>, so it gave back the first letter of the
+        ///     replacement and dropped the rest — <c>Ærøskøbing</c> came out as <c>Aroskobing</c> —
+        ///     and it threw <see cref="IndexOutOfRangeException"/> on the four characters that
+        ///     transliterate to nothing. Returning a string is what makes both unrepresentable.
+        ///     See issue #31.
+        ///     </para>
+        /// </summary>
+        public static string RemoveDiacritics(this char c)
         {
-            foreach (var entry in foreign_characters)
-            {
-                if (entry.Key.Contains(c))
-                    return entry.Value[0];
-            }
-            return c;
+            return Transliterations.TryGetValue(c, out var replacement) ? replacement : c.ToString();
         }
 
         public static string RemoveDiacritics(this string s)

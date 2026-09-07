@@ -22,15 +22,37 @@ namespace cl2j.Database.SqlServer
 
         public IIdentifierGenerator IdentifierGenerator => identifierGenerator;
 
+        /// <summary>
+        ///     Asks the catalog whether the table is there.
+        ///
+        ///     <para>
+        ///     It used to be <c>SELECT TOP 1 *</c> against the table itself, with the caller
+        ///     catching every exception and reading one as "no". Anything that went wrong therefore
+        ///     came back as "the table does not exist": a dropped connection, a timeout, a missing
+        ///     SELECT permission. <c>CreateTableIfRequired</c> would then try to create a table that
+        ///     was already there. See issue #27's neighbours.
+        ///     </para>
+        /// </summary>
         public TextStatement GetTableExistsStatement(Type type)
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, this);
 
-            return new TextStatement
+            var statement = new TextStatement
             {
                 TableDescriptor = tableDescriptor,
-                Text = $"SELECT TOP 1 * FROM {tableDescriptor.NameFormatted}"
+                Text = """
+                    SELECT CASE WHEN EXISTS (
+                        SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME = @tableName AND TABLE_SCHEMA = @tableSchema
+                    ) THEN 1 ELSE 0 END
+                    """
             };
+
+            statement.Parameters.Add(new StatementParameter("tableName", tableDescriptor.Name));
+            //dbo is what SQL Server puts a table in when the type names no schema.
+            statement.Parameters.Add(new StatementParameter("tableSchema", tableDescriptor.Schema ?? "dbo"));
+
+            return statement;
         }
 
         public TextStatement GetDropTableStatement(Type type)
@@ -43,9 +65,47 @@ namespace cl2j.Database.SqlServer
             return CommandBuilderHelpers.GetCreateTableStatement(type, this);
         }
 
+        /// <summary>
+        ///     The insert, followed by a request for the identity the server just picked.
+        ///
+        ///     <para>
+        ///     <c>Insert</c> ends in <c>ExecuteScalarAsync</c> and returns what it gets, and
+        ///     <c>Insert&lt;TIn, TOut&gt;</c> exists to hand that value back typed. A plain
+        ///     <c>INSERT ... VALUES</c> produces no result set, so both returned nothing — always
+        ///     <c>null</c>, always <c>default</c>. The one thing a caller wants after inserting a
+        ///     row with a generated key was the one thing they could not get.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     Only for an <c>int</c> or <c>long</c> key, which is what the DDL declares
+        ///     <c>IDENTITY</c>. A string key is carried by the insert itself and a Guid one comes
+        ///     from <c>DEFAULT NEWID()</c>, which <c>SCOPE_IDENTITY</c> does not report.
+        ///     </para>
+        /// </summary>
         public TextStatement GetInsertStatement(Type type)
         {
-            return CommandBuilderHelpers.GetInsertStatement(type, this);
+            var statement = CommandBuilderHelpers.GetInsertStatement(type, this);
+
+            var identity = statement.TableDescriptor.Keys.FirstOrDefault(IsIdentity);
+            if (identity is not null)
+            {
+                //SCOPE_IDENTITY returns numeric(38,0); cast it back to the type the caller declared
+                //so ExecuteScalar hands over an int rather than a decimal.
+                var cast = identity.Property.PropertyType == Types.TypeLong ? "bigint" : "int";
+                statement.Text += $";SELECT CAST(SCOPE_IDENTITY() AS {cast})";
+            }
+
+            return statement;
+        }
+
+        private static bool IsIdentity(ColumnDescriptor column)
+        {
+            if (column.ColumnAtribute.Key != KeyType.Key)
+                return false;
+
+            var type = column.Property.PropertyType;
+
+            return type == Types.TypeInt || type == Types.TypeLong;
         }
 
         public TextStatement GetUpdateStatement(Type type)
@@ -175,40 +235,79 @@ namespace cl2j.Database.SqlServer
             }
             else
             {
-                if (propertyInfo.PropertyType.IsEnum)
+                //Nullable<T> is not the type it wraps, so every nullable value type used to miss
+                //every branch below and land on the varchar(MAX) default: an ordinary "int?"
+                //column was created as text. Unwrap first, once. See issue #27.
+                var type = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
+
+                if (type.IsEnum)
                     propertyTypeDesc = "int";
-                else if (propertyInfo.PropertyType == Types.TypeBool)
+                else if (type == Types.TypeBool)
                     propertyTypeDesc = "bit";
-                else if (propertyInfo.PropertyType == Types.TypeShort)
+                else if (type == Types.TypeByte)
+                    propertyTypeDesc = "tinyint";
+                else if (type == Types.TypeShort)
                     propertyTypeDesc = "smallint";
-                else if (propertyInfo.PropertyType == Types.TypeInt || propertyInfo.PropertyType == Types.TypeLong)
+                else if (type == Types.TypeInt)
                     propertyTypeDesc = "int";
-                else if (propertyInfo.PropertyType == Types.TypeDecimal || propertyInfo.PropertyType == Types.TypeFloat || propertyInfo.PropertyType == Types.TypeDouble)
-                {
-                    if (columnAttr.Length > 0)
-                        propertyTypeDesc = $"decimal({columnAttr.Length},{columnAttr.Decimals})";
-                    else
-                        propertyTypeDesc = "decimal";
-                }
-                else if (propertyInfo.PropertyType == Types.TypeString)
-                {
-                    if (columnAttr.Length > 0)
-                        propertyTypeDesc = $"varchar({columnAttr.Length})";
-                    else
-                        propertyTypeDesc = $"varchar(max)";
-                }
-                else if (propertyInfo.PropertyType == Types.TypeDateTimeOffset)
+                //long used to share the int branch, so anything past int.MaxValue overflowed the
+                //column this library had created for it.
+                else if (type == Types.TypeLong)
+                    propertyTypeDesc = "bigint";
+                //double and float used to share the decimal branch. With no Length that landed on
+                //bare decimal, which SQL Server reads as decimal(18,0) — so 1.5 was stored as 2.
+                //These are floating-point values and the server has floating-point types for them.
+                else if (type == Types.TypeDouble)
+                    propertyTypeDesc = "float";
+                else if (type == Types.TypeFloat)
+                    propertyTypeDesc = "real";
+                else if (type == Types.TypeDecimal)
+                    propertyTypeDesc = FormatDecimal(columnAttr);
+                //GetColumnKeyType always knew about Guid; this did not, so a Guid that was not a
+                //key fell through to the default and was stored as text.
+                else if (type == Types.TypeGuid)
+                    propertyTypeDesc = "uniqueidentifier";
+                else if (type == Types.TypeString)
+                    propertyTypeDesc = columnAttr.Length > 0 ? $"varchar({columnAttr.Length})" : "varchar(max)";
+                else if (type == Types.TypeByteArray)
+                    propertyTypeDesc = columnAttr.Length > 0 ? $"varbinary({columnAttr.Length})" : "varbinary(max)";
+                else if (type == Types.TypeDateTimeOffset)
                     propertyTypeDesc = "datetimeoffset";
-                else if (propertyInfo.PropertyType == Types.TypeDateTime)
+                else if (type == Types.TypeDateTime)
                     propertyTypeDesc = "datetime2";
+                else if (type == Types.TypeDateOnly)
+                    propertyTypeDesc = "date";
+                else if (type == Types.TypeTimeOnly || type == Types.TypeTimeSpan)
+                    propertyTypeDesc = "time";
+                else if (type == Types.TypeChar)
+                    propertyTypeDesc = "char(1)";
+                //No silent fallback. A varchar(MAX) default is how a Guid came to be stored as
+                //text without anyone noticing, and how every nullable column did the same. A type
+                //nobody mapped is a failure at schema creation, which is the cheapest moment to
+                //find it; TypeName remains the way to say what the column should be.
                 else
-                    propertyTypeDesc = "varchar(MAX)";
+                    throw new DatabaseException($"No column type for '{type.Name}' on '{column.Name}'. Declare one with [Column(TypeName = \"...\")].");
             }
 
             if (!string.IsNullOrEmpty(columnAttr.Default))
                 propertyTypeDesc += $" DEFAULT {columnAttr.Default}";
 
             return propertyTypeDesc;
+        }
+
+
+        /// <summary>
+        ///     A decimal needs its precision declared. Without <c>Length</c> the column would be
+        ///     bare <c>decimal</c>, which SQL Server reads as <c>decimal(18,0)</c> — an amount of
+        ///     12.34 stored as 12, rounded on the way in with nothing to say so. Refusing is louder
+        ///     than guessing a precision the caller did not choose. See issue #27.
+        /// </summary>
+        private static string FormatDecimal(ColumnAttribute columnAttr)
+        {
+            if (columnAttr.Length <= 0)
+                throw new DatabaseException("A decimal column needs its precision: [Column(Length = 18, Decimals = 2)].");
+
+            return $"decimal({columnAttr.Length},{columnAttr.Decimals})";
         }
 
         public string GetColumnKeyType(ColumnDescriptor column)

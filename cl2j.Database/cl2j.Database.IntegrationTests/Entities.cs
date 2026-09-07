@@ -72,6 +72,46 @@ namespace cl2j.Database.IntegrationTests
         public string? Second { get; set; }
     }
 
+    /// <summary>
+    ///     The three types whose column declarations could not hold their values: a long declared
+    ///     int, a double declared decimal without precision, and a Guid declared varchar. See
+    ///     issue #27.
+    /// </summary>
+    [Table("WideValues")]
+    public sealed class WideValuesRow
+    {
+        [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "Big")]
+        public long Big { get; set; }
+
+        [Column(Name = "Ratio")]
+        public double Ratio { get; set; }
+
+        [Column(Name = "Ref")]
+        public Guid Ref { get; set; }
+    }
+
+    /// <summary>
+    ///     Nullable value types, which every branch of the type mapping used to miss. See #27.
+    /// </summary>
+    [Table("Nullable")]
+    public sealed class NullableRow
+    {
+        [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "MaybeCount")]
+        public int? MaybeCount { get; set; }
+
+        [Column(Name = "MaybeWhen")]
+        public DateTime? MaybeWhen { get; set; }
+
+        [Column(Name = "MaybeRef")]
+        public Guid? MaybeRef { get; set; }
+    }
+
     [Table("Transacted")]
     public sealed class TransactedRow
     {
@@ -111,8 +151,22 @@ namespace cl2j.Database.IntegrationTests
     }
 
     /// <summary>
+    ///     An int primary key, which the DDL declares <c>IDENTITY(1,1)</c>. The server supplies the
+    ///     value, so the insert must leave the column out.
+    /// </summary>
+    [Table("IdentityKeyed")]
+    public sealed class IdentityKeyedRow
+    {
+        [Column(Name = "Id", Key = KeyType.Key)]
+        public int Id { get; set; }
+
+        [Column(Name = "Label", Length = 50)]
+        public string Label { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     ///     A string primary key declared <see cref="KeyType.Key"/>, which is the natural reading of
-    ///     the annotation and does not work. Kept to hold that behaviour in place.
+    ///     the annotation. Nobody generates that value, so the insert has to carry it.
     /// </summary>
     [Table("PlainKeyed")]
     public sealed class PlainKeyedRow

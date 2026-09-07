@@ -6,7 +6,7 @@ namespace cl2j.DataStore.Json.Dictionary
 {
     public class DataStoreDictionaryLoadJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, ILogger logger) : IDataStoreDictionaryLoad<TKey, TValue> where TKey : notnull
     {
-        public async Task<Dictionary<TKey, TValue>> GetAllAsync()
+        public async Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync()
         {
             return await fileStorageProvider.GetDictionaryValuesAsync<TKey, TValue>(filename, logger);
         }

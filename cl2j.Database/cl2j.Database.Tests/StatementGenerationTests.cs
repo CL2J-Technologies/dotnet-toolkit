@@ -23,11 +23,35 @@ namespace cl2j.Database.Tests
         private static string Normalise(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal);
 
         [Fact]
-        public void Insert_names_every_column_except_the_key()
+        public void Insert_carries_a_string_key_like_any_other_column()
         {
+            //Nothing generates a string key, so leaving it out of the insert sent NULL into a NOT
+            //NULL primary key. See issue #26.
             var statement = Builder().GetInsertStatement(typeof(Customer));
 
-            Assert.Equal("INSERT INTO [Customer] ([Name]) VALUES (@Name)", statement.Text);
+            Assert.Equal("INSERT INTO [Customer] ([Id],[Name]) VALUES (@Id,@Name)", statement.Text);
+        }
+
+        [Fact]
+        public void Insert_leaves_out_an_int_key_because_the_server_supplies_it()
+        {
+            //The DDL declares an int key IDENTITY(1,1); sending a value would be an error. And
+            //since the server picks it, the statement asks for it back.
+            var statement = Builder().GetInsertStatement(typeof(Counter));
+
+            Assert.Equal(
+                "INSERT INTO [Counter] ([Label]) VALUES (@Label);SELECT CAST(SCOPE_IDENTITY() AS int)",
+                statement.Text);
+        }
+
+        [Fact]
+        public void Insert_does_not_ask_for_an_identity_that_does_not_exist()
+        {
+            //A string key is carried by the insert, so there is nothing for the server to hand
+            //back and SCOPE_IDENTITY would be null.
+            var statement = Builder().GetInsertStatement(typeof(Customer));
+
+            Assert.DoesNotContain("SCOPE_IDENTITY", statement.Text, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -104,11 +128,31 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void Table_exists_probes_the_table_without_reading_it()
+        public void Table_exists_asks_the_catalog_rather_than_the_table()
+        {
+            //It used to be SELECT TOP 1 * against the table, with the caller reading any exception
+            //as "no". A dropped connection or a missing SELECT permission therefore answered "the
+            //table does not exist", and CreateTableIfRequired went on to create one that was there.
+            var statement = Builder().GetTableExistsStatement(typeof(Customer));
+
+            Assert.Contains("INFORMATION_SCHEMA.TABLES", statement.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("[Customer]", statement.Text, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void Table_exists_carries_the_name_and_schema_as_parameters()
         {
             var statement = Builder().GetTableExistsStatement(typeof(Customer));
 
-            Assert.Equal("SELECT TOP 1 * FROM [Customer]", statement.Text);
+            Assert.Equal(["Customer", "dbo"], statement.Parameters.Select(p => p.Value));
+        }
+
+        [Fact]
+        public void Table_exists_uses_the_declared_schema_when_there_is_one()
+        {
+            var statement = Builder().GetTableExistsStatement(typeof(Invoice));
+
+            Assert.Equal(["Invoice", "billing"], statement.Parameters.Select(p => p.Value));
         }
 
         [Fact]

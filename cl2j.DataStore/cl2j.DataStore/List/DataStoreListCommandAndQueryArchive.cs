@@ -1,11 +1,29 @@
-﻿using cl2j.FileStorage.Core;
+﻿using System.Globalization;
+using cl2j.FileStorage.Core;
 using cl2j.FileStorage.Extensions;
 
 namespace cl2j.DataStore.List
 {
-    public class DataStoreListCommandAndQueryArchive<TKey, TValue>(IDataStoreListCommandAndQuery<TKey, TValue> dataStore, IFileStorageProvider fileStorageProvider, string filename) : IDataStoreListCommandAndQuery<TKey, TValue>
+    /// <summary>
+    ///     Writes a snapshot of the whole store to file storage after every change.
+    /// </summary>
+    /// <param name="filename">
+    ///     A composite format string; <c>{0}</c> receives the timestamp, to the minute.
+    /// </param>
+    /// <param name="now">
+    ///     Where the timestamp comes from. It exists so a test can pin it — which is how the
+    ///     twelve-hour clock in the format string went unnoticed: with no way to choose the hour,
+    ///     nothing ever compared a morning snapshot with an afternoon one.
+    /// </param>
+    public class DataStoreListCommandAndQueryArchive<TKey, TValue>(
+        IDataStoreListCommandAndQuery<TKey, TValue> dataStore,
+        IFileStorageProvider fileStorageProvider,
+        string filename,
+        Func<DateTimeOffset>? now = null) : IDataStoreListCommandAndQuery<TKey, TValue>
     {
-        public async Task<List<TValue>> GetAllAsync()
+        private readonly Func<DateTimeOffset> now = now ?? (() => DateTimeOffset.UtcNow);
+
+        public async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             return await dataStore.GetAllAsync();
         }
@@ -41,16 +59,13 @@ namespace cl2j.DataStore.List
 
         private async Task WriteArchiveAsync()
         {
-            try
-            {
-                var entities = await dataStore.GetAllAsync();
+            var entities = await dataStore.GetAllAsync();
 
-                var fn = string.Format(filename, DateTimeOffset.UtcNow.ToString("yyyyMMdd-hhmm"));
-                await fileStorageProvider.WriteJsonObjectAsync(fn, entities);
-            }
-            finally
-            {
-            }
+            //HH, not hh. It used to be the twelve-hour clock, so 13:45 and 01:45 produced the same
+            //name and the afternoon snapshot overwrote the morning one — half a day of archives
+            //gone, with nothing to show for it.
+            var fn = string.Format(CultureInfo.InvariantCulture, filename, now().ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture));
+            await fileStorageProvider.WriteJsonObjectAsync(fn, entities);
         }
     }
 }

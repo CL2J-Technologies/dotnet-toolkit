@@ -4,7 +4,7 @@
     {
         protected readonly Func<TValue, TKey> getKeyPredicate = getKeyPredicate;
 
-        public abstract Task<List<TValue>> GetAllAsync();
+        public abstract Task<IReadOnlyList<TValue>> GetAllAsync();
 
         public abstract Task<TValue?> GetByIdAsync(TKey key);
 

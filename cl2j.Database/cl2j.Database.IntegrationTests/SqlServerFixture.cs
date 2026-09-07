@@ -23,11 +23,11 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public sealed class SqlServerFixture : IAsyncLifetime
     {
-        private readonly MsSqlContainer container = new MsSqlBuilder()
-            //Pinned rather than floating: a test suite that silently changes server version is a
-            //suite whose failures cannot be reproduced.
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
-            .Build();
+        //Pinned rather than floating: a test suite that silently changes server version is a suite
+        //whose failures cannot be reproduced. The image goes to the constructor because the
+        //parameterless one is obsolete.
+        private readonly MsSqlContainer container =
+            new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
         public string ConnectionString { get; private set; } = string.Empty;
 

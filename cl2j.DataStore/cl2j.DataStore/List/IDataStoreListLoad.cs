@@ -3,6 +3,6 @@
     public interface IDataStoreListLoad<TValue>
     {
         //Retreive all the items
-        Task<List<TValue>> GetAllAsync();
+        Task<IReadOnlyList<TValue>> GetAllAsync();
     }
 }

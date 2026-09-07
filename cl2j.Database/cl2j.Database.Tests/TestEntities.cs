@@ -117,6 +117,9 @@ namespace cl2j.Database.Tests
         [Column(Name = "Ratio")]
         public double Ratio { get; set; }
 
+        [Column(Name = "Rate")]
+        public float Rate { get; set; }
+
         [Column(Name = "Bounded", Length = 64)]
         public string Bounded { get; set; } = string.Empty;
 
@@ -140,6 +143,62 @@ namespace cl2j.Database.Tests
 
         [Column(Name = "WithDefault", Length = 10, Default = "'n/a'")]
         public string WithDefault { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    ///     Nullable value types and a byte array. Every one of these used to fall through to the
+    ///     varchar(MAX) default, because Nullable<T> is not the type it wraps. See issue #27.
+    /// </summary>
+    [Table("Nullables")]
+    public sealed class NullablesRow
+    {
+        [Column(Name = "MaybeCount")]
+        public int? MaybeCount { get; set; }
+
+        [Column(Name = "MaybeWhen")]
+        public DateTime? MaybeWhen { get; set; }
+
+        [Column(Name = "MaybeMoment")]
+        public DateTimeOffset? MaybeMoment { get; set; }
+
+        [Column(Name = "MaybeRef")]
+        public Guid? MaybeRef { get; set; }
+
+        [Column(Name = "MaybeFlag")]
+        public bool? MaybeFlag { get; set; }
+
+        [Column(Name = "Payload")]
+        public byte[]? Payload { get; set; }
+
+        [Column(Name = "Elapsed")]
+        public TimeSpan Elapsed { get; set; }
+
+        [Column(Name = "Day")]
+        public DateOnly Day { get; set; }
+
+        [Column(Name = "Tiny")]
+        public byte Tiny { get; set; }
+    }
+
+    /// <summary>
+    ///     A decimal with no precision declared. SQL Server reads bare <c>decimal</c> as
+    ///     <c>decimal(18,0)</c>, so the fraction goes away on the way in.
+    /// </summary>
+    [Table("Imprecise")]
+    public sealed class ImpreciseRow
+    {
+        [Column(Name = "Amount")]
+        public decimal Amount { get; set; }
+    }
+
+    /// <summary>
+    ///     A type no provider can map. It must be refused rather than quietly stored as text.
+    /// </summary>
+    [Table("Unmappable")]
+    public sealed class UnmappableRow
+    {
+        [Column(Name = "Thing")]
+        public Uri? Thing { get; set; }
     }
 
     public enum SampleKind
