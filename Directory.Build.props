@@ -170,8 +170,16 @@
          before it serves waits on these from IHostedLifecycleService.StartingAsync; StartAsync is
          too late, because the web host opens its port from a StartAsync of its own, and the fact
          that an ordinary StartAsync appears to work is an artefact of registration order rather
-         than a contract. -->
-    <Version>5.2.0</Version>
+         than a contract.
+
+         5.2.1: cl2j.DataStore.Database-deprecated declared a floor of cl2j.DataStore 2.0.0, which
+         followed neither 4.x nor 5.x. NuGet resolves the lowest version satisfying a constraint, so
+         a consumer referencing that package and nothing else silently got 2.0.0 — three majors
+         behind the assembly it was built against, with no warning and a green build. It is a
+         ProjectReference now, like every other dependency between packages here, so pack emits the
+         current version and it cannot drift again. It was the last hardcoded one; see issue #17
+         for the sweep it escaped. -->
+    <Version>5.2.1</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
