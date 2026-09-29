@@ -1,0 +1,367 @@
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using cl2j.FileStorage.Core;
+using cl2j.Tooling.Exceptions;
+using Microsoft.Extensions.Configuration;
+
+namespace cl2j.FileStorage.Provider.S3
+{
+    /// <summary>
+    ///     Stores files as objects in an S3-compatible bucket — Amazon S3, Cloudflare R2, MinIO,
+    ///     and anything else that speaks the same API.
+    ///
+    ///     <para>
+    ///     Object storage has no directories: a key containing slashes only looks like a path. The
+    ///     listing operations reproduce the hierarchy the interface expects by asking S3 to group
+    ///     on the delimiter, so <see cref="ListFilesAsync"/> returns what sits directly at a prefix
+    ///     rather than everything beneath it.
+    ///     </para>
+    /// </summary>
+    public class FileStorageProviderS3 : IFileStorageProvider
+    {
+        private const string Delimiter = "/";
+
+        private IAmazonS3? client;
+        private string bucket = null!;
+
+        public string Name { get; set; } = null!;
+
+        public void Initialize(string providerName, IConfigurationSection configuration)
+        {
+            Name = providerName;
+
+            var settings = new FileStorageProviderS3Configuration();
+            configuration.Bind(settings);
+
+            if (string.IsNullOrEmpty(settings.Bucket))
+                throw new NotFoundException("FileStorageProviderS3: Bucket configuration not defined.");
+            if (string.IsNullOrEmpty(settings.AccessKey) || string.IsNullOrEmpty(settings.SecretKey))
+                throw new NotFoundException($"FileStorageProviderS3 '{providerName}': AccessKey and SecretKey are both required.");
+
+            var config = new AmazonS3Config
+            {
+                ForcePathStyle = settings.ForcePathStyle,
+
+                // The SDK computes a checksum for every request by default and sends the body with a
+                // trailing one, which Cloudflare R2 answers with
+                // "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER not implemented" — every write fails.
+                // Asking for checksums only where the protocol requires them keeps the SDK's default
+                // behaviour on Amazon and makes it work everywhere else. Integrity on the wire is
+                // TLS's job either way.
+                RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+                ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED
+            };
+            if (!string.IsNullOrEmpty(settings.ServiceUrl))
+                config.ServiceURL = settings.ServiceUrl;
+            else if (!string.IsNullOrEmpty(settings.Region))
+                config.RegionEndpoint = RegionEndpoint.GetBySystemName(settings.Region);
+
+            var s3 = new AmazonS3Client(new BasicAWSCredentials(settings.AccessKey, settings.SecretKey), config);
+
+            // A bucket that is not there is a configuration error until someone says otherwise —
+            // the same rule the Azure Blob provider settled on, and for the same reason: a
+            // misspelled name that creates its own bucket writes everything where nobody will look
+            // for it, and nothing anywhere says so.
+            switch (Reach(s3, settings.Bucket))
+            {
+                case BucketReach.Refused:
+                    throw new BadRequestException(
+                        $"FileStorageProviderS3 '{providerName}': the credentials cannot reach bucket '{settings.Bucket}'. "
+                        + "A store that refuses to disclose whether a bucket exists answers the same way for a name that is "
+                        + "not there and a name the credentials are not scoped to, so this is either a typo in the bucket "
+                        + "name or a key issued for a different one. Creating it would be refused too.");
+
+                case BucketReach.Missing when !settings.CreateIfMissing:
+                    throw new NotFoundException(
+                        $"FileStorageProviderS3 '{providerName}': bucket '{settings.Bucket}' does not exist. "
+                        + "Create it, or set CreateIfMissing to true for this provider.");
+
+                case BucketReach.Missing:
+                    s3.PutBucketAsync(new PutBucketRequest { BucketName = settings.Bucket }).GetAwaiter().GetResult();
+                    break;
+            }
+
+            bucket = settings.Bucket;
+            client = s3;
+        }
+
+        public async Task<bool> ExistsAsync(string name)
+        {
+            return await GetMetadataAsync(name) != null;
+        }
+
+        public async Task<FileStoreFileInfo?> GetInfoAsync(string name)
+        {
+            var metadata = await GetMetadataAsync(name);
+            if (metadata == null)
+                return null;
+
+            // S3 keeps one timestamp per object. An overwrite replaces the object rather than
+            // editing it, so the moment it was last written is also the moment this version came
+            // into being: reporting it as both is accurate, not a stand-in for something missing.
+            var lastModified = metadata.LastModified ?? DateTime.UtcNow;
+            return new FileStoreFileInfo
+            {
+                Size = metadata.ContentLength,
+                CreatedOn = lastModified,
+                Created = lastModified,
+                LastModified = lastModified
+            };
+        }
+
+        public async Task<IEnumerable<string>> ListFilesAsync(string path)
+        {
+            var prefix = Prefix(path);
+            var names = new List<string>();
+
+            await EachPage(prefix, page =>
+            {
+                // Version 4 of the SDK leaves the collection null rather than empty when the
+                // response carries no such element, which is what a prefix holding nothing looks
+                // like. Reading it without the guard turns "there is nothing here" into a crash.
+                foreach (var entry in page.S3Objects ?? [])
+                {
+                    // The prefix itself comes back as an object when something created it as an
+                    // explicit empty marker. It is not a file in the directory it names.
+                    if (entry.Key.Length <= prefix.Length)
+                        continue;
+
+                    names.Add(entry.Key[prefix.Length..]);
+                }
+            });
+
+            return names;
+        }
+
+        public async Task<IEnumerable<string>> ListFoldersAsync(string path)
+        {
+            var prefix = Prefix(path);
+            var names = new HashSet<string>();
+
+            await EachPage(prefix, page =>
+            {
+                foreach (var common in page.CommonPrefixes ?? [])
+                {
+                    var name = common[prefix.Length..].TrimEnd('/');
+                    if (name.Length > 0)
+                        names.Add(name);
+                }
+            });
+
+            return names;
+        }
+
+        public async Task<bool> ReadAsync(string name, Stream stream)
+        {
+            try
+            {
+                using var response = await Client.GetObjectAsync(bucket, name);
+                await response.ResponseStream.CopyToAsync(stream);
+                return true;
+            }
+            catch (AmazonS3Exception ex) when (IsMissing(ex))
+            {
+                return false;
+            }
+        }
+
+        public async Task WriteAsync(string name, Stream stream, string? contentType = null)
+        {
+            // The SDK signs the payload, which means reading the stream twice — once to hash it and
+            // once to send it. A forward-only stream cannot serve that, so it is buffered here
+            // rather than handed over. Turning payload signing off instead looks like the smaller
+            // change and is not one: the SDK then requires HTTPS, which rules out every endpoint
+            // reached over plain HTTP — a self-hosted service, and the container these tests run
+            // against.
+            //Wrapped rather than handed over: the SDK disposes the stream it is given, and closing
+            //the caller's stream is a thing the Azure Blob provider does not do. A caller writing
+            //the same content to two providers would otherwise find the second one failing,
+            //depending on the order they were called in.
+            Stream payload;
+            MemoryStream? buffered = null;
+            if (stream.CanSeek)
+            {
+                payload = new NonClosingStream(stream);
+            }
+            else
+            {
+                buffered = new MemoryStream();
+                await stream.CopyToAsync(buffered);
+                buffered.Seek(0, SeekOrigin.Begin);
+                payload = buffered;
+            }
+
+            try
+            {
+                var request = new PutObjectRequest
+                {
+                    BucketName = bucket,
+                    Key = name,
+                    InputStream = payload,
+
+                    // The other half of the same incompatibility: chunked transfer encoding carries
+                    // the trailer R2 rejects. Sending the body whole costs nothing here, since the
+                    // stream is already buffered or seekable by this point.
+                    UseChunkEncoding = false
+                };
+                if (contentType != null)
+                    request.ContentType = contentType;
+
+                await Client.PutObjectAsync(request);
+            }
+            finally
+            {
+                buffered?.Dispose();
+                if (buffered is null)
+                    await payload.DisposeAsync();
+            }
+
+            // Rewound for the caller, the same way the Azure Blob provider leaves it: a caller that
+            // writes the same stream to two providers should not have to know which one moved it.
+            if (stream.CanSeek)
+                stream.Seek(0, SeekOrigin.Begin);
+        }
+
+        /// <summary>
+        ///     Appends by reading what is there, adding to it, and writing the whole object back.
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///     S3 has no append. Every implementation of it on object storage is this, and it
+        ///     carries two costs the caller has to know about rather than discover.
+        ///     </para>
+        ///     <para>
+        ///     It transfers the whole object each time, so the cost of appending grows with the
+        ///     size of what is already there — a log file appended to all day is re-uploaded in
+        ///     full on every line. Use one object per period rather than one that grows.
+        ///     </para>
+        ///     <para>
+        ///     And it is last-writer-wins: two appends that overlap leave only one of them, with no
+        ///     error anywhere. Azure Blob has a real append block and does not have this problem,
+        ///     which is worth knowing when choosing where a log goes.
+        ///     </para>
+        /// </remarks>
+        public async Task AppendAsync(string name, Stream stream)
+        {
+            using var combined = new MemoryStream();
+
+            using (var existing = new MemoryStream())
+            {
+                if (await ReadAsync(name, existing))
+                {
+                    existing.Seek(0, SeekOrigin.Begin);
+                    await existing.CopyToAsync(combined);
+                }
+            }
+
+            await stream.CopyToAsync(combined);
+            combined.Seek(0, SeekOrigin.Begin);
+
+            await WriteAsync(name, combined);
+        }
+
+        public async Task DeleteAsync(string name)
+        {
+            await Client.DeleteObjectAsync(bucket, name);
+        }
+
+        #region Private
+
+        private IAmazonS3 Client => client ?? throw new BadRequestException("FileStorageProviderS3: the provider was not initialized.");
+
+        /// <summary>The key prefix a path names, always ending in the delimiter, empty for the root.</summary>
+        private static string Prefix(string? path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+
+            return path.EndsWith(Delimiter) ? path : path + Delimiter;
+        }
+
+        private async Task EachPage(string prefix, Action<ListObjectsV2Response> handle)
+        {
+            var request = new ListObjectsV2Request
+            {
+                BucketName = bucket,
+                Prefix = prefix,
+
+                // Grouping on the delimiter is what makes a flat namespace answer questions about
+                // one level of it: keys below a sub-prefix come back as that prefix instead of one
+                // entry each. Without it, listing a bucket's root would walk every object in it.
+                Delimiter = Delimiter
+            };
+
+            ListObjectsV2Response response;
+            do
+            {
+                response = await Client.ListObjectsV2Async(request);
+                handle(response);
+                request.ContinuationToken = response.NextContinuationToken;
+            }
+            while (response.IsTruncated == true);
+        }
+
+        private async Task<GetObjectMetadataResponse?> GetMetadataAsync(string name)
+        {
+            try
+            {
+                return await Client.GetObjectMetadataAsync(bucket, name);
+            }
+            catch (AmazonS3Exception ex) when (IsMissing(ex))
+            {
+                return null;
+            }
+        }
+
+        // A HEAD on an absent key answers 404 with no error code, where a GET names NoSuchKey.
+        private static bool IsMissing(AmazonS3Exception ex) =>
+            ex.StatusCode == System.Net.HttpStatusCode.NotFound || ex.ErrorCode == "NoSuchKey" || ex.ErrorCode == "NotFound";
+
+        private enum BucketReach
+        {
+            /// <summary>The bucket is there and these credentials can use it.</summary>
+            Present,
+
+            /// <summary>The store says the bucket is not there.</summary>
+            Missing,
+
+            /// <summary>The store will not say — see <see cref="Reach"/>.</summary>
+            Refused
+        }
+
+        /// <summary>Whether the bucket can be used, as far as the store is willing to disclose.</summary>
+        /// <remarks>
+        ///     HEAD rather than GetBucketLocation: the latter is a distinct permission that a
+        ///     least-privilege key is not necessarily granted, so it can answer "no such bucket" for
+        ///     one that is there and works. HEAD needs only the listing right, which this provider
+        ///     requires anyway.
+        ///
+        ///     <para>
+        ///     Refusing to disclose is a third answer, not a failure to get one. Cloudflare R2 with
+        ///     a bucket-scoped token, and Amazon S3 with a bucket owned by someone else, both answer
+        ///     403 for a name that is not there rather than 404, precisely so that a stranger cannot
+        ///     enumerate bucket names. Reading that as "it exists" is how a typo gets past startup.
+        ///     </para>
+        /// </remarks>
+        private static BucketReach Reach(AmazonS3Client s3, string name)
+        {
+            try
+            {
+                s3.HeadBucketAsync(new HeadBucketRequest { BucketName = name }).GetAwaiter().GetResult();
+                return BucketReach.Present;
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound || ex.ErrorCode == "NoSuchBucket")
+            {
+                return BucketReach.Missing;
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                return BucketReach.Refused;
+            }
+        }
+
+        #endregion Private
+    }
+}
