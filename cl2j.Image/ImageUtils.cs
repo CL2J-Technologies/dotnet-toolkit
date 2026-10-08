@@ -1,23 +1,22 @@
-﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
 using cl2j.Tooling.Exceptions;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using ISImage = SixLabors.ImageSharp.Image;
+using SkiaSharp;
 
 namespace cl2j.Image
 {
     /// <summary>
-    /// Image utilities, built on ImageSharp.
+    /// Image utilities, built on SkiaSharp since 6.0.0.
     ///
-    /// **Ported from System.Drawing on September 3rd 2026.** The reason is not modernisation:
-    /// `System.Drawing.Common` throws `PlatformNotSupportedException` on anything but Windows
-    /// since .NET 6. The Appartogo site runs on Linux, so its portal had **never** produced a
-    /// single thumbnail since it opened in June 2025 — 5,400 images, zero thumbnails, without one
-    /// line of error, because both entry points swallowed the exception to return `null` or the
-    /// original bytes. See entry s19 of the cl2j repository journal.
+    /// **Ported from System.Drawing on September 3rd 2026, then from ImageSharp in October 2026.**
     ///
-    /// The same failure was waiting for the crawler: it would have fired the day aggregation
-    /// leaves the Windows VM for a Function or a Linux container.
+    /// The first port was not modernisation: `System.Drawing.Common` throws
+    /// `PlatformNotSupportedException` on anything but Windows since .NET 6, and the Appartogo
+    /// portal, which runs on Linux, had produced **no thumbnail at all** in fifteen months —
+    /// 5,400 images, without one line of error, because the entry points swallowed the exception.
+    ///
+    /// The second port left ImageSharp when five vulnerabilities were published against 3.1.12 on
+    /// October 7th 2026, fixed only in 4.x, which requires a licence key to build. SkiaSharp
+    /// (MIT, Microsoft) was chosen after a measurement on 147 real listing photos: same output
+    /// dimensions, a similar weight, no visible difference, and the same duplicate verdicts.
     ///
     /// **Ownership convention, unchanged:** the images returned belong to the caller, who must
     /// dispose them. Some methods return the instance they received when there is nothing to do —
@@ -26,7 +25,7 @@ namespace cl2j.Image
     /// </summary>
     public static class ImageUtils
     {
-        public class OptimizeReasult
+        public class OptimizeResult
         {
             public int Width { get; set; }
             public int Height { get; set; }
@@ -34,7 +33,7 @@ namespace cl2j.Image
             public bool Modified { get; set; }
         }
 
-        public static OptimizeReasult? OptimizeImage(ref byte[] bytes, int max = 1280, long quality = 75L)
+        public static OptimizeResult? OptimizeImage(ref byte[] bytes, int max = 1280, long quality = 75L)
         {
             using var image = ReadImage(bytes);
             if (image != null)
@@ -47,7 +46,7 @@ namespace cl2j.Image
                     using var resized = ImageResizer.ResizeIfOversize(image, max, max);
                     bytes = ImageSerialization.SaveJpegToBytes(resized, quality);
 
-                    return new OptimizeReasult
+                    return new OptimizeResult
                     {
                         Modified = true,
                         Width = resized.Width,
@@ -57,13 +56,13 @@ namespace cl2j.Image
 
                 //Same reason as in CleanImage: a format browsers do not render must come back
                 //re-encoded, even when nothing else calls for it.
-                if (modified || !EstUnFormatDuWeb(bytes))
+                if (modified || !IsWebFormat(bytes))
                 {
                     bytes = ImageSerialization.SaveJpegToBytes(image, quality);
                     modified = true;
                 }
 
-                return new OptimizeReasult
+                return new OptimizeResult
                 {
                     Modified = modified,
                     Width = image.Width,
@@ -74,13 +73,13 @@ namespace cl2j.Image
             return null;
         }
 
-        public static ImageRgba32 CreateThumbnailCropped(byte[] bytes, int w, int h)
+        public static RasterImage CreateThumbnailCropped(byte[] bytes, int w, int h)
         {
             using var image = ReadImage(bytes) ?? throw new ValidationException("Invalid image");
             return CreateThumbnailCropped(image, w, h);
         }
 
-        public static ImageRgba32 CreateThumbnailCropped(ImageRgba32 image, int w, int h)
+        public static RasterImage CreateThumbnailCropped(RasterImage image, int w, int h)
         {
             var currentRatio = Math.Round((decimal)image.Width / image.Height, 2);
             var targetRatio = Math.Round((decimal)w / h, 2);
@@ -112,7 +111,8 @@ namespace cl2j.Image
             return thumbnail;
         }
 
-        public static ImageRgba32 CreateThumbnail(ImageRgba32 image, int w, int h, Rgba32 backgroundColor)
+        /// <summary>The image scaled to fit `w` x `h`, centred on a background of the given colour.</summary>
+        public static RasterImage CreateThumbnail(RasterImage image, int w, int h, RgbColor backgroundColor)
         {
             var currentRatio = Math.Round((decimal)image.Width / image.Height, 2);
             var targetRatio = Math.Round((decimal)w / h, 2);
@@ -139,19 +139,27 @@ namespace cl2j.Image
                 y = (h - newH) / 2;
             }
 
-            using var resized = ImageResizer.Resize(image, Math.Max(1, newW), Math.Max(1, newH));
-
-            var target = new ImageRgba32(w, h);
-            target.Mutate(g =>
+            var resized = ImageResizer.Resize(image, Math.Max(1, newW), Math.Max(1, newH));
+            try
             {
-                g.BackgroundColor(backgroundColor);
-                g.DrawImage(resized, new SixLabors.ImageSharp.Point(x, y), 1f);
-            });
-
-            return target;
+                var target = new SKBitmap(RasterImage.Info(w, h));
+                using (var canvas = new SKCanvas(target))
+                using (var picture = SKImage.FromBitmap(resized.Bitmap))
+                {
+                    canvas.Clear(new SKColor(backgroundColor.R, backgroundColor.G, backgroundColor.B));
+                    //Drawn at its own size: no resampling happens, the sampling options only satisfy the API.
+                    canvas.DrawImage(picture, x, y, new SKSamplingOptions(SKFilterMode.Nearest));
+                }
+                return new RasterImage(target);
+            }
+            finally
+            {
+                if (!ReferenceEquals(resized, image))
+                    resized.Dispose();
+            }
         }
 
-        public static ImageRgba32 CreateThumbnailWithRatio(ImageRgba32 image, int w)
+        public static RasterImage CreateThumbnailWithRatio(RasterImage image, int w)
         {
             var ratio = Math.Round((decimal)image.Width / image.Height, 2);
             int h = (int)Math.Round(w / ratio, 0);
@@ -159,15 +167,17 @@ namespace cl2j.Image
             return ImageResizer.Resize(image, w, Math.Max(1, h));
         }
 
-        public static ImageRgba32 Crop(ImageRgba32 bmp)
+        /// <summary>The image without its near-white border rows and columns, or the same instance when there is none.</summary>
+        public static RasterImage Crop(RasterImage bmp)
         {
             int w = bmp.Width;
             int h = bmp.Height;
+            var grey = Pixels.Grey(bmp);
 
             int topmost = 0;
             for (int row = 0; row < h; ++row)
             {
-                if (IsAllColorRow(bmp, row))
+                if (Pixels.IsWhiteRow(grey, w, row))
                     topmost = row + 1;
                 else
                     break;
@@ -176,7 +186,7 @@ namespace cl2j.Image
             int bottommost = 0;
             for (int row = h - 1; row >= 0; --row)
             {
-                if (IsAllColorRow(bmp, row))
+                if (Pixels.IsWhiteRow(grey, w, row))
                     bottommost = row;
                 else
                     break;
@@ -185,7 +195,7 @@ namespace cl2j.Image
             int leftmost = 0;
             for (int col = 0; col < w; ++col)
             {
-                if (IsAllColorColumn(bmp, col))
+                if (Pixels.IsWhiteColumn(grey, w, h, col))
                     leftmost = col + 1;
                 else
                     break;
@@ -194,7 +204,7 @@ namespace cl2j.Image
             int rightmost = 0;
             for (int col = w - 1; col >= 0; --col)
             {
-                if (IsAllColorColumn(bmp, col))
+                if (Pixels.IsWhiteColumn(grey, w, h, col))
                     rightmost = col;
                 else
                     break;
@@ -223,16 +233,16 @@ namespace cl2j.Image
             if (croppedWidth == bmp.Width && croppedHeight == bmp.Height)
                 return bmp;
 
-            //An entirely white image gives crossed bounds: the old version then threw a
+            //An entirely white image gives crossed bounds: the System.Drawing version then threw a
             //BadRequestException from Graphics.DrawImage. We keep the same signal, but throw up
             //front rather than waiting for the library.
             if (croppedWidth <= 0 || croppedHeight <= 0 || leftmost + croppedWidth > w || topmost + croppedHeight > h)
                 throw new BadRequestException($"Values are topmost={topmost} btm={bottommost} left={leftmost} right={rightmost} croppedWidth={croppedWidth} croppedHeight={croppedHeight}");
 
-            return bmp.Clone(x => x.Crop(new SixLabors.ImageSharp.Rectangle(leftmost, topmost, croppedWidth, croppedHeight)));
+            return Extract(bmp, leftmost, topmost, croppedWidth, croppedHeight);
         }
 
-        public static ImageRgba32 CropCenter(ImageRgba32 bmp, int w, int h, out bool modified)
+        public static RasterImage CropCenter(RasterImage bmp, int w, int h, out bool modified)
         {
             modified = false;
             if (bmp.Width < w || bmp.Height < h)
@@ -245,26 +255,40 @@ namespace cl2j.Image
 
             modified = true;
 
-            return bmp.Clone(c => c.Crop(new SixLabors.ImageSharp.Rectangle(x, y, w, h)));
+            return Extract(bmp, x, y, w, h);
+        }
+
+        private static RasterImage Extract(RasterImage source, int x, int y, int w, int h)
+        {
+            using var subset = new SKBitmap();
+            if (!source.Bitmap.ExtractSubset(subset, SKRectI.Create(x, y, w, h)))
+                throw new BadRequestException($"Cannot extract {w} x {h} at ({x}, {y}) from a {source.Width} x {source.Height} image");
+            //A subset shares the pixels of its source: copy it so the result outlives the source.
+            return new RasterImage(subset.Copy(), source.Origin, source.HasMetadata);
         }
 
         public class ImageCompareSettings
         {
             public int PixelDifferenceTolerance { get; set; } = 19;
             public int CompareDifferenceMax { get; set; } = 30;
-            public double PourcentEqualsMin { get; set; } = 0.6;
+            public double PercentEqualsMin { get; set; } = 0.6;
         }
 
-        public static bool AreImagesIdentical(ImageRgba32 image1, ImageRgba32 image2, ImageCompareSettings settings)
+        /// <summary>
+        /// True when two images show the same photo, whatever their size: borders cropped, the
+        /// larger scaled down to the smaller, then compared in grey levels. This is what decides
+        /// whether two listings from different sources are the same flat.
+        /// </summary>
+        public static bool AreImagesIdentical(RasterImage image1, RasterImage image2, ImageCompareSettings settings)
         {
             if (image1 == null || image2 == null)
                 return false;
 
-            ImageRgba32? newImage = null;
-            ImageRgba32? newImageCrawler = null;
+            RasterImage? newImage = null;
+            RasterImage? newImageCrawler = null;
             try
             {
-                //Crop images (remove white lines/columns) surronding
+                //Crop images (remove white lines/columns) surrounding
                 newImage = Crop(image2);
                 var imageRatio = (double)newImage.Width / newImage.Height;
 
@@ -277,16 +301,16 @@ namespace cl2j.Image
 
                 //Resize images if required to have the same size for the comparaison
                 if (newImage.Width > newImageCrawler.Width)
-                    newImage = Remplacer(newImage, image2, ImageResizer.Resize(newImage, newImageCrawler.Width, newImageCrawler.Height));
+                    newImage = Replace(newImage, image2, ImageResizer.Resize(newImage, newImageCrawler.Width, newImageCrawler.Height));
                 else
-                    newImageCrawler = Remplacer(newImageCrawler, image1, ImageResizer.Resize(newImageCrawler, newImage.Width, newImage.Height));
+                    newImageCrawler = Replace(newImageCrawler, image1, ImageResizer.Resize(newImageCrawler, newImage.Width, newImage.Height));
 
                 //Compare
                 var res = Compare(newImage, newImageCrawler, out var diff);
                 if (res)
                 {
-                    var pourcentEquals = Equals(newImage, newImageCrawler, settings.PixelDifferenceTolerance);
-                    if (diff <= settings.CompareDifferenceMax && pourcentEquals >= settings.PourcentEqualsMin)
+                    var percentEquals = Equals(newImage, newImageCrawler, settings.PixelDifferenceTolerance);
+                    if (diff <= settings.CompareDifferenceMax && percentEquals >= settings.PercentEqualsMin)
                         return true;
                 }
 
@@ -298,59 +322,59 @@ namespace cl2j.Image
                 //return the instance they received: that is what the reference comparison checks.
                 //Without this care, aggregation disposed its caller images — and across tens of
                 //thousands of comparisons, disposing nothing at all cost memory.
-                Liberer(newImage, image1, image2);
-                Liberer(newImageCrawler, image1, image2);
+                Release(newImage, image1, image2);
+                Release(newImageCrawler, image1, image2);
             }
         }
 
-        private static ImageRgba32 Remplacer(ImageRgba32 ancienne, ImageRgba32 original, ImageRgba32 nouvelle)
+        private static RasterImage Replace(RasterImage previous, RasterImage original, RasterImage next)
         {
-            if (!ReferenceEquals(ancienne, original) && !ReferenceEquals(ancienne, nouvelle))
-                ancienne.Dispose();
-            return nouvelle;
+            if (!ReferenceEquals(previous, original) && !ReferenceEquals(previous, next))
+                previous.Dispose();
+            return next;
         }
 
-        private static void Liberer(ImageRgba32? image, ImageRgba32 original1, ImageRgba32 original2)
+        private static void Release(RasterImage? image, RasterImage original1, RasterImage original2)
         {
             if (image is not null && !ReferenceEquals(image, original1) && !ReferenceEquals(image, original2))
                 image.Dispose();
         }
 
-        public static bool Compare(ImageRgba32 image1, ImageRgba32 image2, out int diff)
+        /// <summary>The mean grey-level difference between two images of the same size, in `diff`. False when the sizes differ.</summary>
+        public static bool Compare(RasterImage image1, RasterImage image2, out int diff)
         {
             diff = 0;
 
             if (image1.Width != image2.Width || image1.Height != image2.Height)
                 return false;
 
+            var a = Pixels.Grey(image1);
+            var b = Pixels.Grey(image2);
             long total = 0;
-            for (int y = 0; y < image1.Height; ++y)
-            {
-                for (int x = 0; x < image1.Width; ++x)
-                    total += image1[x, y].DiffGrayscale(image2[x, y]);
-            }
+            for (int i = 0; i < a.Length; ++i)
+                total += Math.Abs(a[i] - b[i]);
 
-            diff = (int)(total / (image1.Width * image1.Height));
+            diff = (int)(total / a.Length);
 
             return true;
         }
 
-        public static double Equals(ImageRgba32 image1, ImageRgba32 image2, int pixelDiffMax)
+        /// <summary>The share of pixels whose grey levels differ by `pixelDiffMax` at most. 0 when the sizes differ.</summary>
+        public static double Equals(RasterImage image1, RasterImage image2, int pixelDiffMax)
         {
             if (image1.Width != image2.Width || image1.Height != image2.Height)
                 return 0;
 
+            var a = Pixels.Grey(image1);
+            var b = Pixels.Grey(image2);
             int nbPixelEquals = 0;
-            for (int y = 0; y < image1.Height; ++y)
+            for (int i = 0; i < a.Length; ++i)
             {
-                for (int x = 0; x < image1.Width; ++x)
-                {
-                    if (image1[x, y].DiffGrayscale(image2[x, y]) <= pixelDiffMax)
-                        ++nbPixelEquals;
-                }
+                if (Math.Abs(a[i] - b[i]) <= pixelDiffMax)
+                    ++nbPixelEquals;
             }
 
-            return (double)nbPixelEquals / (image1.Width * image1.Height);
+            return (double)nbPixelEquals / a.Length;
         }
 
         public static byte[]? CleanImage(byte[] bytes, int max = 1280)
@@ -358,15 +382,15 @@ namespace cl2j.Image
             if (bytes == null)
                 return bytes;
 
-            //No more fallback, and that is the heart of the fix. The old version chained two
-            //attempts that both ended in System.Drawing, then returned the original bytes without
-            //saying anything: on Linux, every image came back as-is, not resized — 2.4 MB measured
-            //on one portal photo.
+            //No fallback, and that is the heart of the September 2026 fix. The System.Drawing
+            //version chained two attempts that both ended in System.Drawing, then returned the
+            //original bytes without saying anything: on Linux, every image came back as-is, not
+            //resized — 2.4 MB measured on one portal photo.
             //
-            //The exception is now allowed to propagate. An unreadable image is an error the caller
+            //The exception is allowed to propagate. An unreadable image is an error the caller
             //must see, not a silence to store.
-            using var image = ReadImage(bytes)
-                ?? throw new ValidationException("Invalid image: no decoder could read it.");
+            using var image = ReadImage(bytes, out var failure)
+                ?? throw new ValidationException($"Invalid image: {failure}.");
 
             var modified = ExifUtils.RotateFlipIfRequired(image);
             modified |= ExifUtils.Strip(image);
@@ -381,13 +405,13 @@ namespace cl2j.Image
             //nothing to straighten, and would therefore come back untouched — that is exactly how
             //93 iPhone photos ended up stored as HEIC under a `.jpg` name, invisible in every
             //browser. Anything that is not a web format is re-encoded, unconditionally.
-            if (modified || !EstUnFormatDuWeb(bytes))
+            if (modified || !IsWebFormat(bytes))
                 return ImageSerialization.SaveJpegToBytes(image, 75L);
 
             return bytes;
         }
 
-        public static ImageRgba32 CleanImage(this ImageRgba32 image, int max, out bool modified)
+        public static RasterImage CleanImage(this RasterImage image, int max, out bool modified)
         {
             modified = ExifUtils.RotateFlipIfRequired(image);
             modified |= ExifUtils.Strip(image);
@@ -402,74 +426,26 @@ namespace cl2j.Image
             return image;
         }
 
-        public static ImageRgba32 GenerateDiffImage(ImageRgba32 image1, ImageRgba32 image2)
+        /// <summary>An image of the per-channel differences between two images of the same size.</summary>
+        public static RasterImage GenerateDiffImage(RasterImage image1, RasterImage image2)
         {
             if (image1.Width != image2.Width || image1.Height != image2.Height)
                 throw new BadRequestException("Images sizes must match");
 
-            var result = new ImageRgba32(image1.Width, image1.Height);
-            for (int y = 0; y < image1.Height; ++y)
+            var result = new RasterImage(image1.Width, image1.Height);
+            var a = image1.Bitmap.GetPixelSpan();
+            var b = image2.Bitmap.GetPixelSpan();
+            var r = result.Bitmap.GetPixelSpan();
+            for (int i = 0; i < r.Length; i += 4)
             {
-                for (int x = 0; x < image1.Width; ++x)
-                    result[x, y] = image1[x, y].Diff(image2[x, y]);
+                r[i] = (byte)Math.Abs(a[i] - b[i]);
+                r[i + 1] = (byte)Math.Abs(a[i + 1] - b[i + 1]);
+                r[i + 2] = (byte)Math.Abs(a[i + 2] - b[i + 2]);
+                r[i + 3] = 255;
             }
             return result;
         }
 
-        public static bool IsAllColorRow(ImageRgba32 image, int n)
-        {
-            for (int i = 0; i < image.Width; ++i)
-            {
-                if (!image[i, n].CloseToWhite())
-                    return false;
-            }
-            return true;
-        }
-
-        public static bool IsAllColorColumn(ImageRgba32 image, int n)
-        {
-            for (int i = 0; i < image.Height; ++i)
-            {
-                if (!image[n, i].CloseToWhite())
-                    return false;
-            }
-            return true;
-        }
-
-        public static bool CloseToWhite(this Rgba32 c, byte threshold = 230)
-        {
-            var g = c.ToGrayscale();
-            return g >= threshold;
-        }
-
-        public static byte ToGrayscale(this Rgba32 c)
-        {
-            return (byte)(0.3 * c.R + 0.59 * c.G + 0.11 * c.B);
-        }
-
-        public static int DiffGrayscale(this Rgba32 c1, Rgba32 c2)
-        {
-            var g1 = c1.ToGrayscale();
-            var g2 = c2.ToGrayscale();
-            return Math.Abs(g1 - g2);
-        }
-
-        public static Rgba32 Diff(this Rgba32 c1, Rgba32 c2)
-        {
-            var r = (byte)Math.Abs(c1.R - c2.R);
-            var g = (byte)Math.Abs(c1.G - c2.G);
-            var b = (byte)Math.Abs(c1.B - c2.B);
-            return new Rgba32(r, g, b);
-        }
-
-        /// <summary>
-        /// Returns the image, or `null` if the bytes are not a readable image.
-        ///
-        /// ⚠️ **The `null` is silent, and that is what cost fifteen months.** On Linux this method
-        /// returned `null` for *every* image, and `cl2j.Medias.MediaService` ignored that `null`:
-        /// no thumbnail was ever produced, without one line of log. A caller that can do nothing
-        /// with a `null` must throw or log, never carry on.
-        /// </summary>
         /// <summary>
         /// Returns true if the bytes carry an image in a recognised format, reading only the
         /// header — no full decode, so negligible next to a download.
@@ -479,26 +455,39 @@ namespace cl2j.Image
         /// was storing the LogisQuebec home page under a `.jpg` name — the source redirected its
         /// deleted photos to its home page, and `HttpClient` follows redirects on its own.
         /// </summary>
-        public static bool IsImage(byte[] bytes)
+        public static bool IsImage(byte[] bytes) => Identify(bytes) is not null;
+
+        /// <summary>
+        /// What the header of an image file declares — dimensions as stored, frame count, format —
+        /// without decoding the pixels, so safe to call before deciding whether to decode at all.
+        /// `null` when the bytes are not an image this library reads.
+        /// </summary>
+        public static ImageHeader? Identify(byte[] bytes)
         {
             if (bytes == null || bytes.Length == 0)
-                return false;
+                return null;
 
             try
             {
-                return ISImage.Identify(bytes) is not null;
+                using var codec = SKCodec.Create(new SKMemoryStream(bytes));
+                if (codec == null)
+                    return null;
+                return new ImageHeader(codec.Info.Width, codec.Info.Height, Math.Max(1, codec.FrameCount), FormatName(codec.EncodedFormat));
             }
             catch (Exception)
             {
-                return false;
+                return null;
             }
         }
 
-        public static ImageRgba32? ReadImage(byte[] bytes) => ReadImage(bytes, out _);
+        public static RasterImage? ReadImage(byte[] bytes) => ReadImage(bytes, out _);
 
         /// <summary>
         /// Reads an image, and says in `failure` why it could not. `null` image with a non-null
         /// `failure`; a read that works leaves `failure` null.
+        ///
+        /// The EXIF orientation is not applied: it stays pending on the image until
+        /// `ExifUtils.RotateFlipIfRequired`, so `Width` and `Height` are the stored ones.
         ///
         /// **Why the reason is handed back rather than logged.** This assembly takes no logger,
         /// and a caller that knows the file name writes a better line than one that only has the
@@ -510,7 +499,7 @@ namespace cl2j.Image
         /// was only found by sniffing the bytes by hand. The reason therefore names the format
         /// when the signature is one this decoder is known not to read.
         /// </summary>
-        public static ImageRgba32? ReadImage(byte[] bytes, out string? failure)
+        public static RasterImage? ReadImage(byte[] bytes, out string? failure)
         {
             failure = null;
 
@@ -526,51 +515,75 @@ namespace cl2j.Image
                 return null;
             }
 
+            var unsupported = NameUnsupportedFormat(bytes);
             try
             {
-                return ISImage.Load<Rgba32>(bytes);
+                using var codec = SKCodec.Create(new SKMemoryStream(bytes), out var result);
+                if (codec == null)
+                {
+                    failure = unsupported == null
+                        ? $"unrecognised image format ({result})"
+                        : $"{unsupported}, which this decoder does not read";
+                    return null;
+                }
+
+                var bitmap = new SKBitmap(RasterImage.Info(codec.Info.Width, codec.Info.Height));
+                var decoded = codec.GetPixels(bitmap.Info, bitmap.GetPixels());
+                //A truncated file decodes what it has, the rest filled in — what browsers show.
+                if (decoded != SKCodecResult.Success && decoded != SKCodecResult.IncompleteInput)
+                {
+                    bitmap.Dispose();
+                    failure = $"decoding failed ({decoded})";
+                    return null;
+                }
+
+                return new RasterImage(bitmap, codec.EncodedOrigin, MetadataSniffer.HasMetadata(bytes));
             }
             catch (Exception ex)
             {
-                var format = NommerUnFormatNonSupporte(bytes);
-                failure = format == null
+                failure = unsupported == null
                     ? $"{ex.GetType().Name}: {ex.Message}"
-                    : $"{format}, which this decoder does not read ({ex.GetType().Name})";
+                    : $"{unsupported}, which this decoder does not read ({ex.GetType().Name})";
                 return null;
             }
         }
 
         /// <summary>
-        /// Names the format of a file `ImageSharp` cannot read, by reading its signature. Returns
+        /// Names the format of a file this library cannot read, by reading its signature. Returns
         /// `null` when the format is not recognised. It serves to **explain a refusal**, never to
         /// decide to accept: nothing here decodes anything.
         ///
-        /// **Why this method exists.** Client decision, September 4th 2026: no native library will
-        /// be added to decode HEIC. ImageMagick does it, but it recognises more than two hundred
-        /// formats, some of them languages able to read and write files, and its vulnerability
-        /// history — the ImageTragick family — has no fully reliable defence. For 95 photos, the
-        /// game is not worth the candle. The conversion will happen **in the browser**, before the
-        /// upload.
+        /// **Why this method exists.** Decision of September 4th 2026: no native library is added
+        /// to decode HEIC. ImageMagick does it, but it recognises more than two hundred formats,
+        /// some of them languages able to read and write files, and its vulnerability history —
+        /// the ImageTragick family — has no fully reliable defence. The conversion happens **in the
+        /// browser**, before the upload.
         ///
         /// But a client is still a client: an old browser, a direct API call or a failed
         /// conversion will send HEIC anyway. The server must therefore refuse, and the refusal must
         /// be **readable** — "HEIC format not accepted" rather than a generic error nobody can
-        /// interpret. Fifteen months of missing thumbnails were born of a mute failure; we are not
-        /// doing that again.
+        /// interpret.
+        ///
+        /// TIFF joined the list with 6.0.0: ImageSharp read it, SkiaSharp does not.
         ///
         /// Twelve bytes are enough: four of size, the `ftyp` tag, then the brand. It is managed
-        /// code, with no dependency, and it covers the 124 files the portal refused.
+        /// code, with no dependency.
         /// </summary>
-        public static string? NommerUnFormatNonSupporte(byte[] bytes)
+        public static string? NameUnsupportedFormat(byte[] bytes)
         {
             if (bytes is null || bytes.Length < 12)
                 return null;
 
+            var tiffLittleEndian = bytes[0] == (byte)'I' && bytes[1] == (byte)'I' && bytes[3] == 0 && (bytes[2] == 42 || bytes[2] == 43);
+            var tiffBigEndian = bytes[0] == (byte)'M' && bytes[1] == (byte)'M' && bytes[2] == 0 && (bytes[3] == 42 || bytes[3] == 43);
+            if (tiffLittleEndian || tiffBigEndian)
+                return "TIFF";
+
             if (bytes[4] != (byte)'f' || bytes[5] != (byte)'t' || bytes[6] != (byte)'y' || bytes[7] != (byte)'p')
                 return null;
 
-            var marque = System.Text.Encoding.ASCII.GetString(bytes, 8, 4);
-            return marque switch
+            var brand = System.Text.Encoding.ASCII.GetString(bytes, 8, 4);
+            return brand switch
             {
                 "heic" or "heix" or "heim" or "heis" or "hevc" or "hevx" or "hevm" or "hevs" or "mif1" or "msf1" => "HEIC",
                 "avif" or "avis" => "AVIF",
@@ -581,26 +594,53 @@ namespace cl2j.Image
         }
 
         /// <summary>
-        /// True if the format is rendered by browsers. A HEIC decodes correctly but displays in
-        /// neither Chrome nor Firefox: storing it as-is produces a listing with no image, which is
-        /// exactly the failure seen on 93 portal files. Anything not in this list must come back
-        /// re-encoded.
+        /// True if the format is rendered by browsers. A HEIC decodes correctly on some systems but
+        /// displays in neither Chrome nor Firefox: storing it as-is produces a listing with no
+        /// image, which is exactly the failure seen on 93 portal files. Anything not in this list
+        /// must come back re-encoded.
         /// </summary>
-        public static bool EstUnFormatDuWeb(byte[] bytes)
+        public static bool IsWebFormat(byte[] bytes)
         {
-            try
+            var format = Identify(bytes)?.Format;
+            return format is "JPEG" or "PNG" or "WEBP" or "GIF";
+        }
+
+        private static string FormatName(SKEncodedImageFormat format) => format.ToString().ToUpperInvariant();
+    }
+
+    /// <summary>Grey-level helpers shared by the comparisons. Weights of the historical implementation, kept so verdicts do not move.</summary>
+    internal static class Pixels
+    {
+        private const byte WhiteThreshold = 230;
+
+        public static byte[] Grey(RasterImage image)
+        {
+            var span = image.Bitmap.GetPixelSpan();
+            var grey = new byte[image.Width * image.Height];
+            for (int i = 0, p = 0; i < grey.Length; ++i, p += 4)
+                grey[i] = (byte)(0.3 * span[p] + 0.59 * span[p + 1] + 0.11 * span[p + 2]);
+            return grey;
+        }
+
+        public static bool IsWhiteRow(byte[] grey, int width, int row)
+        {
+            var start = row * width;
+            for (int x = 0; x < width; ++x)
             {
-                var format = ISImage.DetectFormat(bytes);
-                return format is not null
-                    && (format.Name.Equals("JPEG", StringComparison.OrdinalIgnoreCase)
-                        || format.Name.Equals("PNG", StringComparison.OrdinalIgnoreCase)
-                        || format.Name.Equals("WEBP", StringComparison.OrdinalIgnoreCase)
-                        || format.Name.Equals("GIF", StringComparison.OrdinalIgnoreCase));
+                if (grey[start + x] < WhiteThreshold)
+                    return false;
             }
-            catch (Exception)
+            return true;
+        }
+
+        public static bool IsWhiteColumn(byte[] grey, int width, int height, int column)
+        {
+            for (int y = 0; y < height; ++y)
             {
-                return false;
+                if (grey[y * width + column] < WhiteThreshold)
+                    return false;
             }
+            return true;
         }
     }
 }

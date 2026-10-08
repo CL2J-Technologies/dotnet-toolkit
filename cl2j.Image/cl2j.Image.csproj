@@ -2,14 +2,28 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Image</PackageId>
-    <Description>Image utilities: EXIF data extraction, image comparison, and resizing. Cross-platform, on ImageSharp.</Description>
+    <Description>Image utilities: reading, EXIF orientation, resizing, thumbnails, JPEG encoding and duplicate detection. Cross-platform, on SkiaSharp.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- System.Drawing.Common removed on September 3rd 2026. It throws
          PlatformNotSupportedException off Windows since .NET 6, which left this library mute and
-         inoperative on Linux. Do not reintroduce it. -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+         inoperative on Linux. Do not reintroduce it.
+
+         SixLabors.ImageSharp removed in 6.0.0, October 2026. Five vulnerabilities were published
+         against 3.1.12 on October 7th, fixed only in 4.x, whose licence requires a key at build
+         time. SkiaSharp is MIT, maintained by Microsoft, and tracks Skia's security fixes.
+
+         The Linux native assets are referenced here, not left to consumers: the library must work
+         on Linux out of the box — not working there unnoticed is how it once went fifteen months
+         without producing a thumbnail. NoDependencies bundles what libSkiaSharp needs instead of
+         expecting fontconfig on the host. Windows and macOS assets come with SkiaSharp itself. -->
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="cl2j.Image.Tests" />
   </ItemGroup>
 
   <ItemGroup>

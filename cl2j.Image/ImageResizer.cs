@@ -1,33 +1,50 @@
-﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace cl2j.Image
 {
     public class ImageResizer
     {
-        //Ported to ImageSharp on September 3rd 2026. System.Drawing throws
-        //PlatformNotSupportedException on anything but Windows since .NET 6, and the Appartogo
-        //site runs on Linux: its portal never produced a single thumbnail, without one line of
-        //error. See entry s19 of the cl2j repository journal.
-        //
-        //The images returned belong to the caller, who must dispose them. That was already the
-        //convention with Bitmap; the port did not change it.
-        public static ImageRgba32 Resize(ImageRgba32 image, int newWidth, int newHeight)
+        //Catmull-Rom: the bicubic kernel ImageSharp used under the name `Bicubic`, kept so the
+        //thumbnails do not change character with the engine.
+        private static readonly SKSamplingOptions Bicubic = new(SKCubicResampler.CatmullRom);
+        private static readonly SKSamplingOptions Linear = new(SKFilterMode.Linear, SKMipmapMode.None);
+
+        /// <summary>
+        /// The image scaled to `newWidth` x `newHeight`, aspect ratio not preserved. Returns **the
+        /// same instance** when the size already matches: callers rely on it to know what to dispose.
+        ///
+        /// **Why the halving.** A single cubic pass samples only a few source pixels per target
+        /// pixel: past a 2x reduction, the fine detail folds back into patterns that were not in the
+        /// photo. Measured in October 2026 on real listing photos, a 5760-pixel image reduced to
+        /// 1280 in one pass differed by 10 grey levels on average from the reference; halving first,
+        /// with a linear filter, while the image is still more than twice the target brought it to 6
+        /// and made it indistinguishable. ImageSharp did the equivalent by widening its kernel with
+        /// the reduction factor.
+        /// </summary>
+        public static RasterImage Resize(RasterImage image, int newWidth, int newHeight)
         {
             if (image.Width == newWidth && image.Height == newHeight)
                 return image;
 
-            //Bicubic, like the old InterpolationMode.HighQualityBicubic.
-            return image.Clone(x => x.Resize(new ResizeOptions
+            var current = image.Bitmap;
+            while (current.Width >= 2 * newWidth && current.Height >= 2 * newHeight)
             {
-                Size = new SixLabors.ImageSharp.Size(newWidth, newHeight),
-                Sampler = KnownResamplers.Bicubic,
-                Mode = ResizeMode.Stretch
-            }));
+                var half = current.Resize(RasterImage.Info(current.Width / 2, current.Height / 2), Linear)
+                    ?? throw new InvalidOperationException($"Cannot halve a {current.Width} x {current.Height} image");
+                if (!ReferenceEquals(current, image.Bitmap))
+                    current.Dispose();
+                current = half;
+            }
+
+            var resized = current.Resize(RasterImage.Info(newWidth, newHeight), Bicubic)
+                ?? throw new InvalidOperationException($"Cannot resize a {current.Width} x {current.Height} image to {newWidth} x {newHeight}");
+            if (!ReferenceEquals(current, image.Bitmap))
+                current.Dispose();
+
+            return new RasterImage(resized, image.Origin, image.HasMetadata);
         }
 
-        public static ImageRgba32 ResizeIfOversize(ImageRgba32 image, int maxW, int maxH)
+        public static RasterImage ResizeIfOversize(RasterImage image, int maxW, int maxH)
         {
             int newW;
             int newH;
@@ -42,9 +59,6 @@ namespace cl2j.Image
                 newH = maxH;
             }
 
-            //A very elongated image could yield a zero dimension, on which Bitmap threw. We clamp
-            //to 1: ImageSharp throws as well, and a panorama must not bring down an aggregation
-            //cycle.
             return Resize(image, Math.Max(1, newW), Math.Max(1, newH));
         }
     }
