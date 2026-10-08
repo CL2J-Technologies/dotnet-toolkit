@@ -1,39 +1,30 @@
-﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace cl2j.Image
 {
     public class ImageSerialization
     {
-        //Ported to ImageSharp on September 3rd 2026, see ImageResizer for why.
-        //
-        //`quality` stays a `long` so as not to break callers, which all pass `75L`. ImageSharp
-        //expects an integer from 1 to 100, as the GDI+ JPEG encoder did.
-        public static void SaveJpeg(string path, ImageRgba32 image, long quality = 75L)
+        public static void SaveJpeg(string path, RasterImage image, long quality = 75L)
         {
-            image.Save(path, Encoder(quality));
+            File.WriteAllBytes(path, SaveJpegToBytes(image, quality));
         }
 
-        public static Stream SaveJpegToStream(ImageRgba32 image, long quality = 75L)
+        public static Stream SaveJpegToStream(RasterImage image, long quality = 75L)
         {
-            var ms = new MemoryStream();
-            image.Save(ms, Encoder(quality));
-            ms.Position = 0;
-            return ms;
+            return new MemoryStream(SaveJpegToBytes(image, quality));
         }
 
-        public static byte[] SaveJpegToBytes(ImageRgba32 image, long quality = 75L)
+        /// <summary>
+        /// The image as a JPEG. No metadata is written — no EXIF, no ICC profile — which is what
+        /// `ExifUtils.Strip` promises. Alpha is ignored: JPEG has none, and a transparent pixel comes
+        /// out as its colour channels, black for transparent black, as with the previous engine.
+        /// </summary>
+        public static byte[] SaveJpegToBytes(RasterImage image, long quality = 75L)
         {
-            using var ms = new MemoryStream();
-            image.Save(ms, Encoder(quality));
-            return ms.ToArray();
-        }
-
-        private static JpegEncoder Encoder(long quality)
-        {
-            return new JpegEncoder { Quality = (int)Math.Clamp(quality, 1, 100) };
+            using var skImage = SKImage.FromBitmap(image.Bitmap);
+            using var data = skImage.Encode(SKEncodedImageFormat.Jpeg, (int)Math.Clamp(quality, 1, 100))
+                ?? throw new InvalidOperationException($"JPEG encoding failed for a {image.Width} x {image.Height} image");
+            return data.ToArray();
         }
     }
 }

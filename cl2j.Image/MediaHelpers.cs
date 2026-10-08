@@ -1,6 +1,4 @@
-﻿using ImageRgba32 = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
 using cl2j.FileStorage.Core;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace cl2j.Image
 {
@@ -16,7 +14,7 @@ namespace cl2j.Image
             }
         }
 
-        public static async Task UploadMediaAsync(IFileStorageProvider fileStorageProvider, string fileName, ImageRgba32 image, int max = 1280)
+        public static async Task UploadMediaAsync(IFileStorageProvider fileStorageProvider, string fileName, RasterImage image, int max = 1280)
         {
             //Fixed in passing, on September 3rd 2026: this overload computed the cleaned image
             //then serialized `image`, the original. The resize was therefore computed and thrown

@@ -195,8 +195,16 @@
          5.4.0 is a minor bump for the same reason: it adds a package rather than changing one.
          cl2j.FileStorage.Provider.S3 stores files as objects in an S3-compatible bucket — Amazon
          S3, Cloudflare R2, MinIO. Nothing in the twelve packages that were already here changes,
-         so a consumer that does not reference the new one sees no difference. -->
-    <Version>5.4.0</Version>
+         so a consumer that does not reference the new one sees no difference.
+
+         6.0.0 is a major bump: cl2j.Image moves from ImageSharp to SkiaSharp, and its public API
+         changes. Images are a `RasterImage` instead of ImageSharp's `Image<Rgba32>`, so a consumer
+         that named the ImageSharp type no longer compiles; `NommerUnFormatNonSupporte`,
+         `EstUnFormatDuWeb` and `OptimizeReasult` are renamed `NameUnsupportedFormat`, `IsWebFormat`
+         and `OptimizeResult`; `ImageCompareSettings.PourcentEqualsMin` becomes `PercentEqualsMin`;
+         the per-pixel `Rgba32` helpers are gone. Behaviour changes too: TIFF is no longer read,
+         and is named in the failure like HEIC. Nothing outside cl2j.Image changes. -->
+    <Version>6.0.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
