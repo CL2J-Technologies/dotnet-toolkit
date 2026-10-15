@@ -111,12 +111,19 @@ namespace cl2j.FileStorage.Provider.S3
             };
         }
 
-        public async Task<IEnumerable<string>> ListFilesAsync(string path)
+        public Task<IEnumerable<string>> ListFilesAsync(string path) => ListFilesAsync(path, string.Empty);
+
+        /// <summary>
+        ///     The service narrows the listing itself: the name prefix joins the folder in the request's
+        ///     <c>Prefix</c>, so only matching keys cross the wire. Grouping on the delimiter still keeps
+        ///     anything below a sub-folder out, whatever its name starts with.
+        /// </summary>
+        public async Task<IEnumerable<string>> ListFilesAsync(string path, string namePrefix)
         {
             var prefix = Prefix(path);
             var names = new List<string>();
 
-            await EachPage(prefix, page =>
+            await EachPage(prefix + namePrefix, page =>
             {
                 // Version 4 of the SDK leaves the collection null rather than empty when the
                 // response carries no such element, which is what a prefix holding nothing looks

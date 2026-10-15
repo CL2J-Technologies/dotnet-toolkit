@@ -235,6 +235,11 @@ not have either problem — worth knowing when deciding where a log goes.
 rather than everything beneath it, the same way the other providers behave. Object storage itself
 is flat: a key containing slashes only looks like a path.
 
+**A listing can be narrowed by name**: `ListFilesAsync(path, namePrefix)` returns only the files in
+the path whose name starts with the prefix, and the service does the narrowing, so a bucket too
+large to list whole can be walked one slice at a time. Azure Blob narrows the same way; the disk
+provider and any other implementation fall back on listing the path and filtering.
+
 # Feedback & Community
 
 We look forward to hearing your comments.

@@ -110,6 +110,29 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             return list;
         }
 
+        /// <summary>
+        ///     The service narrows the listing itself: the folder and the name prefix make the request's
+        ///     prefix, so only blobs whose name starts with both come back. A blob below a sub-folder is
+        ///     left out, as in the plain listing.
+        /// </summary>
+        public async Task<IEnumerable<string>> ListFilesAsync(string path, string namePrefix)
+        {
+            if (container == null)
+                throw new BadRequestException("Container not defined");
+
+            var folder = string.IsNullOrEmpty(path) ? string.Empty : path.TrimEnd('/') + "/";
+            var list = new List<string>();
+
+            await foreach (var blob in container.GetBlobsAsync(prefix: folder + namePrefix))
+            {
+                var name = blob.Name[folder.Length..];
+                if (name.IndexOf('/') < 0)
+                    list.Add(name);
+            }
+
+            return list;
+        }
+
         public async Task<IEnumerable<string>> ListFoldersAsync(string path)
         {
             if (container == null)
