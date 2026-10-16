@@ -460,15 +460,7 @@ namespace cl2j.Database
 
             var column = columns.First();
 
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = column.Name;
-            parameter.Value = key;
-
-            var dbType = ParameterTyping.DbTypeFor(column, key);
-            if (dbType is not null)
-                parameter.DbType = dbType.Value;
-
-            command.Parameters.Add(parameter);
+            ParameterDeclaration.Bind(command, column.Name, column, key);
         }
 
         /// <summary>
@@ -479,17 +471,7 @@ namespace cl2j.Database
         private static void CreateStatementParameters(this DbCommand command, TextStatement statement)
         {
             foreach (var statementParameter in statement.Parameters)
-            {
-                var parameter = command.CreateParameter();
-                parameter.ParameterName = statementParameter.Name;
-                parameter.Value = statementParameter.Value;
-
-                var dbType = ParameterTyping.DbTypeFor(statementParameter.Column, statementParameter.Value);
-                if (dbType is not null)
-                    parameter.DbType = dbType.Value;
-
-                command.Parameters.Add(parameter);
-            }
+                ParameterDeclaration.Bind(command, statementParameter.Name, statementParameter.Column, statementParameter.Value);
         }
 
         private static void CreateParameters(this DbCommand command, object t, IEnumerable<ColumnDescriptor> columns)
@@ -506,26 +488,12 @@ namespace cl2j.Database
 
         private static void CreateParameter(this DbCommand command, ColumnDescriptor column, object? value)
         {
-            var parameter = command.CreateParameter();
-            parameter.ParameterName = column.Name;
-
             if (column.ColumnAtribute.Json)
-            {
-                parameter.Value = ToJsonString(value);
-                parameter.DbType = DbType.String;
-            }
+                ParameterDeclaration.Bind(command, column.Name, column, ToJsonString(value), DbType.String);
             else if (value is null && column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
-                parameter.Value = DateTimeOffset.UtcNow;
+                ParameterDeclaration.Bind(command, column.Name, column, DateTimeOffset.UtcNow);
             else
-            {
-                parameter.Value = value ?? DBNull.Value;
-
-                var dbType = ParameterTyping.DbTypeFor(column, value);
-                if (dbType is not null)
-                    parameter.DbType = dbType.Value;
-            }
-
-            command.Parameters.Add(parameter);
+                ParameterDeclaration.Bind(command, column.Name, column, value);
         }
 
         private static void GenerateKeys<TIn>(TIn item, IEnumerable<ColumnDescriptor> keys, IIdentifierGenerator identifierGenerator)
