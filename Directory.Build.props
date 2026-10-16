@@ -209,8 +209,18 @@
          `ListFilesAsync(path, namePrefix)` overload, with a default implementation on the interface
          so every existing provider — and every consumer's own implementation — keeps compiling and
          answers the same as listing the path and filtering. The S3 and Azure Blob providers narrow
-         at the service instead. -->
-    <Version>6.1.0</Version>
+         at the service instead.
+
+         6.2.0 is a minor bump: cl2j.Database declares its parameters by their type rather than by
+         their value. A string is sent as nvarchar(4000), or varchar(8000) for a key, and as max
+         past that; a decimal as decimal(38,18) whenever that holds it exactly; a null with the type
+         of its property. No value changes, and every query keeps one plan in SQL Server's cache
+         instead of one per length, scale or null. One thing can differ: arithmetic SQL Server does
+         with a decimal parameter derives its result type from the declared one, so the precision
+         of such a result may change. -->
+    <Version>6.2.0</Version>
+        
+  
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
