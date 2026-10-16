@@ -203,8 +203,14 @@
          `EstUnFormatDuWeb` and `OptimizeReasult` are renamed `NameUnsupportedFormat`, `IsWebFormat`
          and `OptimizeResult`; `ImageCompareSettings.PourcentEqualsMin` becomes `PercentEqualsMin`;
          the per-pixel `Rgba32` helpers are gone. Behaviour changes too: TIFF is no longer read,
-         and is named in the failure like HEIC. Nothing outside cl2j.Image changes. -->
-    <Version>6.0.0</Version>
+         and is named in the failure like HEIC. Nothing outside cl2j.Image changes.
+
+         6.1.0 is a minor bump: it adds API rather than changing any. IFileStorageProvider gains a
+         `ListFilesAsync(path, namePrefix)` overload, with a default implementation on the interface
+         so every existing provider — and every consumer's own implementation — keeps compiling and
+         answers the same as listing the path and filtering. The S3 and Azure Blob providers narrow
+         at the service instead. -->
+    <Version>6.1.0</Version>
     <Authors>CL2J Technologies</Authors>
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>

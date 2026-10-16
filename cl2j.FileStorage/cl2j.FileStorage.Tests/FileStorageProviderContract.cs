@@ -100,6 +100,57 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
+        public async Task A_listing_by_name_prefix_names_only_the_files_that_start_with_it()
+        {
+            var folder = Folder(nameof(A_listing_by_name_prefix_names_only_the_files_that_start_with_it));
+
+            await Provider.WriteTextAsync($"{folder}/ab1.txt", "1");
+            await Provider.WriteTextAsync($"{folder}/ab2.txt", "2");
+            await Provider.WriteTextAsync($"{folder}/ac.txt", "3");
+            //Below the folder rather than in it: a name prefix narrows the listing, it does not deepen it.
+            await Provider.WriteTextAsync($"{folder}/ab-sub/deep.txt", "4");
+
+            var files = await Provider.ListFilesAsync(folder, "ab");
+
+            Assert.Equal(["ab1.txt", "ab2.txt"], files.OrderBy(n => n, StringComparer.Ordinal));
+        }
+
+        [Fact]
+        public async Task A_listing_by_name_prefix_works_at_the_root()
+        {
+            //At the root is where a flat store keeps everything, and where walking it one slice at a time matters.
+            var prefix = $"contract-root-{Guid.NewGuid():N}-";
+
+            await Provider.WriteTextAsync($"{prefix}a.txt", "1");
+            await Provider.WriteTextAsync($"{prefix}b.txt", "2");
+
+            try
+            {
+                var files = await Provider.ListFilesAsync(string.Empty, prefix);
+
+                Assert.Equal([$"{prefix}a.txt", $"{prefix}b.txt"], files.OrderBy(n => n, StringComparer.Ordinal));
+            }
+            finally
+            {
+                await Provider.DeleteAsync($"{prefix}a.txt");
+                await Provider.DeleteAsync($"{prefix}b.txt");
+            }
+        }
+
+        [Fact]
+        public async Task A_listing_by_an_empty_name_prefix_is_the_whole_listing()
+        {
+            var folder = Folder(nameof(A_listing_by_an_empty_name_prefix_is_the_whole_listing));
+
+            await Provider.WriteTextAsync($"{folder}/one.txt", "1");
+            await Provider.WriteTextAsync($"{folder}/two.txt", "2");
+
+            Assert.Equal(
+                (await Provider.ListFilesAsync(folder)).OrderBy(n => n, StringComparer.Ordinal),
+                (await Provider.ListFilesAsync(folder, string.Empty)).OrderBy(n => n, StringComparer.Ordinal));
+        }
+
+        [Fact]
         public async Task A_listing_names_the_folders_that_are_there()
         {
             var folder = Folder(nameof(A_listing_names_the_folders_that_are_there));

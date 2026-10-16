@@ -42,6 +42,21 @@ namespace cl2j.FileStorage.Core
         Task<IEnumerable<string>> ListFilesAsync(string path);
 
         /// <summary>
+        /// Return the files directly in the path whose name starts with <paramref name="namePrefix"/>.
+        /// </summary>
+        /// <remarks>
+        /// For a store too large to list whole. A store that can narrow a listing at the source — an S3 bucket, an Azure
+        /// container — answers only the names that start with the prefix, so a caller can walk the store one slice at a time
+        /// and never hold all of it. This default answers the same by listing the path and filtering, which is correct for
+        /// any provider but costs the whole listing: a provider that can do better overrides it.
+        /// </remarks>
+        /// <param name="path">The path to list the objects</param>
+        /// <param name="namePrefix">What the names must start with; empty lists the whole path</param>
+        /// <returns>The names in the path that start with the prefix</returns>
+        async Task<IEnumerable<string>> ListFilesAsync(string path, string namePrefix) =>
+            (await ListFilesAsync(path)).Where(name => name.StartsWith(namePrefix, StringComparison.Ordinal));
+
+        /// <summary>
         /// Return the list of all directory contained in the path
         /// </summary>
         /// <param name="path">The path to list the objects</param>
