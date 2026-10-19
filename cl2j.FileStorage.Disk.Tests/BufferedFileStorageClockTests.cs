@@ -10,7 +10,7 @@ namespace cl2j.FileStorage.Disk.Tests
     ///
     /// They exist because of a defect seen in production on September 6th 2026: the log stamped
     /// its lines in the time zone the application configured while the file name and the rollover
-    /// were hard-coded to UTC. The file `appartogocrawler_20260906_01.log` opened on a line dated
+    /// were hard-coded to UTC. The file `crawler_20260906_01.log` opened on a line dated
     /// the 5th at 19:59 — that is, midnight UTC. Diagnosing an evening therefore meant opening the
     /// next day file, with nothing to say so.
     ///

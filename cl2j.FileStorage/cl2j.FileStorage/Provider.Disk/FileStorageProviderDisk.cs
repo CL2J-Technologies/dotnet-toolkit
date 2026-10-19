@@ -123,7 +123,7 @@ namespace cl2j.FileStorage.Provider.Disk
         ///
         /// **Why, since September 3rd 2026.** The previous implementation opened the target with
         /// `FileMode.Create`, which **truncates it to zero before writing**. A process interrupted
-        /// between the two — on Appartogo, a VM deallocated by its Logic App while a crawl cycle
+        /// between the two — for instance a VM deallocated by a scheduler while a crawl cycle
         /// was writing — left an empty or partial file. The Azure storage of the same project does
         /// not have this problem: a blob only becomes visible there once the upload is committed.
         /// Local disk had no such guarantee; it does now.
