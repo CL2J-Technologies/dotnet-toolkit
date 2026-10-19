@@ -32,8 +32,7 @@ namespace cl2j.Image
         /// metadata is written, as for the JPEG. Alpha is kept: unlike JPEG, WebP has a channel for
         /// it.
         ///
-        /// Added in 6.3.0 for Appartogo, which serves its listing photos as WebP next to the JPEG.
-        /// SkiaSharp encodes it natively (libwebp): no library is added, and AVIF stays out of reach.
+        /// Added in 6.3.0, for serving an image as WebP next to its JPEG. SkiaSharp encodes it natively (libwebp): no library is added, and AVIF stays out of reach.
         ///
         /// Skia switches to **lossless** WebP at quality 100, which weighs more than the JPEG would.
         /// The number is clamped to 1..100 like the JPEG's, and the default stays 75.

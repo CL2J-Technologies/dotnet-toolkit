@@ -6,9 +6,8 @@ using Xunit;
 namespace cl2j.Image.Tests
 {
     /// <summary>
-    /// The WebP encoder, added in 6.3.0 so that Appartogo can serve its listing photos as WebP next
-    /// to the JPEG. `RasterImage.Bitmap` is internal, so a consumer cannot encode on its own: the
-    /// package has to.
+    /// The WebP encoder, added in 6.3.0 for serving an image as WebP next to its JPEG.
+    /// `RasterImage.Bitmap` is internal, so a consumer cannot encode on its own: the package has to.
     /// </summary>
     public class ImageSerializationTests
     {
