@@ -217,8 +217,14 @@
          of its property. No value changes, and every query keeps one plan in SQL Server's cache
          instead of one per length, scale or null. One thing can differ: arithmetic SQL Server does
          with a decimal parameter derives its result type from the declared one, so the precision
-         of such a result may change. -->
-    <Version>6.2.0</Version>
+         of such a result may change.
+
+         6.3.0 is a minor bump: it adds API. cl2j.Image gains `ImageSerialization.SaveWebpToBytes`,
+         and `MediaHelpers.GetContentTypeFromFileName` names `.webp`. `RasterImage.Bitmap` is
+         internal, so a consumer cannot encode WebP itself since 6.0.0 moved off ImageSharp: the
+         package has to. SkiaSharp does it natively, no dependency is added. (6.1.0 and 6.2.0 were
+         already taken when this went in, hence the number.) -->
+    <Version>6.3.0</Version>
         
   
     <Authors>CL2J Technologies</Authors>
