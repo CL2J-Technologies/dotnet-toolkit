@@ -40,6 +40,9 @@ namespace cl2j.Image
             var extension = Path.GetExtension(fileName).ToLowerInvariant();
             if (extension == ".jpg" || extension == ".jpeg")
                 return "image/jpeg";
+            //6.3.0. Without it a .webp goes to the CDN with no Content-Type.
+            if (extension == ".webp")
+                return "image/webp";
             return null;
         }
     }

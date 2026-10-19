@@ -8,7 +8,7 @@ namespace cl2j.FileStorage.Disk.Tests
     /// Tests for the atomic write of the disk provider.
     ///
     /// They exist because of a precise risk: `WriteAsync` opened the target with
-    /// `FileMode.Create`, which truncates it to zero before writing. On Appartogo, the machine
+    /// `FileMode.Create`, which truncates it to zero before writing. In the consuming application, the machine
     /// that aggregates is deallocated every day by a Logic App while cycles write every three
     /// minutes — an interruption between the truncation and the end of the write would have left
     /// an empty or partial file.

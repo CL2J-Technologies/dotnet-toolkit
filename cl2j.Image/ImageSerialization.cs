@@ -26,5 +26,23 @@ namespace cl2j.Image
                 ?? throw new InvalidOperationException($"JPEG encoding failed for a {image.Width} x {image.Height} image");
             return data.ToArray();
         }
+
+        /// <summary>
+        /// The image as a lossy WebP, on the same quality scale as <see cref="SaveJpegToBytes"/>. No
+        /// metadata is written, as for the JPEG. Alpha is kept: unlike JPEG, WebP has a channel for
+        /// it.
+        ///
+        /// Added in 6.3.0, for serving an image as WebP next to its JPEG. SkiaSharp encodes it natively (libwebp): no library is added, and AVIF stays out of reach.
+        ///
+        /// Skia switches to **lossless** WebP at quality 100, which weighs more than the JPEG would.
+        /// The number is clamped to 1..100 like the JPEG's, and the default stays 75.
+        /// </summary>
+        public static byte[] SaveWebpToBytes(RasterImage image, long quality = 75L)
+        {
+            using var skImage = SKImage.FromBitmap(image.Bitmap);
+            using var data = skImage.Encode(SKEncodedImageFormat.Webp, (int)Math.Clamp(quality, 1, 100))
+                ?? throw new InvalidOperationException($"WebP encoding failed for a {image.Width} x {image.Height} image");
+            return data.ToArray();
+        }
     }
 }

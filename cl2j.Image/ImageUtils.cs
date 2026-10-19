@@ -9,7 +9,7 @@ namespace cl2j.Image
     /// **Ported from System.Drawing on September 3rd 2026, then from ImageSharp in October 2026.**
     ///
     /// The first port was not modernisation: `System.Drawing.Common` throws
-    /// `PlatformNotSupportedException` on anything but Windows since .NET 6, and the Appartogo
+    /// `PlatformNotSupportedException` on anything but Windows since .NET 6, and the consuming
     /// portal, which runs on Linux, had produced **no thumbnail at all** in fifteen months —
     /// 5,400 images, without one line of error, because the entry points swallowed the exception.
     ///
@@ -451,8 +451,8 @@ namespace cl2j.Image
         /// header — no full decode, so negligible next to a download.
         ///
         /// It answers a question the calling code must ask before storing anything: "is what the
-        /// source just handed me really an image?". On September 3rd 2026, the Appartogo crawler
-        /// was storing the LogisQuebec home page under a `.jpg` name — the source redirected its
+        /// source just handed me really an image?". On September 3rd 2026, a consuming crawler
+        /// was storing a source's home page under a `.jpg` name — the source redirected its
         /// deleted photos to its home page, and `HttpClient` follows redirects on its own.
         /// </summary>
         public static bool IsImage(byte[] bytes) => Identify(bytes) is not null;

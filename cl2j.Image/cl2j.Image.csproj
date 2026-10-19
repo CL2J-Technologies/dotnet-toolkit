@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Image</PackageId>
-    <Description>Image utilities: reading, EXIF orientation, resizing, thumbnails, JPEG encoding and duplicate detection. Cross-platform, on SkiaSharp.</Description>
+    <Description>Image utilities: reading, EXIF orientation, resizing, thumbnails, JPEG and WebP encoding and duplicate detection. Cross-platform, on SkiaSharp.</Description>
   </PropertyGroup>
 
   <ItemGroup>

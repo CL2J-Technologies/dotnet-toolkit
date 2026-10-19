@@ -6,7 +6,7 @@ namespace cl2j.Image.Tests
 {
     /// <summary>
     /// These tests exist because of a precise failure: `cl2j.Image` relied on `System.Drawing`,
-    /// which throws `PlatformNotSupportedException` off Windows since .NET 6. The Appartogo site
+    /// which throws `PlatformNotSupportedException` off Windows since .NET 6. The consuming site
     /// runs on Linux, so its portal produced **no thumbnail at all** between June 2025 and
     /// September 2026 — 5,400 images, zero thumbnails, without one line of error, because the
     /// entry points swallowed the exception to return `null` or the original bytes.
@@ -99,7 +99,7 @@ namespace cl2j.Image.Tests
         }
 
         [Theory]
-        [InlineData("<!DOCTYPE html>\r\n<html lang=\"fr\"><head><title>LogisQuebec</title></head></html>")]
+        [InlineData("<!DOCTYPE html>\r\n<html lang=\"fr\"><head><title>Accueil</title></head></html>")]
         [InlineData("")]
         [InlineData("not an image at all")]
         public void IsImage_refuses_what_is_not_an_image(string content)
