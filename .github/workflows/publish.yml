@@ -1,7 +1,13 @@
 name: Publish NuGet Packages
 
 # Releases. Pull requests are validated by ci.yml, which is a separate workflow because this one
-# holds NUGET_API_KEY and should not run on branch contributions.
+# can publish to NuGet.org and should not run on branch contributions.
+#
+# Publishing uses NuGet.org Trusted Publishing: there is no long-lived API key to expire or leak.
+# The job exchanges its GitHub OIDC token for a short-lived key (about an hour), which NuGet.org
+# only issues to this repository's publish.yml, for packages matching `cl2j.*`. Renaming this
+# file, moving the repository, or adding a job `environment:` breaks that match — update the
+# policy on NuGet.org at the same time.
 #
 # The build and test steps below stay: this workflow must never pack an artifact it has not
 # compiled and tested itself. ci.yml having passed on the pull request is not a substitute — main
@@ -19,6 +25,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Lets NuGet/login request the OIDC token.
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +44,14 @@ jobs:
       - name: Pack
         run: dotnet pack --no-build -c Release -o ./artifacts
 
+      # Right before the push, so the short-lived key is not spent waiting on build and tests.
+      - name: Log in to NuGet.org
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: jfblier-cl2j
+
       - name: Push to NuGet.org
-        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
     env:
       DOTNET_NOLOGO: true
