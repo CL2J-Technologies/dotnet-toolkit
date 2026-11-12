@@ -49,9 +49,10 @@ jobs:
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          # The NuGet.org account that owns the cl2j.* packages and the trusted publishing policy.
-          # The login succeeds for any account with a matching policy, but the push is then
-          # refused with a 403 unless that account owns the packages.
+          # The NuGet.org account that *created* the trusted publishing policy — not a GitHub
+          # account, and not the policy's package owner. A wrong name fails the login with a 401
+          # ("no matching trust policy"). Separately, the policy's package owner must be jfblier,
+          # which owns the cl2j.* packages, or the login succeeds and the push fails with a 403.
           user: jfblier
 
       - name: Push to NuGet.org
