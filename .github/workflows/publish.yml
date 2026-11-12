@@ -49,7 +49,11 @@ jobs:
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: jfblier-cl2j
+          # The NuGet.org account that *created* the trusted publishing policy — not a GitHub
+          # account, and not the policy's package owner. A wrong name fails the login with a 401
+          # ("no matching trust policy"). Separately, the policy's package owner must be jfblier,
+          # which owns the cl2j.* packages, or the login succeeds and the push fails with a 403.
+          user: jfblier
 
       - name: Push to NuGet.org
         run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
