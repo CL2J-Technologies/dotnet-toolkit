@@ -19,11 +19,16 @@ namespace cl2j.Tooling.Email
             return await SendEmailAsync(smtpSettings.From, subject, body, toEmail, isBodyHtml);
         }
 
-        public async Task<EmailResult> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false)
+        public Task<EmailResult> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false)
+        {
+            return SendEmailAsync(from, subject, body, toEmail, null, isBodyHtml);
+        }
+
+        public async Task<EmailResult> SendEmailAsync(string from, string subject, string body, string toEmail, string? replyTo, bool isBodyHtml = false)
         {
             try
             {
-                var message = CreateMailMessage(from, subject, body, toEmail, isBodyHtml);
+                var message = CreateMailMessage(from, subject, body, toEmail, isBodyHtml, replyTo);
                 var client = CreateSmtpClient(smtpSettings);
                 await client.SendMailAsync(message);
 
@@ -79,7 +84,7 @@ namespace cl2j.Tooling.Email
             };
         }
 
-        private static MailMessage CreateMailMessage(string from, string subject, string body, string to, bool isBodyHtml)
+        internal static MailMessage CreateMailMessage(string from, string subject, string body, string to, bool isBodyHtml, string? replyTo = null)
         {
             var mailMessage = new MailMessage
             {
@@ -90,6 +95,9 @@ namespace cl2j.Tooling.Email
             };
             foreach (var address in to.Split(","))
                 mailMessage.To.Add(address);
+            //An address that is not one throws FormatException, which the caller turns into a failed result.
+            if (!string.IsNullOrWhiteSpace(replyTo))
+                mailMessage.ReplyToList.Add(replyTo);
             return mailMessage;
         }
     }
