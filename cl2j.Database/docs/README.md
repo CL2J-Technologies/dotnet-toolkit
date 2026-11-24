@@ -1,6 +1,6 @@
 # cl2j.Database documentation
 
-An attribute-driven micro-ORM for .NET and SQL Server. Start with [Getting started](getting-started.md).
+An attribute-driven micro-ORM for .NET, on SQL Server, MySQL and PostgreSQL. Start with [Getting started](getting-started.md).
 
 | Page | What it covers |
 |---|---|
@@ -17,6 +17,9 @@ An attribute-driven micro-ORM for .NET and SQL Server. Start with [Getting start
 | [Parameters and the plan cache](parameters-and-plan-cache.md) | How parameters are declared and why. |
 | [Errors and diagnostics](errors-and-diagnostics.md) | Exceptions, logging, what reaches the logs. |
 | [Edge cases](edge-cases.md) | The non-obvious behaviour, with its proof. |
-| [SQL Server provider](providers/sqlserver.md) | Provider-specific behaviour. |
+| [SQL Server provider](providers/sqlserver.md) | SQL Server specifics. |
+| [MySQL provider](providers/mysql.md) | MySQL 8.0.13 or later: registration, type mapping, bulk insert. |
+| [PostgreSQL provider](providers/postgresql.md) | PostgreSQL 13 or later: registration, type mapping, binary COPY. |
+| [Implementing a provider](providers/implementing-a-provider.md) | What a provider supplies, to add another database engine. |
 
 Performance numbers are in [`benchmarks/README.md`](../../benchmarks/README.md).

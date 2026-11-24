@@ -2,7 +2,7 @@
 
 **Describe a table with a class. Get the SQL, the mapping and a 1.5-second million-row bulk insert, without a `DbContext`.**
 
-Hand-writing `INSERT`, `UPDATE` and row-mapping code for every table is slow to write and easy to get wrong. Carrying EF Core's context, change tracker and query pipeline for simple data access costs time and memory on every call. `cl2j.Database` sits between the two: a few attributes on a plain class, and `Insert`, `Update`, `Query`, `QueryKey`, `BulkInsert` and `CreateTable` are written for you, at the speed of hand-written ADO.NET and Dapper. SQL Server only for now.
+Hand-writing `INSERT`, `UPDATE` and row-mapping code for every table is slow to write and easy to get wrong. Carrying EF Core's context, change tracker and query pipeline for simple data access costs time and memory on every call. `cl2j.Database` sits between the two: a few attributes on a plain class, and `Insert`, `Update`, `Query`, `QueryKey`, `BulkInsert` and `CreateTable` are written for you, at the speed of hand-written ADO.NET and Dapper. It runs on **SQL Server, MySQL (8.0+) and PostgreSQL (13+)**.
 
 ```cs
 [Table("Sale")]
@@ -38,9 +38,10 @@ await connection.BulkInsert(manySales);                                    // Sq
 - **JSON columns with one attribute:** `Json = true`.
 - **Generated, prefixed keys.** `KeyPrefix = "sal_"` gives identifiers you can attribute to a table in a log, with a pluggable generator.
 - **Plan-cache-friendly parameters.** They are declared from the column, not from the value, so the server's plan cache stays small and a `varchar` key stays seekable ([details](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/parameters-and-plan-cache.md)).
-- **18 types round-tripped against a real SQL Server**, with what each keeps and loses written down ([Type mapping](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/type-mapping.md)).
+- **Three database engines behind one API:** SQL Server, MySQL and PostgreSQL, each tested against a real server.
+- **18 types round-tripped against a real SQL Server**, with what each keeps and loses written down ([Type mapping](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/type-mapping.md)); the MySQL and PostgreSQL pages list their own mapping.
 
-Numbers come from the [benchmarks](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/benchmarks/README.md): one run, one workstation, SQL Server in a local container, steady state (the one-off cost of the first read of each type is excluded). Read them as ratios, not as absolute times.
+Numbers come from the [benchmarks](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/benchmarks/README.md): one run, one workstation, SQL Server only, in a local container, steady state (the one-off cost of the first read of each type is excluded). Read them as ratios, not as absolute times.
 
 ## How it compares
 
@@ -54,7 +55,7 @@ Numbers come from the [benchmarks](https://github.com/CL2J-Technologies/dotnet-t
 | `DbContext` / change tracking | None, by design | None | Yes |
 | LINQ, joins, navigation properties | No: write SQL | No: write SQL | Yes |
 | Migrations | No: `CreateTable` only | No | Yes |
-| Databases | SQL Server | Any ADO.NET provider | Many |
+| Databases | SQL Server, MySQL, PostgreSQL | Any ADO.NET provider | Many |
 
 **Lightweight by design, which means no LINQ, no migrations and no change tracking.** `cl2j.Database` also needs Roslyn at runtime (the row mapper is compiled on the first read of each type, see [#42](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/42)) and handles one table per call: for joins, you write the SQL.
 
@@ -62,11 +63,19 @@ Numbers come from the [benchmarks](https://github.com/CL2J-Technologies/dotnet-t
 
 ```powershell
 Install-Package cl2j.Database
-Install-Package cl2j.Database.SqlServer
+Install-Package cl2j.Database.SqlServer   # or cl2j.Database.MySql, or cl2j.Database.PostgreSql
 ```
 
 - `cl2j.Database` is the abstraction: attributes, `IDatabase`, `DbConnection` extension methods, identifier generation.
-- `cl2j.Database.SqlServer` is the SQL Server provider, built on `Microsoft.Data.SqlClient`. It is the only provider today.
+- A provider package, one per database engine:
+
+  | Package | Database | Built on | Page |
+  |---|---|---|---|
+  | `cl2j.Database.SqlServer` | SQL Server | `Microsoft.Data.SqlClient` | [SQL Server provider](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/sqlserver.md) |
+  | `cl2j.Database.MySql` | MySQL 8.0 or later | `MySqlConnector` | [MySQL provider](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/mysql.md) |
+  | `cl2j.Database.PostgreSql` | PostgreSQL 13 or later | `Npgsql` | [PostgreSQL provider](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/postgresql.md) |
+
+  The examples below use SQL Server; the provider pages show the same wiring for the other two. To write another provider, see [Implementing a provider](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/implementing-a-provider.md).
 - Target framework: `net10.0`. It replaces `cl2j.DataStore.Database-deprecated` (see [Migrating](#migrating-from-cl2jdatastoredatabase-deprecated)).
 
 Wiring is four steps, one of them outside dependency injection: see [Wiring it up](#wiring-it-up) below, or the [Getting started](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/getting-started.md) page.
@@ -90,12 +99,13 @@ Every page lists what the repository's tests prove and says plainly what the lib
 | Parameter declarations and plan-cache behaviour | [Parameters and the plan cache](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/parameters-and-plan-cache.md) |
 | Exceptions and logging | [Errors and diagnostics](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/errors-and-diagnostics.md) |
 | The non-obvious behaviour, in one list | [Edge cases](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/edge-cases.md) |
-| SQL Server specifics | [SQL Server provider](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/sqlserver.md) |
+| Per-database specifics | [SQL Server](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/sqlserver.md), [MySQL](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/mysql.md), [PostgreSQL](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/postgresql.md) |
+| Writing a provider for another database | [Implementing a provider](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/providers/implementing-a-provider.md) |
 
 
 # Wiring it up
 
-Four steps, and the last one is **outside dependency injection**:
+Four steps, and the last one is **outside dependency injection**. This is the SQL Server version; MySQL and PostgreSQL use the same steps with `MySqlDatabase` and `MySql.Register()`, or `PostgreSqlDatabase` and `PostgreSql.Register()` (see their provider pages):
 
 ```cs
 using cl2j.Database;
@@ -323,10 +333,10 @@ Add `TrustServerCertificate=True` in development (a server with a valid certific
 
 # Testing
 
-`cl2j.Database.Tests` tests statement generation without a server. `cl2j.Database.IntegrationTests` runs against a real SQL Server started with Testcontainers, so `dotnet test` needs Docker running; those tests fail rather than skip when it is not. See [CONTRIBUTING.md](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/CONTRIBUTING.md).
+`cl2j.Database.Tests` tests statement generation without a server. `cl2j.Database.IntegrationTests`, `cl2j.Database.MySql.IntegrationTests` and `cl2j.Database.PostgreSql.IntegrationTests` run against a real SQL Server, MySQL and PostgreSQL started with Testcontainers, so `dotnet test` needs Docker running; those tests fail rather than skip when it is not. See [CONTRIBUTING.md](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/CONTRIBUTING.md).
 
 # Known limitations
 
 - **ANSI key binding only applies to `QueryKey`.** `QuerySingle<T>(new { ... })` and the other anonymous-parameter paths do not get it, which can defeat the index on a `varchar` key column. See [#43](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/43).
 - **Roslyn is a runtime dependency**, needed on the first read, and nothing checks for it at startup. See [#42](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/42).
-- **One provider today.** SQL Server only; the schema is created from the class and never migrated; there are no joins, LINQ or change tracking. The full list of behaviours worth knowing is in [Edge cases](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/edge-cases.md).
+- **Providers are not interchangeable.** SQL Server, MySQL and PostgreSQL differ in column types and in a few behaviours, and each provider page lists them. The schema is created from the class and never migrated; there are no joins, LINQ or change tracking. The full list of behaviours worth knowing is in [Edge cases](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/edge-cases.md).
