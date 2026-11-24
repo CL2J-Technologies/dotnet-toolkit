@@ -240,11 +240,11 @@
          a Reply-To address, declared as a default interface method so existing implementers keep
          compiling; the default drops the Reply-To, `EmailService` honours it.
 
-         6.6.4 is a patch bump: cl2j.Database could not read a nullable enum column. The reader it
+         6.5.5 is a patch bump: cl2j.Database could not read a nullable enum column. The reader it
          generates read such a column through GetValue and unboxed the int the provider returns
          straight to the nullable enum, which throws InvalidCastException on every row. It now
          reads the int and converts it, and a NULL gives null. No API change. -->
-    <Version>6.6.4</Version>
+    <Version>6.5.5</Version>
         
   
     <Authors>CL2J Technologies</Authors>
