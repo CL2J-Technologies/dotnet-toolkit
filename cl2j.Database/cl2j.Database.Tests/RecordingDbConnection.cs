@@ -16,6 +16,9 @@ namespace cl2j.Database.Tests
         /// <summary>The columns of the empty result set a reader command returns.</summary>
         public DataTable ReaderShape { get; set; } = new();
 
+        /// <summary>What a scalar command returns.</summary>
+        public object? ScalarResult { get; set; }
+
         /// <summary>The commands created from this connection, in order.</summary>
         public List<RecordingDbCommand> Commands { get; } = [];
 
@@ -59,7 +62,7 @@ namespace cl2j.Database.Tests
 
         public override void Cancel() { }
         public override int ExecuteNonQuery() => 1;
-        public override object? ExecuteScalar() => null;
+        public override object? ExecuteScalar() => connection.ScalarResult;
         public override void Prepare() { }
 
         protected override DbParameter CreateDbParameter() => new RecordingDbParameter();

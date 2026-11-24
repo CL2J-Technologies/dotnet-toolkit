@@ -153,9 +153,9 @@ namespace cl2j.Database
         public static async Task<TOut?> Insert<TIn, TOut>(this DbConnection connection, TIn item)
         {
             var result = await Insert(connection, item, CancellationToken.None);
-            if (result is null)
-                return default;
-            return (TOut)result;
+            //Converted rather than unboxed: a server hands the identity back as whatever its own
+            //type is (MySQL: ulong), which does not unbox to the int the caller asked for.
+            return IdentityConversion.To<TOut>(result);
         }
 
         public static async Task<object?> Insert<TIn>(this DbConnection connection, TIn item, CancellationToken cancellationToken, DbTransaction? transaction = null)
