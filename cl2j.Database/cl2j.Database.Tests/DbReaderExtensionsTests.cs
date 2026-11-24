@@ -207,7 +207,7 @@ namespace cl2j.Database.Tests
             Assert.Null(empty.Payload);
         }
 
-        [Fact(Skip = "Bug: a nullable enum column is emitted as (E?)context.GetValue(o), which cannot unbox the int the provider returns and throws InvalidCastException")]
+        [Fact]
         public async Task A_nullable_enum_column_is_read_as_the_enum()
         {
             var table = Table(("Id", typeof(string)), ("MaybeKind", typeof(int)));
