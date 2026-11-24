@@ -110,6 +110,31 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
+        public void A_string_key_constraint_is_a_plain_primary_key_that_every_provider_accepts()
+        {
+            //MySQL refuses CLUSTERED and PostgreSQL refuses ASC, so the text carries neither.
+            var statement = Builder().GetCreateTableStatement(typeof(TpStringKeyRow));
+
+            var expected =
+                "CREATE TABLE `TpStringKey` 
+" +
+                "(
+" +
+                "	`Id` VARCHAR(20) NOT NULL
+" +
+                "	,CONSTRAINT `PK_TpStringKey` PRIMARY KEY (`Id`)
+" +
+                "	,`Label` VARCHAR(50)
+" +
+                ")
+";
+
+            Assert.Equal(expected, Normalise(statement.Text));
+            Assert.DoesNotContain("CLUSTERED", statement.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("ASC", statement.Text, StringComparison.Ordinal);
+        }
+
+        [Fact]
         public void The_builder_is_its_own_formatter()
         {
             var builder = Builder();

@@ -37,8 +37,12 @@ namespace cl2j.Database.CommandBuilders
                 //Primary Key
                 if (isKey)
                 {
+                    //Plain PRIMARY KEY, with neither CLUSTERED nor ASC: MySQL refuses the first and
+                    //PostgreSQL refuses the second, and neither is needed. On SQL Server a primary key
+                    //on a new table is clustered by default, and ascending is the default order, so
+                    //the table comes out the same.
                     if (column.Property.PropertyType == Types.TypeString)
-                        lines.Add($"CONSTRAINT {formatter.FormatColumnName($"PK_{tableDescriptor.Name}")} PRIMARY KEY CLUSTERED({column.NameFormatted} ASC)");
+                        lines.Add($"CONSTRAINT {formatter.FormatColumnName($"PK_{tableDescriptor.Name}")} PRIMARY KEY ({column.NameFormatted})");
                 }
 
                 //Foreign Key

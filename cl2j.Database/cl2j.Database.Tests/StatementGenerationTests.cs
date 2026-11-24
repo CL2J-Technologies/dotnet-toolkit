@@ -164,7 +164,7 @@ namespace cl2j.Database.Tests
                 "CREATE TABLE [billing].[Invoice] \n" +
                 "(\n" +
                 "\t[Id] varchar(50) NOT NULL\n" +
-                "\t,CONSTRAINT [PK_Invoice] PRIMARY KEY CLUSTERED([Id] ASC)\n" +
+                "\t,CONSTRAINT [PK_Invoice] PRIMARY KEY ([Id])\n" +
                 "\t,[CustomerId] varchar(50)\n" +
                 "\t,CONSTRAINT [FK_Invoice_Customer] FOREIGN KEY ([CustomerId]) REFERENCES [Customer]([Id])\n" +
                 "\t,[Amount] decimal(18,2) NOT NULL\n" +
