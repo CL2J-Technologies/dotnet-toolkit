@@ -1,3 +1,4 @@
+using cl2j.FileStorage.Core;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -238,6 +239,39 @@ namespace cl2j.Logging.Tests
         public void A_MemoryLogger_accepts_the_default_capacity()
         {
             Assert.Empty(new MemoryLogger().GetLogs());
+        }
+
+        [Fact]
+        public void Disposing_the_provider_runs_Dispose_with_disposing_true()
+        {
+            var provider = new RecordingProvider(harness.Factory);
+
+            provider.Dispose();
+
+            Assert.Equal([true], provider.DisposeCalls);
+        }
+
+        [Fact]
+        public async Task A_disposed_provider_has_flushed_its_lines()
+        {
+            var provider = harness.CreateProvider();
+            provider.CreateLogger("c").LogInformation("flushed on dispose");
+
+            provider.Dispose();
+
+            Assert.Contains("flushed on dispose", await harness.ReadAllLogsAsync());
+        }
+
+        private sealed class RecordingProvider(IFileStorageFactory factory)
+            : LoggerProvider(factory, Microsoft.Extensions.Options.Options.Create(LoggingTestHarness.Options()))
+        {
+            public List<bool> DisposeCalls { get; } = [];
+
+            protected override void Dispose(bool disposing)
+            {
+                DisposeCalls.Add(disposing);
+                base.Dispose(disposing);
+            }
         }
 
         [Fact]

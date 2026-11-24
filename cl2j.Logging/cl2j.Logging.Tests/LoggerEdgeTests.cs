@@ -61,6 +61,19 @@ namespace cl2j.Logging.Tests
         }
 
         [Fact]
+        public void A_block_reports_a_non_decreasing_elapsed_time()
+        {
+            using var provider = harness.CreateProvider();
+            using var block = provider.CreateLogger("c").CreateBlockInfo("work");
+
+            var first = block.ElapsedMilliseconds;
+            var second = block.ElapsedMilliseconds;
+
+            Assert.True(first >= 0);
+            Assert.True(second >= first);
+        }
+
+        [Fact]
         public void A_scope_can_be_opened_and_closed_without_effect_on_the_line()
         {
             using var provider = harness.CreateProvider(o => o.MemoryLogs = true);
