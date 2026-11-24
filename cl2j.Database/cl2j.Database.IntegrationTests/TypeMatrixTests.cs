@@ -225,7 +225,9 @@ namespace cl2j.Database.IntegrationTests
             DateOnly day => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             float single => single.ToString("R", CultureInfo.InvariantCulture),
             double number => number.ToString("R", CultureInfo.InvariantCulture),
-            char letter => $"char:{(int)letter}",
+            //The column keeps its declared scale (1.00), so the trailing zeros are not part of the value.
+            decimal amount => amount.ToString("0.############################", CultureInfo.InvariantCulture),
+            char letter =>$"char:{(int)letter}",
             Enum e => $"{e.GetType().Name}.{e}",
             IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
             _ => value.ToString() ?? string.Empty,

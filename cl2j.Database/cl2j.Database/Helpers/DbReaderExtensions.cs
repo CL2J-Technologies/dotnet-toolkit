@@ -185,7 +185,7 @@ namespace cl2j.Database.Helpers
                     else if (propType.IsEnum)
                         sb.AppendLine($"({propTypeName})context.GetInt32({ordinal});");
                     else
-                        sb.AppendLine($"({propTypeName})context.GetValue({ordinal});");
+                        sb.AppendLine($"{ConversionOf(propType, $"context.GetValue({ordinal})", i) ?? $"({propTypeName})context.GetValue({ordinal})"};");
                 }
                 else
                 {
@@ -212,14 +212,43 @@ namespace cl2j.Database.Helpers
                 if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json || c.Property.PropertyType.IsEnum || IsNullableEnum(c.Property.PropertyType))
                     sb.Append($"\t\t{c.Name}={vi}");
                 else
-                    sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName}){vi}");
+                    sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName})({ConversionOf(c.Property.PropertyType, vi, i) ?? vi})");
                 if (i < tableDescriptor.Columns.Count - 1) sb.Append(',');
                 sb.AppendLine();
             }
             sb.AppendLine("\t};");
         }
 
-        private static bool IsNullableEnum(Type type) => Nullable.GetUnderlyingType(type)?.IsEnum == true;
+        /// <summary>
+        ///     The expression that turns what the provider hands back into the property's own type,
+        ///     for the three types it does not hand back as themselves, or <c>null</c> when a plain
+        ///     cast is enough.
+        ///
+        ///     <para>
+        ///     SqlClient returns a <c>date</c> as a <see cref="DateTime"/>, a <c>time</c> as a
+        ///     <see cref="TimeSpan"/> and a <c>char(1)</c> as a <see cref="string"/>, so casting
+        ///     the boxed value straight to <see cref="DateOnly"/>, <see cref="TimeOnly"/> or
+        ///     <see cref="char"/> threw InvalidCastException on the first row. See issue #46. A
+        ///     value that already has the right type (another provider) is still cast as before.
+        ///     </para>
+        /// </summary>
+        /// <param name="source">An expression for the boxed value, never a DBNull.</param>
+        /// <param name="index">The column index, to keep the pattern variables apart.</param>
+        private static string? ConversionOf(Type propType, string source, int index)
+        {
+            var type = Nullable.GetUnderlyingType(propType) ?? propType;
+
+            if (type == Types.TypeDateOnly)
+                return $"{source} is DateTime d{index} ? DateOnly.FromDateTime(d{index}) : (DateOnly){source}";
+            if (type == Types.TypeTimeOnly)
+                return $"{source} is TimeSpan t{index} ? TimeOnly.FromTimeSpan(t{index}) : (TimeOnly){source}";
+            if (type == Types.TypeChar)
+                return $"{source} is string s{index} ? (s{index}.Length == 0 ? '\\0' : s{index}[0]) : (char){source}";
+
+            return null;
+        }
+
+        private static bool IsNullableEnum(Type type) =>Nullable.GetUnderlyingType(type)?.IsEnum == true;
 
         private static Script CreateScript<T>(string code, TableDescriptor tableDescriptor)
         {

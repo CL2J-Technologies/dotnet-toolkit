@@ -31,17 +31,15 @@ namespace cl2j.Database.Helpers
                 foreach (var column in columns)
                 {
                     var v = column.Property.GetValue(item);
+                    //The same rule as Insert: a null DateTimeOffset with no column default becomes the
+                    //current time, and a value is kept. This branch used to replace every value of a
+                    //DateTimeOffset property by UtcNow, whatever the caller had set, offset included.
                     if (v is null)
-                        values[i] = DBNull.Value;
+                        values[i] = column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default) ? DateTimeOffset.UtcNow : DBNull.Value;
+                    else if (column.ColumnAtribute.Json)
+                        values[i] = ConnectionExtensions.ToJsonString(v);
                     else
-                    {
-                        if (column.ColumnAtribute.Json)
-                            values[i] = ConnectionExtensions.ToJsonString(v);
-                        else if (column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
-                            values[i] = DateTimeOffset.UtcNow;
-                        else
-                            values[i] = v;
-                    }
+                        values[i] = v;
 
                     ++i;
                 }
