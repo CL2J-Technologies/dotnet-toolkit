@@ -24,12 +24,12 @@ namespace cl2j.DataStore.TestApp
             await dataStoreColorRead.InsertAsync(new Color { Id = "yellow", Value = "#ff0" });
             await dataStoreColorRead.InsertAsync(new Color { Id = "black", Value = "#000" });
 
-            //Retreive all the colors
+            //Retrieve all the colors
             var colors = await dataStoreColorRead.GetAllAsync();
             foreach (var color in colors)
                 Debug.WriteLine($"{color.Id} -> {color.Value}");
 
-            //Retreive the color black and update it's value
+            //Retrieve the color black and update it's value
             var black = await dataStoreColorRead.GetByIdAsync("black");
             if (black != null)
             {

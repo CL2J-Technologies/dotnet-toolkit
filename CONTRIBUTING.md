@@ -16,15 +16,10 @@ follow it.
 
 ### Existing French comments
 
-Parts of the codebase still carry French comments, written before this rule. Two ways they go:
-
-- **Opportunistically.** If you are editing a method whose comments are in French, translate them
-  as part of your change.
-- **In a sweep.** A deliberate translation pass is fine, but give it its own pull request, separate
-  from any behaviour change — mixed in, it buries the part a reviewer needs to read.
-
-`cl2j.Database` is done. Still outstanding: `cl2j.FileStorage`, `cl2j.Image`, `cl2j.Logging`,
-`cl2j.WebTooling`.
+The translation sweep is done: no French comments remain in the codebase, so new code and edits
+follow the English-only rule with nothing left to translate. If you come across one that was missed,
+translate it as part of your change, or in a pull request of its own if it is more than a line or
+two, so it does not bury a behaviour change.
 
 ## Tests
 

@@ -353,3 +353,7 @@ MigrationBackup/
 
 # Worktrees de sessions Claude Code
 .claude/worktrees/
+
+# Test and coverage output
+coverage/
+TestResults/
