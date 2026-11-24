@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using cl2j.Database.Databases;
 using cl2j.Database.SqlServer;
 using Microsoft.Data.SqlClient;
@@ -67,6 +68,10 @@ namespace cl2j.Database.IntegrationTests
         }
     }
 
+    // CA1711 expects a "Collection" suffix to mean a collection type; this is an xUnit
+    // collection definition. Renaming it would touch every [Collection(SqlServerCollection.Name)]
+    // in the project (and any test class added concurrently), so the rule is suppressed here only.
+    [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "xUnit collection definition, not a collection type.")]
     [CollectionDefinition(Name)]
     public sealed class SqlServerCollection : ICollectionFixture<SqlServerFixture>
     {
