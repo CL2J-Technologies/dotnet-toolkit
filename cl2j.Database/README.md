@@ -131,7 +131,16 @@ A short prefix makes an identifier in a log attributable to its table. With no p
 
 `bool` -> `bit`, `byte` -> `tinyint`, `short` -> `smallint`, `int` -> `int`, `long` -> `bigint`, `float` -> `real`, `double` -> `float`, `decimal` -> `decimal(Length,Decimals)` (**`Length` is required**), `Guid` -> `uniqueidentifier`, `string` -> `varchar(Length)` or `varchar(max)`, `byte[]` -> `varbinary`, `DateTime` -> `datetime2`, `DateTimeOffset` -> `datetimeoffset`, `DateOnly` -> `date`, `TimeOnly`/`TimeSpan` -> `time`, `char` -> `char(1)`, enums -> `int` (not null), `Json = true` -> `varchar`. Nullable value types are unwrapped. Any other type throws `No column type for '...'. Declare one with [Column(TypeName = "...")].`
 
-`string` columns are `varchar`, not `nvarchar`; use `TypeName = "nvarchar(100)"` when you need Unicode. `Default` is appended as `DEFAULT <value>` in the DDL. A null `DateTimeOffset` with no `Default` is written as the current UTC time.
+`string` columns are `varchar`, not `nvarchar`; use `TypeName = "nvarchar(100)"` when you need Unicode. `Default` is appended as `DEFAULT <value>` in the DDL. A null `DateTimeOffset` with no `Default` is written as the current UTC time. That holds for `Insert` and `BulkInsert` alike, and a `DateTimeOffset` that has a value is always kept.
+
+What each type keeps, and what it does not:
+
+- `char` and `string` are non-Unicode, so a character outside the column collation (Windows-1252 by default) is stored as `?` or a look-alike, with no error. Use `TypeName = "nchar(1)"` or `"nvarchar(n)"` to keep it.
+- `TimeSpan` maps to `time`, which holds `00:00:00` to just under 24 hours. A longer or negative `TimeSpan` is refused by the server (it throws); it is not truncated.
+- `DateTime` keeps its ticks to the 100 ns that `datetime2(7)` holds, but not its `Kind`: it reads back `Unspecified`. `DateTimeOffset` keeps its offset.
+- `double` and `float` keep every digit that `float` and `real` hold. SQL Server has no `NaN` or infinity, so those are refused.
+- A `decimal` with more decimals than its column is rounded by the server to `Decimals`.
+- A key of type `Guid` is left to the server (`DEFAULT NEWID()`): on `Insert`, a value set on the property is ignored.
 
 # Operations
 
@@ -235,6 +244,5 @@ Add `TrustServerCertificate=True` in development (a server with a valid certific
 
 # Known limitations
 
-- **`DateOnly` is written but cannot be read back** (and `TimeOnly` probably behaves the same): the read throws `InvalidCastException` because the reader returns `DateTime`/`TimeSpan`. See [#46](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/46).
 - **ANSI key binding only applies to `QueryKey`.** `QuerySingle<T>(new { ... })` and the other anonymous-parameter paths do not get it, which can defeat the index on a `varchar` key column. See [#43](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/43).
 - **Roslyn is a runtime dependency**, needed on the first read, and nothing checks for it at startup. See [#42](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/42).
