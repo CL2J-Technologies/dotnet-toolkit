@@ -17,6 +17,8 @@ All benchmarks are async, return what they read (so nothing is optimised away), 
 | `ByKeyBenchmarks` | one row by key, parameterized (1,000-row table) | cl2j `QuerySingle` (SQL) and `QueryKey`, Dapper `QuerySingleOrDefaultAsync`, EF Core LINQ and raw SQL |
 | `InsertBenchmarks` | one insert, identity returned | cl2j `Insert<T, int>`, Dapper `ExecuteScalarAsync`, EF Core `Add` + `SaveChangesAsync` |
 | `MappingBenchmarks` | map 1 / 100 / 10,000 rows from an in-memory `DataTableReader`, **no database** | cl2j `Read<T>`, Dapper `Parse<T>` |
+| `BulkInsertBenchmarks` | insert 10,000 / 100,000 / 1,000,000 rows into an empty table | cl2j `BulkInsert`, hand-written `SqlBulkCopy` (baseline), EF Core `AddRange` + `SaveChangesAsync` |
+| `DapperBulkInsertBenchmarks` | insert 10,000 rows | Dapper `ExecuteAsync` over the list in one transaction, hand-written `SqlBulkCopy` |
 
 The mapping suite isolates the library's own overhead, which the network round trip hides in the
 three end-to-end suites. EF Core cannot take part in it: it builds its own readers and has no
@@ -232,3 +234,47 @@ Each cell gives the mean time, then the allocations.
 - The overall picture is unchanged. cl2j.Database is at parity with hand-written ADO.NET and Dapper,
   and at 10,000 rows it is faster and allocates less than Dapper. EF Core is 15 to 30 percent slower
   and allocates 6 to 14 times as much on small reads.
+
+## Bulk insert
+
+`BulkInsertBenchmarks` and `DapperBulkInsertBenchmarks` insert many rows into an empty `Client` table.
+Each iteration starts from a truncated table and freshly built objects (outside the measurement) and
+checks the row count afterwards, so a partial insert cannot look fast. One operation takes up to
+tens of seconds, so these suites use BenchmarkDotNet's `Monitoring` strategy: one invocation per
+iteration, one warm-up and five iterations. The error bars at 10,000 and 100,000 rows are wide; at a
+million rows they are within 4 percent.
+
+Run them with a connection timeout long enough for a million rows (`SqlBulkCopy` and
+`BulkInsert` both use it):
+
+```bash
+CL2J_BENCH_SQL="...;Connection Timeout=300" dotnet run -c Release --project benchmarks/cl2j.Database.Benchmarks -- --filter "*BulkInsert*"
+```
+
+### Results (same machine, 6.5.3)
+
+| Method | Rows | Mean | Ratio | Allocated | Alloc ratio |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| ADO.NET `SqlBulkCopy` (hand-written) | 10,000 | 25.0 ms | 1.00 | 7.07 MB | 1.00 |
+| cl2j.Database `BulkInsert` | 10,000 | 25.6 ms | 1.02 | 8.06 MB | 1.14 |
+| EF Core 10 (`AddRange` + `SaveChanges`) | 10,000 | 448 ms | 17.9 | 74.0 MB | 10.5 |
+| Dapper (`ExecuteAsync` over the list, one transaction) | 10,000 | 6.21 s | 270 | 32.5 MB | 4.6 |
+| ADO.NET `SqlBulkCopy` (hand-written) | 100,000 | 183 ms | 1.00 | 67.4 MB | 1.00 |
+| cl2j.Database `BulkInsert` | 100,000 | 207 ms | 1.13 | 77.3 MB | 1.15 |
+| EF Core 10 (`AddRange` + `SaveChanges`) | 100,000 | 3.39 s | 18.5 | 734 MB | 10.9 |
+| ADO.NET `SqlBulkCopy` (hand-written) | 1,000,000 | 1.48 s | 1.00 | 649 MB | 1.00 |
+| cl2j.Database `BulkInsert` | 1,000,000 | **1.53 s** | 1.04 | 748 MB | 1.15 |
+| EF Core 10 (`AddRange` + `SaveChanges`) | 1,000,000 | 34.4 s | 23.2 | 7,285 MB | 11.2 |
+
+The Dapper row comes from its own suite, where the `SqlBulkCopy` baseline measured 23.0 ms; its ratio
+is against that run.
+
+- **A million rows in about 1.5 seconds**, within 4 percent of hand-written `SqlBulkCopy`, from one
+  call on a plain list. The 15 percent extra allocation is the `DataTable` `BulkInsert` builds from
+  the attributes; the hand-written baseline builds the same table by hand.
+- **EF Core** batches multi-row `INSERT` statements and tracks every entity: 18 to 23 times slower,
+  and 7 GB allocated for a million rows. Its bulk extensions are third-party packages, and some of
+  them are commercial.
+- **Dapper** has no bulk API of its own (Dapper Plus is a commercial add-on). Passing a list to
+  `ExecuteAsync` runs one `INSERT` per item: 6 seconds for 10,000 rows even in one transaction, so a
+  million rows would take about 10 minutes. It was not measured at that size.
