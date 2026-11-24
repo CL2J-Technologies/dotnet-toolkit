@@ -238,8 +238,13 @@
 
          6.5.0 is a minor bump: it adds API. `IEmailService.SendEmailAsync` gains an overload taking
          a Reply-To address, declared as a default interface method so existing implementers keep
-         compiling; the default drops the Reply-To, `EmailService` honours it. -->
-    <Version>6.5.0</Version>
+         compiling; the default drops the Reply-To, `EmailService` honours it.
+
+         6.6.3 is a patch bump: in cl2j.Image, the public RasterImage(width, height) constructor
+         left the pending EXIF orientation unassigned, which is not TopLeft. RotateFlipIfRequired
+         therefore reported a freshly created image as rotated, and CleanImage as modified,
+         returning a copy instead of the same instance. It now starts upright. -->
+    <Version>6.6.3</Version>
         
   
     <Authors>CL2J Technologies</Authors>
