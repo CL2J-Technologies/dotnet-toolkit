@@ -282,6 +282,66 @@ namespace cl2j.DataStore.Tests
             Assert.Contains("Delete", store.Calls);
             Assert.Empty(observer.Notifications);
         }
+
+        [Fact]
+        public void The_cache_reports_the_name_it_was_given()
+        {
+            using var cache = Cache(Seeded());
+
+            Assert.Equal("people", cache.Name);
+        }
+
+        [Fact]
+        public async Task Warming_loads_the_cache_from_the_store_once()
+        {
+            var store = Seeded(new Person("1", "Renée"));
+            using var cache = Cache(store);
+
+            await cache.WarmAsync();
+
+            Assert.Single(store.Calls);
+            Assert.Equal("Renée", Assert.Single(await cache.GetAllAsync()).Name);
+            Assert.Single(store.Calls);
+        }
+
+        [Fact]
+        public async Task A_store_that_cannot_be_read_is_reported_rather_than_answered_as_empty()
+        {
+            var logger = new RecordingLogger();
+            using var cache = new DataStoreListCommandAndQueryCache<string, Person>(
+                "broken", new UnreadableStore(), NoRefresh, p => p.Id, logger);
+
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => cache.GetAllAsync());
+
+            Assert.Contains("broken", failure.Message, StringComparison.Ordinal);
+            Assert.Equal("the source is unavailable", failure.InnerException?.Message);
+            Assert.Contains(logger.Entries, e => e.Level == LogLevel.Critical && e.Exception is not null);
+        }
+
+        [Fact]
+        public async Task A_read_by_key_on_a_store_that_cannot_be_read_is_refused_too()
+        {
+            using var cache = new DataStoreListCommandAndQueryCache<string, Person>(
+                "broken", new UnreadableStore(), NoRefresh, p => p.Id, new RecordingLogger());
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => cache.GetByIdAsync("1"));
+        }
+
+        /// <summary>A command-and-query store whose reads fail, to show what the cache does when the source is down.</summary>
+        private sealed class UnreadableStore : IDataStoreListCommandAndQuery<string, Person>
+        {
+            public Task<IReadOnlyList<Person>> GetAllAsync() => throw new InvalidOperationException("the source is unavailable");
+
+            public Task<Person?> GetByIdAsync(string key) => throw new InvalidOperationException("the source is unavailable");
+
+            public Task InsertAsync(Person entity) => Task.CompletedTask;
+
+            public Task UpdateAsync(Person entity) => Task.CompletedTask;
+
+            public Task DeleteAsync(string key) => Task.CompletedTask;
+
+            public Task ReplaceAllByAsync(ICollection<Person> items) => Task.CompletedTask;
+        }
     }
 
     public class ListLoadCacheTests

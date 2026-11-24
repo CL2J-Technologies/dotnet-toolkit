@@ -1,0 +1,212 @@
+using System.Text;
+using Xunit;
+
+namespace cl2j.Image.Tests
+{
+    /// <summary>
+    /// `MetadataSniffer` decides whether `CleanImage` re-encodes a photo to strip its metadata, so a
+    /// false negative leaves an EXIF block, and the GPS position in it, in a stored file. The
+    /// containers are written byte by byte: the tests assert the formats, not a library able to
+    /// write them.
+    /// </summary>
+    public class MetadataSnifferTests
+    {
+        [Fact]
+        public void HasMetadata_is_false_for_missing_or_too_short_bytes()
+        {
+            Assert.False(MetadataSniffer.HasMetadata(null!));
+            Assert.False(MetadataSniffer.HasMetadata([0xFF, 0xD8, 0xFF, 0xE1]));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_an_unknown_container()
+        {
+            Assert.False(MetadataSniffer.HasMetadata(new byte[32]));
+        }
+
+        [Fact]
+        public void HasMetadata_finds_the_exif_block_of_a_jpeg_written_by_a_camera()
+        {
+            Assert.True(MetadataSniffer.HasMetadata(TestImages.WithExif(TestImages.Jpeg(16, 16), orientation: 1)));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_a_jpeg_the_encoder_wrote()
+        {
+            Assert.False(MetadataSniffer.HasMetadata(TestImages.Jpeg(16, 16)));
+        }
+
+        [Theory]
+        [InlineData(0xE1, "Exif\0\0")]
+        [InlineData(0xE1, "http://ns.adobe.com/xap/1.0/\0")]
+        [InlineData(0xE2, "ICC_PROFILE\0")]
+        [InlineData(0xED, "Photoshop 3.0\0")]
+        public void HasMetadata_recognises_each_jpeg_segment_that_carries_metadata(int marker, string payload)
+        {
+            Assert.True(MetadataSniffer.HasMetadata(JpegWith(Segment(marker, payload), ScanStart())));
+        }
+
+        [Theory]
+        [InlineData(0xE1, "NotExif\0")]   // an APP1 that is neither EXIF nor XMP
+        [InlineData(0xE0, "JFIF\0")]      // the plain JFIF header every JPEG starts with
+        [InlineData(0xE2, "MPF\0")]       // an APP2 that is not an ICC profile
+        [InlineData(0xED, "Other\0")]     // an APP13 that is not the Photoshop block
+        public void HasMetadata_ignores_a_jpeg_segment_that_carries_none(int marker, string payload)
+        {
+            Assert.False(MetadataSniffer.HasMetadata(JpegWith(Segment(marker, payload), ScanStart())));
+        }
+
+        [Fact]
+        public void HasMetadata_stops_looking_at_the_start_of_the_scan()
+        {
+            // Past the scan header the bytes are entropy-coded pixels: whatever they spell is not metadata.
+            var bytes = JpegWith(Segment(0xE0, "JFIF\0"), ScanStart(), Segment(0xE1, "Exif\0\0"));
+
+            Assert.False(MetadataSniffer.HasMetadata(bytes));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_a_jpeg_cut_off_after_its_last_segment()
+        {
+            // No scan, no end marker: the walker runs out of bytes rather than finding metadata.
+            var bytes = new byte[] { 0xFF, 0xD8 }.Concat(Segment(0xE0, "JFIF\0")).Concat(new byte[8]).ToArray();
+
+            Assert.False(MetadataSniffer.HasMetadata(bytes));
+        }
+
+        [Fact]
+        public void HasMetadata_skips_the_fill_bytes_before_a_marker()
+        {
+            var fill = new byte[] { 0xFF };
+
+            Assert.True(MetadataSniffer.HasMetadata(JpegWith(fill, Segment(0xE1, "Exif\0\0"), ScanStart())));
+        }
+
+        [Theory]
+        [InlineData("eXIf")]
+        [InlineData("iCCP")]
+        public void HasMetadata_recognises_the_png_chunks_that_carry_metadata(string type)
+        {
+            Assert.True(MetadataSniffer.HasMetadata(PngWith(Chunk(type, [0, 0, 0, 0]), Chunk("IEND", []))));
+        }
+
+        [Fact]
+        public void HasMetadata_recognises_the_xmp_text_chunk_of_a_png()
+        {
+            var xmp = Encoding.ASCII.GetBytes("XML:com.adobe.xmp\0\0\0\0\0");
+
+            Assert.True(MetadataSniffer.HasMetadata(PngWith(Chunk("iTXt", xmp), Chunk("IEND", []))));
+        }
+
+        [Fact]
+        public void HasMetadata_ignores_a_png_text_chunk_with_another_keyword()
+        {
+            var comment = Encoding.ASCII.GetBytes("Comment\0\0\0\0\0\0\0\0\0\0");
+
+            Assert.False(MetadataSniffer.HasMetadata(PngWith(Chunk("iTXt", comment), Chunk("IEND", []))));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_a_png_the_encoder_wrote()
+        {
+            Assert.False(MetadataSniffer.HasMetadata(TestImages.Png(16, 16)));
+        }
+
+        [Fact]
+        public void HasMetadata_finds_a_metadata_chunk_added_to_a_real_png()
+        {
+            var exif = new byte[] { (byte)'M', (byte)'M', 0, 42, 0, 0, 0, 8, 0, 0 };
+
+            Assert.True(MetadataSniffer.HasMetadata(TestImages.PngWithChunk(TestImages.Png(16, 16), "eXIf", exif)));
+        }
+
+        [Fact]
+        public void HasMetadata_does_not_look_past_the_end_chunk_of_a_png()
+        {
+            Assert.False(MetadataSniffer.HasMetadata(PngWith(Chunk("IEND", []), Chunk("eXIf", [0, 0, 0, 0]))));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_a_png_cut_off_before_its_end_chunk()
+        {
+            Assert.False(MetadataSniffer.HasMetadata(PngWith(Chunk("IDAT", [1, 2, 3, 4]))));
+        }
+
+        [Fact]
+        public void HasMetadata_gives_up_on_a_png_chunk_with_a_negative_length()
+        {
+            // 0x80000000 and above: a length no real chunk has, from a corrupt or hostile file.
+            var corrupt = new byte[] { 0x80, 0, 0, 0, (byte)'e', (byte)'X', (byte)'I', (byte)'f', 0, 0, 0, 0 };
+
+            Assert.False(MetadataSniffer.HasMetadata(PngSignature().Concat(corrupt).ToArray()));
+        }
+
+        [Theory]
+        [InlineData(0x20, true)]   // ICC profile
+        [InlineData(0x08, true)]   // EXIF
+        [InlineData(0x04, true)]   // XMP
+        [InlineData(0x02, false)]  // animation only
+        [InlineData(0x10, false)]  // alpha only
+        [InlineData(0x00, false)]
+        public void HasMetadata_reads_the_flags_of_the_extended_webp_header(int flags, bool expected)
+        {
+            Assert.Equal(expected, MetadataSniffer.HasMetadata(WebPExtended((byte)flags)));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_a_webp_the_encoder_wrote()
+        {
+            using var image = TestImages.Grey(16, 16, (x, y) => (byte)(x * 10));
+
+            Assert.False(MetadataSniffer.HasMetadata(ImageSerialization.SaveWebpToBytes(image)));
+        }
+
+        [Fact]
+        public void HasMetadata_is_false_for_a_webp_header_cut_before_its_flags()
+        {
+            // RIFF, size, WEBP, VP8X and its size are 20 bytes: the flags byte at offset 20 is missing.
+            var truncated = WebPExtended(0x08).Take(20).ToArray();
+
+            Assert.False(MetadataSniffer.HasMetadata(truncated));
+        }
+
+        // --- Helpers -----------------------------------------------------------------------------
+
+        private static byte[] Ascii(string text) => Encoding.ASCII.GetBytes(text);
+
+        private static byte[] Segment(int marker, string payload)
+        {
+            var length = payload.Length + 2;
+            return new byte[] { 0xFF, (byte)marker, (byte)(length >> 8), (byte)length }.Concat(Ascii(payload)).ToArray();
+        }
+
+        // Start of scan with a 2-byte payload, enough for the walker to stop there.
+        private static byte[] ScanStart() => [0xFF, 0xDA, 0x00, 0x04, 0x01, 0x02];
+
+        private static byte[] JpegWith(params byte[][] parts) =>
+            new byte[] { 0xFF, 0xD8 }.Concat(parts.SelectMany(p => p)).Concat(new byte[] { 0xFF, 0xD9 }).ToArray();
+
+        private static byte[] PngSignature() => [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A];
+
+        // The sniffer reads lengths and types only: the CRC stays zero.
+        private static byte[] Chunk(string type, byte[] data) =>
+            new byte[] { (byte)(data.Length >> 24), (byte)(data.Length >> 16), (byte)(data.Length >> 8), (byte)data.Length }
+                .Concat(Ascii(type)).Concat(data).Concat(new byte[4]).ToArray();
+
+        private static byte[] PngWith(params byte[][] chunks) =>
+            PngSignature().Concat(Chunk("IHDR", new byte[13])).Concat(chunks.SelectMany(c => c)).ToArray();
+
+        private static byte[] WebPExtended(byte flags)
+        {
+            var header = new List<byte>();
+            header.AddRange(Ascii("RIFF"));
+            header.AddRange(new byte[] { 0x1E, 0, 0, 0 });
+            header.AddRange(Ascii("WEBP"));
+            header.AddRange(Ascii("VP8X"));
+            header.AddRange(new byte[] { 10, 0, 0, 0 });
+            header.Add(flags);
+            header.AddRange(new byte[9]);
+            return header.ToArray();
+        }
+    }
+}

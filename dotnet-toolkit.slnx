@@ -31,6 +31,7 @@
   </Folder>
   <Folder Name="/Logging/">
     <Project Path="cl2j.Logging/cl2j.Logging/cl2j.Logging.csproj" />
+    <Project Path="cl2j.Logging/cl2j.Logging.Tests/cl2j.Logging.Tests.csproj" />
   </Folder>
   <Folder Name="/Scripting/">
     <Project Path="cl2j.Scripting/cl2j.Scripting/cl2j.Scripting.csproj" />
@@ -39,7 +40,9 @@
   <Project Path="cl2j.Image/cl2j.Image.csproj" />
   <Project Path="cl2j.Image.Tests/cl2j.Image.Tests.csproj" />
   <Project Path="cl2j.Smapper/cl2j.Smapper.csproj" />
+  <Project Path="cl2j.Smapper.Tests/cl2j.Smapper.Tests.csproj" />
   <Project Path="cl2j.Tooling/cl2j.Tooling.csproj" />
   <Project Path="cl2j.Tooling.Tests/cl2j.Tooling.Tests.csproj" />
   <Project Path="cl2j.WebTooling/cl2j.WebTooling.csproj" />
+  <Project Path="cl2j.WebTooling.Tests/cl2j.WebTooling.Tests.csproj" />
 </Solution>

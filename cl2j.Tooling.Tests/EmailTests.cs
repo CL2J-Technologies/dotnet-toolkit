@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Net.Sockets;
 using Xunit;
 
 namespace cl2j.Tooling.Tests
@@ -23,14 +25,44 @@ namespace cl2j.Tooling.Tests
     /// </summary>
     public class EmailServiceTests
     {
-        //Nothing is listening here, so a send fails immediately rather than waiting on a timeout.
-        //A hostname would cost a DNS lookup; a loopback address costs a refused connection.
+        /// <summary>A loopback server that closes every connection as soon as it is accepted.</summary>
+        private static class HangUp
+        {
+            private static readonly TcpListener Listener = Start();
+
+            public static int Port => ((IPEndPoint)Listener.LocalEndpoint).Port;
+
+            private static TcpListener Start()
+            {
+                var listener = new TcpListener(IPAddress.Loopback, 0);
+                listener.Start();
+                _ = Task.Run(async () =>
+                {
+                    while (true)
+                    {
+                        try
+                        {
+                            using var client = await listener.AcceptTcpClientAsync();
+                        }
+                        catch (Exception)
+                        {
+                            return;
+                        }
+                    }
+                });
+                return listener;
+            }
+        }
+
+        //The server accepts the connection and hangs up, so a send fails immediately rather than waiting on a timeout.
+        //A closed port is not used instead: where loopback connections are dropped rather than refused
+        //(some firewalls, WSL with mirrored networking), the send would wait for the SMTP timeout.
         private static SmtpSettings Unreachable(string? from = "sender@example.invalid", string? systemTo = null, string? errorTo = null)
         {
             return new SmtpSettings
             {
                 Server = "127.0.0.1",
-                Port = 59999,
+                Port = HangUp.Port,
                 User = "user",
                 Password = "password",
                 From = from,
