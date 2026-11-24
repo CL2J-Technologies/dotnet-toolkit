@@ -19,7 +19,7 @@
   <ItemGroup>
     <!-- The Mx* entities, one per mapped type, are shared with the integration tests so that both
          prove the same types. -->
-    <Compile Include="..\cl2j.Database.IntegrationTests\TypeMatrixEntities.cs" Link="TypeMatrixEntities.cs" />
+    <Compile Include="..\cl2j.Database.IntegrationTests.Shared\TypeMatrixEntities.cs" Link="TypeMatrixEntities.cs" />
   </ItemGroup>
 
   <ItemGroup>
