@@ -28,7 +28,7 @@ namespace cl2j.Database.TypeMatrix
         public bool V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public bool R { get; set; };
+        public bool R { get; set; }
 
         [Column(Name = "N")]
         public bool? N { get; set; }
@@ -44,7 +44,7 @@ namespace cl2j.Database.TypeMatrix
         public byte V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public byte R { get; set; };
+        public byte R { get; set; }
 
         [Column(Name = "N")]
         public byte? N { get; set; }
@@ -60,7 +60,7 @@ namespace cl2j.Database.TypeMatrix
         public short V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public short R { get; set; };
+        public short R { get; set; }
 
         [Column(Name = "N")]
         public short? N { get; set; }
@@ -76,7 +76,7 @@ namespace cl2j.Database.TypeMatrix
         public int V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public int R { get; set; };
+        public int R { get; set; }
 
         [Column(Name = "N")]
         public int? N { get; set; }
@@ -92,7 +92,7 @@ namespace cl2j.Database.TypeMatrix
         public long V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public long R { get; set; };
+        public long R { get; set; }
 
         [Column(Name = "N")]
         public long? N { get; set; }
@@ -108,7 +108,7 @@ namespace cl2j.Database.TypeMatrix
         public float V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public float R { get; set; };
+        public float R { get; set; }
 
         [Column(Name = "N")]
         public float? N { get; set; }
@@ -124,7 +124,7 @@ namespace cl2j.Database.TypeMatrix
         public double V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public double R { get; set; };
+        public double R { get; set; }
 
         [Column(Name = "N")]
         public double? N { get; set; }
@@ -140,7 +140,7 @@ namespace cl2j.Database.TypeMatrix
         public decimal V { get; set; }
 
         [Column(Name = "R", Required = true, Length = 18, Decimals = 2)]
-        public decimal R { get; set; };
+        public decimal R { get; set; }
 
         [Column(Name = "N", Length = 18, Decimals = 2)]
         public decimal? N { get; set; }
@@ -156,7 +156,7 @@ namespace cl2j.Database.TypeMatrix
         public Guid V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public Guid R { get; set; };
+        public Guid R { get; set; }
 
         [Column(Name = "N")]
         public Guid? N { get; set; }
@@ -204,7 +204,7 @@ namespace cl2j.Database.TypeMatrix
         public DateTime V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public DateTime R { get; set; };
+        public DateTime R { get; set; }
 
         [Column(Name = "N")]
         public DateTime? N { get; set; }
@@ -220,7 +220,7 @@ namespace cl2j.Database.TypeMatrix
         public DateTimeOffset V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public DateTimeOffset R { get; set; };
+        public DateTimeOffset R { get; set; }
 
         [Column(Name = "N")]
         public DateTimeOffset? N { get; set; }
@@ -236,7 +236,7 @@ namespace cl2j.Database.TypeMatrix
         public DateOnly V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public DateOnly R { get; set; };
+        public DateOnly R { get; set; }
 
         [Column(Name = "N")]
         public DateOnly? N { get; set; }
@@ -252,7 +252,7 @@ namespace cl2j.Database.TypeMatrix
         public TimeOnly V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public TimeOnly R { get; set; };
+        public TimeOnly R { get; set; }
 
         [Column(Name = "N")]
         public TimeOnly? N { get; set; }
@@ -268,7 +268,7 @@ namespace cl2j.Database.TypeMatrix
         public TimeSpan V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public TimeSpan R { get; set; };
+        public TimeSpan R { get; set; }
 
         [Column(Name = "N")]
         public TimeSpan? N { get; set; }
@@ -284,7 +284,7 @@ namespace cl2j.Database.TypeMatrix
         public char V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public char R { get; set; };
+        public char R { get; set; }
 
         [Column(Name = "N")]
         public char? N { get; set; }
@@ -300,7 +300,7 @@ namespace cl2j.Database.TypeMatrix
         public MatrixKind V { get; set; }
 
         [Column(Name = "R", Required = true)]
-        public MatrixKind R { get; set; };
+        public MatrixKind R { get; set; }
 
         [Column(Name = "N")]
         public MatrixKind? N { get; set; }
