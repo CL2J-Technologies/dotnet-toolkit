@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using cl2j.Database.Descriptors;
 
 namespace cl2j.Database.Helpers
@@ -58,11 +59,15 @@ namespace cl2j.Database.Helpers
         {
             var parameter = command.CreateParameter();
             parameter.ParameterName = name;
-            parameter.Value = value ?? DBNull.Value;
+            //An enum is sent as its Int32 value, which is how its column is declared (int / integer).
+            //Npgsql refuses a CLR enum parameter unless it is given a PostgreSQL enum type name, and
+            //SqlClient already infers an enum as Int32, so nothing changes there.
+            var isEnum = value is Enum;
+            parameter.Value = isEnum ? Convert.ToInt32(value, CultureInfo.InvariantCulture) : value ?? DBNull.Value;
 
             var declaredType = column is null ? null : Nullable.GetUnderlyingType(column.Property.PropertyType) ?? column.Property.PropertyType;
 
-            var type = dbType ?? ParameterTyping.DbTypeFor(column, value) ?? (value is null ? NullType(command, column, declaredType) : null);
+            var type = dbType ?? (isEnum ? (DbType?)DbType.Int32 : null) ?? ParameterTyping.DbTypeFor(column, value) ?? (value is null ? NullType(command, column, declaredType) : null);
             if (type is not null)
                 parameter.DbType = type.Value;
 
@@ -92,6 +97,11 @@ namespace cl2j.Database.Helpers
 
             if (declaredType == typeof(byte[]))
                 return DbType.Binary;
+
+            //Declared Int32, like a value of the property is (see Bind): Npgsql cannot infer a type
+            //from a CLR enum.
+            if (declaredType.IsEnum)
+                return DbType.Int32;
 
             if (!declaredType.IsValueType)
                 return null;

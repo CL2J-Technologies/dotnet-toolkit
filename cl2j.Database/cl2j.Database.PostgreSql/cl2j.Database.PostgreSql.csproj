@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>cl2j.Database.PostgreSql</PackageId>
+    <Description>PostgreSQL provider for cl2j.Database, on Npgsql, with binary COPY for bulk inserts. Requires PostgreSQL 13 or later.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 10.0.3: the latest release that is at least two weeks old when this provider was written. -->
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\cl2j.Database\cl2j.Database.csproj" />
+  </ItemGroup>
+</Project>

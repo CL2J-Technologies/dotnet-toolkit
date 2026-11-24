@@ -75,9 +75,9 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void A_json_column_is_varchar_max()
+        public void A_json_column_is_nvarchar_max()
         {
-            Assert.Equal("varchar(max)", Formatter().GetColumnDataType(Column(typeof(Invoice), "Metadata")));
+            Assert.Equal("nvarchar(max)", Formatter().GetColumnDataType(Column(typeof(Invoice), "Metadata")));
         }
 
         [Fact]

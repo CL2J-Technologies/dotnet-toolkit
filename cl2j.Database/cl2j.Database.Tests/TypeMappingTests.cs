@@ -74,10 +74,10 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void A_json_column_is_varchar_and_a_length_bounds_it()
+        public void A_json_column_is_nvarchar_and_a_length_bounds_it()
         {
-            Assert.Equal("varchar(max)", Formatter().GetColumnDataType(Column(typeof(OverriddenRow), "Body")));
-            Assert.Equal("varchar(200)", Formatter().GetColumnDataType(Column(typeof(OverriddenRow), "BoundedBody")));
+            Assert.Equal("nvarchar(max)", Formatter().GetColumnDataType(Column(typeof(OverriddenRow), "Body")));
+            Assert.Equal("nvarchar(200)", Formatter().GetColumnDataType(Column(typeof(OverriddenRow), "BoundedBody")));
         }
 
         [Fact]

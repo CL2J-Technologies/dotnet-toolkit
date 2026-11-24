@@ -272,8 +272,12 @@
            - cl2j.Image: a RasterImage built with the public constructor did not start upright, so
              CleanImage reported a blank image as modified and returned a copy;
            - cl2j.Database: a nullable enum column could not be read; the generated reader unboxed
-             the provider's int straight to the nullable enum and threw InvalidCastException. -->
-    <Version>6.5.3</Version>
+             the provider's int straight to the nullable enum and threw InvalidCastException.
+
+         6.6.0 is a minor bump: it adds two packages, cl2j.Database.MySql and
+         cl2j.Database.PostgreSql, on a provider base shared with cl2j.Database.SqlServer. Nothing
+         that was already here changes for a caller that does not reference them. -->
+    <Version>6.6.0</Version>
         
   
     <Authors>CL2J Technologies</Authors>

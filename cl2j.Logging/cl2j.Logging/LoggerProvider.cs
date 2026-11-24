@@ -13,8 +13,10 @@ namespace cl2j.Logging
 
         // A single instance, shared by the file name and by the lines. Two instances would give
         // the same result, but nothing would guarantee they always do: the gap between two
-        // clocks is precisely what produced the defect.
-        private readonly IDateTimeProvider dateTimeProvider;
+        // clocks is precisely what produced the defect. Typed as the concrete class: the interface
+        // has no other implementation and no test substitutes it (it is internal, with no
+        // InternalsVisibleTo), so the abstraction bought nothing here.
+        private readonly DateTimeProvider dateTimeProvider;
 
         public LoggerProvider(IFileStorageFactory fileStorageFactory, IOptions<LoggerOptions> options, string fileStorageName = "Logger")
         {

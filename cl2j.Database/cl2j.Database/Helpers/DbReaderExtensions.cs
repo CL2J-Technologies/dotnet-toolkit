@@ -146,6 +146,16 @@ namespace cl2j.Database.Helpers
 
         private static void AddReadObjectCode<T>(StringBuilder sb, string typeName, TableDescriptor tableDescriptor)
         {
+            //The reader fills the entity with an object initializer, which needs a public setter
+            //(an init accessor counts). A get-only property used to fail the Roslyn compile with
+            //CS0200 on the first read, a message about generated code the caller never wrote.
+            //Insert still writes such a property, so only the reader needs to refuse it.
+            foreach (var column in tableDescriptor.Columns)
+            {
+                if (column.Property.SetMethod is not { IsPublic: true })
+                    throw new DatabaseException($"{typeof(T).Name}.{column.Property.Name} has no public setter, so a read cannot fill it. Mark it [Ignore] if it is not a column, or give it a setter.");
+            }
+
             for (var i = 0; i < tableDescriptor.Columns.Count; ++i)
             {
                 var c = tableDescriptor.Columns[i];
@@ -173,7 +183,8 @@ namespace cl2j.Database.Helpers
                     else if (propType == Types.TypeDecimal)
                         sb.AppendLine($"context.GetDecimal({ordinal});");
                     else if (propType == Types.TypeFloat)
-                        sb.AppendLine($"context.GetFloat({ordinal});");
+                        //Not GetFloat: a provider that stores a float in a double column (MySQL) refuses it.
+                        sb.AppendLine($"System.Convert.ToSingle(context.GetValue({ordinal}), System.Globalization.CultureInfo.InvariantCulture);");
                     else if (propType == Types.TypeDouble)
                         sb.AppendLine($"context.GetDouble({ordinal});");
                     else if (propType == Types.TypeGuid)
@@ -224,7 +235,7 @@ namespace cl2j.Database.Helpers
 
         /// <summary>
         ///     The expression that turns what the provider hands back into the property's own type,
-        ///     for the three types it does not hand back as themselves, or <c>null</c> when a plain
+        ///     for the types it does not always hand back as themselves, or <c>null</c> when a plain
         ///     cast is enough.
         ///
         ///     <para>
@@ -233,6 +244,27 @@ namespace cl2j.Database.Helpers
         ///     the boxed value straight to <see cref="DateOnly"/>, <see cref="TimeOnly"/> or
         ///     <see cref="char"/> threw InvalidCastException on the first row. See issue #46. A
         ///     value that already has the right type (another provider) is still cast as before.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     The generated reader is compiled once per entity type and cached by type only, so
+        ///     the code it emits has to read every provider's shapes. Npgsql returns a
+        ///     <see cref="short"/> for a <see cref="byte"/> property (PostgreSQL has no one-byte
+        ///     integer, the column is <c>smallint</c>), and both Npgsql (<c>timestamptz</c>) and
+        ///     MySqlConnector (<c>datetime</c> has no offset) return a <see cref="DateTime"/> for a
+        ///     <see cref="DateTimeOffset"/> property. A byte that does not fit throws rather than
+        ///     truncating. MySQL stores a <see cref="float"/> in a double column (its FLOAT keeps six
+        ///     significant digits), so a double is accepted for a float property. A
+        ///     <see cref="DateTime"/> is read as the UTC instant, which is how both
+        ///     drivers write a <see cref="DateTimeOffset"/> parameter: Unspecified and Utc kinds are
+        ///     taken as UTC, a Local kind is converted with <c>ToUniversalTime()</c>.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     These are conversions on the boxed value rather than a typed
+        ///     <c>GetFieldValue&lt;DateTimeOffset&gt;</c> call: the emitted code can then be tested
+        ///     without a server, and it does not depend on each driver supporting that generic
+        ///     getter.
         ///     </para>
         /// </summary>
         /// <param name="propType">The property type, nullable or not.</param>
@@ -243,11 +275,20 @@ namespace cl2j.Database.Helpers
             var type = Nullable.GetUnderlyingType(propType) ?? propType;
 
             if (type == Types.TypeDateOnly)
-                return $"{source} is DateTime d{index} ? DateOnly.FromDateTime(d{index}) : (DateOnly){source}";
+                return $"({source} switch {{ DateTime d{index} => DateOnly.FromDateTime(d{index}), var x{index} => (DateOnly)x{index} }})";
             if (type == Types.TypeTimeOnly)
-                return $"{source} is TimeSpan t{index} ? TimeOnly.FromTimeSpan(t{index}) : (TimeOnly){source}";
+                return $"({source} switch {{ TimeSpan t{index} => TimeOnly.FromTimeSpan(t{index}), var x{index} => (TimeOnly)x{index} }})";
             if (type == Types.TypeChar)
-                return $"{source} is string s{index} ? (s{index}.Length == 0 ? '\\0' : s{index}[0]) : (char){source}";
+                return $"({source} switch {{ string s{index} => s{index}.Length == 0 ? '\\0' : s{index}[0], var x{index} => (char)x{index} }})";
+
+            if (type == Types.TypeByte)
+                return $"({source} switch {{ byte b{index} => b{index}, var x{index} => System.Convert.ToByte(x{index}, System.Globalization.CultureInfo.InvariantCulture) }})";
+            //MySQL has to store a float in a double column (its FLOAT comes back with six significant digits),
+            //so MySqlConnector hands back a double for a float property.
+            if (type == Types.TypeFloat)
+                return $"({source} switch {{ float f{index} => f{index}, var x{index} => System.Convert.ToSingle(x{index}, System.Globalization.CultureInfo.InvariantCulture) }})";
+            if (type == Types.TypeDateTimeOffset)
+                return $"({source} switch {{ DateTime m{index} => new DateTimeOffset(m{index}.Kind == DateTimeKind.Local ? m{index}.ToUniversalTime() : DateTime.SpecifyKind(m{index}, DateTimeKind.Utc)), var x{index} => (DateTimeOffset)x{index} }})";
 
             return null;
         }

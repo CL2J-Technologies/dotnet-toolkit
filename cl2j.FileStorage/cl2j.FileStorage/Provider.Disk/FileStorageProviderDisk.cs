@@ -81,7 +81,9 @@ namespace cl2j.FileStorage.Provider.Disk
             //name lost its first character — "1.jpg" listed as ".jpg". Seen September 4th 2026
             //against a local media folder; production runs on Azure, where the other provider
             //builds its names differently, so nothing ever caught it.
-            return list.Select(Path.GetFileName);
+            //The lambda, not the method group: `GetFileName` returns null only for a null input,
+            //and `GetFiles` never yields one, so a lambda lets the compiler see a non-null result.
+            return list.Select(n => Path.GetFileName(n));
         }
 
         public async Task<IEnumerable<string>> ListFoldersAsync(string path)
@@ -96,7 +98,8 @@ namespace cl2j.FileStorage.Provider.Disk
             //`GetFileName` names a directory as well, as long as the path carries no trailing
             //separator — which `GetDirectories` never returns.
             var list = Directory.GetDirectories(fullName);
-            return list.Select(Path.GetFileName);
+            //Lambda for the same reason as in ListFilesAsync: `GetDirectories` never yields null.
+            return list.Select(n => Path.GetFileName(n));
         }
 
         public async Task<bool> ReadAsync(string name, Stream stream)

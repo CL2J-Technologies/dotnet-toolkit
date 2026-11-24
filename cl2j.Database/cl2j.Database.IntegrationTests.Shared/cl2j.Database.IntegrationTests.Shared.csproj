@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The provider-neutral integration suite: the entities, the test bodies (as abstract
+       XxxTestsBase classes) and the IDatabaseFixture contract a provider fills in. Each provider
+       has its own test project that derives from these and adds a fixture. Deliberately not a
+       test project, and deliberately not referencing any provider. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- xunit.core's build props mark any project that references it as a test project, so
+         `dotnet test` on the solution looked for a testhost here and aborted the run. -->
+    <IsTestProject>false</IsTestProject>
+    <!-- CA1707: underscore-separated test names are intentional, they read as sentences
+         in the CI report. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xunit.core carries [Fact], [Theory] and IAsyncLifetime, xunit.assert the Assert class.
+         Same version as the test projects, which reference the xunit metapackage. -->
+    <PackageReference Include="xunit.core" Version="2.9.2" />
+    <PackageReference Include="xunit.assert" Version="2.9.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\cl2j.Database\cl2j.Database.csproj" />
+  </ItemGroup>
+
+</Project>

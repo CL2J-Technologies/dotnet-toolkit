@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>cl2j.Database.MySql</PackageId>
+    <Description>MySQL provider for cl2j.Database, on MySqlConnector, with MySqlBulkCopy (or batched multi-row INSERTs) for bulk inserts. Requires MySQL 8.0.13 or later.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MySqlConnector (MIT) rather than Oracle's MySql.Data (GPL with FOSS exception). -->
+    <PackageReference Include="MySqlConnector" Version="2.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\cl2j.Database\cl2j.Database.csproj" />
+  </ItemGroup>
+</Project>
