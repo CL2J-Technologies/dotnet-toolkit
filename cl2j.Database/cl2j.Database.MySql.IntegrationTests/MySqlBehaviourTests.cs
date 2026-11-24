@@ -253,6 +253,71 @@ namespace cl2j.Database.MySql.IntegrationTests
 
         #endregion
 
+        #region Bulk insert
+
+        private async Task<DbConnection> OpenFor(string how) => how == "bulkcopy" ? await fixture.BulkCopy.OpenAsync() : await fixture.OpenAsync();
+
+        private static MyBatchRow[] Rows(int count, params (int position, string id)[] overrides)
+        {
+            var rows = Enumerable.Range(0, count).Select(i => new MyBatchRow { Id = $"id-{i}", Position = i }).ToArray();
+            foreach (var (position, id) in overrides)
+                rows[position].Id = id;
+            return rows;
+        }
+
+        [Theory]
+        [InlineData("batched")]
+        [InlineData("bulkcopy")]
+        public async Task A_duplicate_key_fails_the_whole_bulk_insert_and_nothing_is_stored(string how)
+        {
+            //Batched: the failing statement is refused whole and the provider's own transaction rolls
+            //back the statements before it. Bulk copy: LOAD DATA LOCAL skips the duplicate (IGNORE),
+            //MySqlBulkCopy notices the row count and throws, and the same rollback removes the rows the
+            //load did keep. Both end where SqlBulkCopy does: nothing is stored.
+            await using var connection = await OpenFor(how);
+            await connection.CreateTable<MyBatchRow>();
+
+            await Assert.ThrowsAnyAsync<Exception>(() => connection.BulkInsert(Rows(2500, (2100, "id-5"))));
+
+            Assert.Empty(await connection.Query<MyBatchRow>());
+        }
+
+        [Theory]
+        [InlineData("batched")]
+        [InlineData("bulkcopy")]
+        public async Task With_a_caller_transaction_a_failed_bulk_insert_leaves_the_rollback_to_the_caller(string how)
+        {
+            await using var connection = await OpenFor(how);
+            await connection.CreateTable<MyBatchRow>();
+            await using var transaction = await connection.BeginTransactionAsync();
+
+            await Assert.ThrowsAnyAsync<Exception>(() => connection.BulkInsert(Rows(2500, (2100, "id-5")), CancellationToken.None, transaction));
+
+            var stored = (await connection.Query<MyBatchRow>(null, CancellationToken.None, transaction)).Count();
+            //Batched: the two full statements before the failing one stay (2 x 1000). Bulk copy: every
+            //row but the duplicate was loaded.
+            Assert.Equal(how == "batched" ? 2000 : 2499, stored);
+
+            await transaction.RollbackAsync();
+            Assert.Empty(await connection.Query<MyBatchRow>());
+        }
+
+        [Theory]
+        [InlineData("batched")]
+        [InlineData("bulkcopy")]
+        public async Task An_empty_bulk_insert_writes_nothing_and_does_not_fail(string how)
+        {
+            await using var connection = await OpenFor(how);
+            await connection.CreateTable<MyBatchRow>();
+
+            await connection.BulkInsert(Array.Empty<MyBatchRow>());
+
+            Assert.Empty(await connection.Query<MyBatchRow>());
+        }
+
+        #endregion
+
+
         #region Range
 
         [Theory]
