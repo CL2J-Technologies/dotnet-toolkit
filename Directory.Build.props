@@ -238,8 +238,17 @@
 
          6.5.0 is a minor bump: it adds API. `IEmailService.SendEmailAsync` gains an overload taking
          a Reply-To address, declared as a default interface method so existing implementers keep
-         compiling; the default drops the Reply-To, `EmailService` honours it. -->
-    <Version>6.5.0</Version>
+         compiling; the default drops the Reply-To, `EmailService` honours it.
+
+         6.6.1 is a patch bump: two defects in cl2j.FileStorage, no signature change.
+         FileProviderExtensions.Copy returned false on every path, success included, so a caller
+         could not tell a copy from a failure; it now returns true once the file is written.
+         BufferedFileStorage.Dispose returned while a timer flush was still writing the buffer,
+         because that flush had already emptied it: lines written just before shutdown could be
+         lost. A flush now holds a lock for its whole duration, Dispose stops the timer before its
+         final flush, the first tick waits one interval instead of firing at construction, and the
+         async void tick can no longer let an exception escape and terminate the process. -->
+    <Version>6.6.1</Version>
         
   
     <Authors>CL2J Technologies</Authors>

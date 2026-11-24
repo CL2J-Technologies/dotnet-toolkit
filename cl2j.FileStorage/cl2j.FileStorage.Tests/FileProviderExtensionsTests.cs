@@ -76,7 +76,7 @@ namespace cl2j.FileStorage.Tests
             Assert.False(await provider.ExistsAsync("to.txt"));
         }
 
-        [Fact(Skip = "Bug: Copy always returns false, even when the file was copied, so a caller cannot tell success from failure.")]
+        [Fact]
         public async Task Copy_returns_true_when_the_file_was_copied()
         {
             await provider.WriteTextAsync("from.txt", "content");
