@@ -290,8 +290,8 @@ namespace cl2j.Database.TypeMatrix
         public char? N { get; set; }
     }
 
-    [Table("Mx_Enum")]
-    public sealed class MxEnum
+    [Table("Mx_Kind")]
+    public sealed class MxKind
     {
         [Column(Name = "Id", Key = KeyType.Key)]
         public int Id { get; set; }

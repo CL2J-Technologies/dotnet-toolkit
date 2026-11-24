@@ -12,7 +12,7 @@ namespace cl2j.Database.IntegrationTests
     [Collection(SqlServerCollection.Name)]
     public class KnownDefectTests(SqlServerFixture fixture)
     {
-        [Fact(Skip = "Bug: #46 a DateOnly is written to a date column but the read throws InvalidCastException (DateTime to DateOnly)")]
+        [Fact]
         public async Task A_DateOnly_survives_the_write_read_cycle()
         {
             await using var connection = await fixture.OpenAsync();

@@ -114,7 +114,7 @@ namespace cl2j.Database.IntegrationTests
                 new MatrixCase<MxChar>("char",
                     () => new() { V = 'Z', R = 'a', N = 'k' }, () => new() { V = 'q', R = 'r', N = null },
                     x => new { x.V }, x => new { x.R }, x => new { x.N }),
-                new MatrixCase<MxEnum>("enum",
+                new MatrixCase<MxKind>("enum",
                     () => new() { V = MatrixKind.One, R = MatrixKind.Big, N = MatrixKind.Zero }, () => new() { V = MatrixKind.Big, R = MatrixKind.One, N = null },
                     x => new { x.V }, x => new { x.R }, x => new { x.N }),
             };

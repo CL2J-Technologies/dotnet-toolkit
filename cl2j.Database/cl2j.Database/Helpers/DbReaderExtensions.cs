@@ -232,6 +232,7 @@ namespace cl2j.Database.Helpers
         ///     value that already has the right type (another provider) is still cast as before.
         ///     </para>
         /// </summary>
+        /// <param name="propType">The property type, nullable or not.</param>
         /// <param name="source">An expression for the boxed value, never a DBNull.</param>
         /// <param name="index">The column index, to keep the pattern variables apart.</param>
         private static string? ConversionOf(Type propType, string source, int index)
