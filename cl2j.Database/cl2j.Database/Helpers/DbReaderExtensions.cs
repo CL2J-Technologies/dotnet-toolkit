@@ -1,8 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using cl2j.Database.Descriptors;
 using cl2j.Database.Exceptions;
@@ -48,20 +46,9 @@ namespace cl2j.Database.Helpers
 #endif
                 });
 
+                //Script.Execute lets what the generated reader throws through as itself, so a
+                //missing column or a value that would not convert surfaces with its own message.
                 return script.Execute<DbDataReader, List<T>>(reader) ?? [];
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException is not null)
-            {
-                Debug.WriteLine($"DbReaderExtensions.Read<{type.Name}> : GENERATED CODE");
-                if (script is not null)
-                    Debug.WriteLine(script.Options.Code);
-
-                //The generated reader runs through reflection, so everything it throws arrives
-                //wrapped in "Exception has been thrown by the target of an invocation" — which says
-                //nothing about the column that was missing or the value that would not convert.
-                //Rethrow the real one, keeping its stack.
-                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-                throw;
             }
             catch
             {
@@ -90,17 +77,7 @@ namespace cl2j.Database.Helpers
                     return CreateScript<T>(code, tableDescriptor);
                 });
 
-                try
-                {
-                    return script.Execute<DbDataReader, T>(reader);
-                }
-                catch (TargetInvocationException ex) when (ex.InnerException is not null)
-                {
-                    //Same unwrapping as Read: the reflection wrapper hides the only part of the
-                    //message a caller can act on.
-                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-                    throw;
-                }
+                return script.Execute<DbDataReader, T>(reader);
             }
             finally
             {
