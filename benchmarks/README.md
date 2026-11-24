@@ -208,3 +208,27 @@ The fixed per-call cost drops from about 2.3 times hand-written code to 1.3 time
 The 10,000-row rows are noisy in this run (Dapper's error is ±160 us); the earlier runs had all three
 at 1.85 to 1.93 ms, and the delegate does not touch the per-row loop. End to end, the gain is
 invisible behind the round trip.
+
+### 6.5.2 against 6.5.3, end to end (default job, one session)
+
+Both versions were measured in the same session, against the same SQL Server container: 6.5.3 is
+this repository's source, and 6.5.2 is the published package (`CL2J_DB_VERSION=6.5.2`, cl2j cases only).
+Each cell gives the mean time, then the allocations.
+
+| Case | ADO.NET | cl2j 6.5.2 | cl2j 6.5.3 | Dapper | EF Core (LINQ) | EF Core (raw SQL) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| List, 1 row | 682 us, 5.70 KB | 696 us, 6.83 KB | 665 us, 6.46 KB | 673 us, 6.66 KB | 801 us, 73.8 KB | 776 us, 80.3 KB |
+| List, 100 rows | 712 us, 17.9 KB | 731 us, 22.0 KB | 710 us, 21.7 KB | 666 us, 27.3 KB | 813 us, 104.6 KB | 828 us, 111.1 KB |
+| List, 10,000 rows | 4.79 ms, 1,731 KB | 4.91 ms, 1,664 KB | 4.85 ms, 1,664 KB | 5.45 ms, 2,228 KB | 6.09 ms, 3,693 KB | 6.36 ms, 3,700 KB |
+| By key (`QuerySingle`) | 655 us, 6.52 KB | 696 us, 7.82 KB | 671 us, 7.45 KB | 716 us, 7.70 KB | 809 us, 76.2 KB | 773 us, 82.0 KB |
+| By key (`QueryKey`) | | 708 us, 8.63 KB | 651 us, 8.26 KB | | | |
+| Insert, one row | 1.69 ms, 7.38 KB | 1.81 ms, 9.5 KB | 1.70 ms, 9.5 KB | 1.71 ms, 8.05 KB | 1.85 ms, 83.6 KB | |
+
+- The measurable difference between the two versions is in allocations: 0.37 KB less per read in
+  6.5.3. Allocations are deterministic, so this holds from run to run.
+- The time differences between 6.5.2 and 6.5.3 (3 to 7 percent) are drift between the two passes,
+  not the change: the delegate saves about 0.2 us per call. Insert proves it. It does not go through
+  the changed code (9.5 KB in both versions), yet it shows the same 6 percent gap.
+- The overall picture is unchanged. cl2j.Database is at parity with hand-written ADO.NET and Dapper,
+  and at 10,000 rows it is faster and allocates less than Dapper. EF Core is 15 to 30 percent slower
+  and allocates 6 to 14 times as much on small reads.
