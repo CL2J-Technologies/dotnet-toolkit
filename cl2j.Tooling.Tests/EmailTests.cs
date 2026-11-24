@@ -151,6 +151,38 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public void A_reply_to_address_lands_in_the_message()
+        {
+            using var message = EmailService.CreateMailMessage("sender@example.invalid", "subject", "body", "to@example.invalid", false, "reply@example.invalid");
+
+            var replyTo = Assert.Single(message.ReplyToList);
+            Assert.Equal("reply@example.invalid", replyTo.Address);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void No_reply_to_address_leaves_the_header_out(string? replyTo)
+        {
+            using var message = EmailService.CreateMailMessage("sender@example.invalid", "subject", "body", "to@example.invalid", false, replyTo);
+
+            Assert.Empty(message.ReplyToList);
+        }
+
+        [Fact]
+        public async Task A_reply_to_that_is_not_an_address_is_a_failure_rather_than_a_crash()
+        {
+            var (service, logger) = Build(Unreachable());
+
+            var result = await service.SendEmailAsync("sender@example.invalid", "subject", "body", "to@example.invalid", "not an address");
+
+            Assert.False(result.Sent);
+            Assert.IsType<FormatException>(result.Failure);
+            Assert.Contains(logger.Entries, e => e.Level == LogLevel.Error);
+        }
+
+        [Fact]
         public async Task A_result_that_succeeded_carries_no_failure()
         {
             //Asserted on the type rather than through a send, since a send cannot succeed here
@@ -361,6 +393,8 @@ namespace cl2j.Tooling.Tests
             public Task<EmailResult> SendEmailAsync(string from, string subject, string body, string toEmail, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
 
             public Task<EmailResult> SendSystemAsync(string subject, string details, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
+
+            //Deliberately does not implement the reply-to overload: proves an existing implementer still compiles.
 
             public Task<EmailResult> SendErrorAsync(Exception ex, string subject, string details, bool isBodyHtml = false) => Task.FromResult(EmailResult.Success());
         }
