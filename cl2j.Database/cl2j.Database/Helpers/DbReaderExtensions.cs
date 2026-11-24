@@ -173,7 +173,8 @@ namespace cl2j.Database.Helpers
                     else if (propType == Types.TypeDecimal)
                         sb.AppendLine($"context.GetDecimal({ordinal});");
                     else if (propType == Types.TypeFloat)
-                        sb.AppendLine($"context.GetFloat({ordinal});");
+                        //Not GetFloat: a provider that stores a float in a double column (MySQL) refuses it.
+                        sb.AppendLine($"System.Convert.ToSingle(context.GetValue({ordinal}), System.Globalization.CultureInfo.InvariantCulture);");
                     else if (propType == Types.TypeDouble)
                         sb.AppendLine($"context.GetDouble({ordinal});");
                     else if (propType == Types.TypeGuid)

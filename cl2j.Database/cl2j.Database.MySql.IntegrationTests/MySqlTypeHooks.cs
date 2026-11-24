@@ -9,18 +9,6 @@ namespace cl2j.Database.MySql.IntegrationTests
         //datetime(6), datetime(6) and time(6): one microsecond, not the seventh digit of a tick.
         internal const int TemporalFractionalDigits = 6;
 
-        /// <summary>The first day of MySQL's <c>datetime</c> and <c>date</c> range.</summary>
-        internal static readonly DateTime FirstDay = new(1000, 1, 1);
-
-        //MySQL's datetime and date start in the year 1000, not 0001.
-        internal static object ValueToWrite(object value) => value switch
-        {
-            DateTime stamp when stamp < FirstDay => DateTime.SpecifyKind(FirstDay, stamp.Kind),
-            DateOnly day when day < DateOnly.FromDateTime(FirstDay) => DateOnly.FromDateTime(FirstDay),
-            DateTimeOffset moment when moment.UtcDateTime < FirstDay => new DateTimeOffset(FirstDay, TimeSpan.Zero),
-            _ => value,
-        };
-
         //The column holds an instant: the offset does not come back.
         internal static object ExpectedValue(object written) => written switch
         {
