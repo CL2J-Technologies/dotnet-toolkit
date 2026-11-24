@@ -40,16 +40,15 @@ namespace cl2j.Database.MySql.IntegrationTests
                 return "int";
             if (clrType == typeof(long))
                 return "bigint";
-            if (clrType == typeof(float))
-                return "float";
-            if (clrType == typeof(double))
+            //float is stored as double: see MySqlCommandBuilder.MapClrType.
+            if (clrType == typeof(float) || clrType == typeof(double))
                 return "double";
             if (clrType == typeof(decimal))
                 return "decimal";
             if (clrType == typeof(Guid) || clrType == typeof(char))
                 return "char";
             if (clrType == typeof(string))
-                return "longtext";
+                return "varchar";
             if (clrType == typeof(byte[]))
                 return "longblob";
             if (clrType == typeof(DateTime) || clrType == typeof(DateTimeOffset))

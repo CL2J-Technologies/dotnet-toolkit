@@ -99,8 +99,10 @@ namespace cl2j.Database.MySql
                 return "bigint";
             if (type == Types.TypeDouble)
                 return "double";
+            //Not float: MySQL sends a FLOAT as text with six significant digits (16777216 reads back as
+            //16777200) and refuses float.MaxValue as out of range. A double column holds every float exactly.
             if (type == Types.TypeFloat)
-                return "float";
+                return "double";
             if (type == Types.TypeDecimal)
                 return FormatDecimal(columnAttr);
             if (type == Types.TypeGuid)
@@ -189,7 +191,14 @@ namespace cl2j.Database.MySql
 
             //MySqlBulkCopy compares the rows sent with the rows inserted and throws on a mismatch,
             //so a skipped duplicate is not silent.
-            await bulkCopy.WriteToServerAsync(rows, cancellationToken);
+            var result = await bulkCopy.WriteToServerAsync(rows, cancellationToken);
+
+            //LOAD DATA LOCAL runs with IGNORE: what an INSERT would refuse (a value too long, a
+            //value out of range, NaN) is stored changed, and reported only as a warning. Refuse it
+            //here, as the INSERT path and SqlBulkCopy do; the transaction is rolled back.
+            var warnings = result.Warnings.Where(w => !string.Equals(w.Level, "Note", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (warnings.Count > 0)
+                throw new DatabaseException($"MySqlBulkCopy into {table.NameFormatted} raised {warnings.Count} warning(s), first: {warnings[0].Message}");
         }
 
         private static async Task BatchedInsertAsync(MySqlConnection connection, MySqlTransaction? transaction, TableDescriptor table, IReadOnlyList<ColumnDescriptor> columns, DataTable rows, CancellationToken cancellationToken)
