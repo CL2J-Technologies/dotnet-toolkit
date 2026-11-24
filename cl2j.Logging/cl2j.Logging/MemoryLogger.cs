@@ -4,6 +4,7 @@ namespace cl2j.Logging
 {
     public class MemoryLogger(int maxLines = 1000)
     {
+        private readonly int maxLines = ValidateMaxLines(maxLines);
         private readonly List<LogData> list = new(maxLines);
 
         public IList<LogData> GetLogs()
@@ -13,8 +14,8 @@ namespace cl2j.Logging
 
         internal void Log(DateTimeOffset dateTime, LogLevel logLevel, Exception? ex, string text)
         {
-            if (!EnsureCapacityDoNotOverflow())
-                return;
+            if (list.Count >= maxLines)
+                list.RemoveAt(0);
 
             list.Add(new LogData
             {
@@ -30,18 +31,10 @@ namespace cl2j.Logging
             list.Clear();
         }
 
-        private bool EnsureCapacityDoNotOverflow()
+        private static int ValidateMaxLines(int maxLines)
         {
-            if (list.Count >= maxLines)
-            {
-                try
-                {
-                    list.RemoveAt(0);
-                }
-                catch { }
-            }
-
-            return list.Count < maxLines;
+            ArgumentOutOfRangeException.ThrowIfLessThan(maxLines, 1);
+            return maxLines;
         }
     }
 }

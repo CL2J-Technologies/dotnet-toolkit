@@ -225,6 +225,21 @@ namespace cl2j.Logging.Tests
             Assert.Equal("line 1004", logs[^1].Text);
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(int.MinValue)]
+        public void A_MemoryLogger_rejects_a_capacity_below_one(int maxLines)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MemoryLogger(maxLines));
+        }
+
+        [Fact]
+        public void A_MemoryLogger_accepts_the_default_capacity()
+        {
+            Assert.Empty(new MemoryLogger().GetLogs());
+        }
+
         [Fact]
         public void WriteToConsole_follows_IncludeConsole()
         {
