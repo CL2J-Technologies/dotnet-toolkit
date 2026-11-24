@@ -26,24 +26,25 @@ public class Profile
 - **`null`:** `Insert` writes the text `null`, `BulkInsert` writes SQL `NULL`. Both read back as `null`
   (`KeyAndJsonFixTests`).
 
-## Write options, and what they drop
+## Write options
 
-The write side uses `ConnectionExtensions.JsonSerializeOptions`:
-`DefaultIgnoreCondition = WhenWritingDefault` and `UnsafeRelaxedJsonEscaping` (non-ASCII characters are not
-`\u`-escaped). Because of `WhenWritingDefault`, **properties holding the default of their type are not
-written**: `0`, `false`, `null`, `Guid.Empty`.
-
-That is harmless until a property's initializer is not its type default:
+The write side uses `ConnectionExtensions.JsonSerializeOptions`: `UnsafeRelaxedJsonEscaping` (non-ASCII
+characters are not `\u`-escaped), and **every property is written**, including `0`, `false` and `null`.
+A value that equals its type's default is stored as such, so it reads back as it was set, even when the
+property's initializer is something else:
 
 ```cs
 public class Retry { public int Count { get; set; } = 3; }
 
-// Stored with Count = 0: the "0" is not written -> {}. Read back: Count == 3.
+// Stored with Count = 0: {"Count":0}. Read back: Count == 0.
 ```
 
-If a zero or `false` must survive, use the type default as the initial value, or a nullable type
-(`int?`) that defaults to `null`. This is the configured behaviour, found while writing these docs; no test
-covers it.
+Tested for `Insert`, `Update` and `BulkInsert` on every provider (`DefectFixTests`).
+
+> **Migration note (6.6.0).** Before 6.6.0 the write side skipped properties holding their type's default, so
+> `Count = 0` was stored as `{}` and read back as the initializer's value. That was silent data loss. Rows
+> written before 6.6.0 are not changed: a property that was skipped is still missing from the stored text, and
+> still reads back as the initializer's value. Only new writes (and rewrites by `Update`) are complete.
 
 ## Unicode: `varchar` loses non-Latin text
 

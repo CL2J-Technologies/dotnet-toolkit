@@ -9,7 +9,7 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class DefectFixTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        private static readonly Type[] Tables = [typeof(GeneratedKeyBulkRow)];
+        private static readonly Type[] Tables = [typeof(GeneratedKeyBulkRow), typeof(JsonDefaultRow)];
 
         public async Task InitializeAsync()
         {
@@ -41,6 +41,75 @@ namespace cl2j.Database.IntegrationTests
             Assert.All(rows, r => Assert.StartsWith("gkb_", r.Id));
             Assert.Equal(5, rows.Select(r => r.Id).Distinct().Count());
         }
+
+        [Fact]
+        public async Task Insert_keeps_a_json_property_that_holds_its_type_default()
+        {
+            //Count = 0 was not written (the type default), and read back as the initializer's 3.
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<JsonDefaultRow>();
+
+            await connection.Insert(new JsonDefaultRow { Code = "a", Retry = new RetryPolicy { Count = 0, Enabled = false, Label = null } });
+
+            var retry = (await connection.QueryKey<JsonDefaultRow>("a"))!.Retry!;
+            Assert.Equal(0, retry.Count);
+            Assert.False(retry.Enabled);
+            Assert.Null(retry.Label);
+        }
+
+        [Fact]
+        public async Task Update_keeps_a_json_property_that_holds_its_type_default()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<JsonDefaultRow>();
+            var row = new JsonDefaultRow { Code = "a", Retry = new RetryPolicy { Count = 7, Enabled = true, Label = "x" } };
+            await connection.Insert(row);
+
+            row.Retry = new RetryPolicy { Count = 0, Enabled = false, Label = null };
+            await connection.Update(row);
+
+            var retry = (await connection.QueryKey<JsonDefaultRow>("a"))!.Retry!;
+            Assert.Equal(0, retry.Count);
+            Assert.False(retry.Enabled);
+            Assert.Null(retry.Label);
+        }
+
+        [Fact]
+        public async Task BulkInsert_keeps_a_json_property_that_holds_its_type_default()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<JsonDefaultRow>();
+
+            await connection.BulkInsert(new[]
+            {
+                new JsonDefaultRow { Code = "a", Retry = new RetryPolicy { Count = 0, Enabled = false, Label = null } },
+                new JsonDefaultRow { Code = "b", Retry = new RetryPolicy { Count = 5, Enabled = true } },
+            });
+
+            var a = (await connection.QueryKey<JsonDefaultRow>("a"))!.Retry!;
+            Assert.Equal(0, a.Count);
+            Assert.False(a.Enabled);
+            Assert.Null(a.Label);
+            Assert.Equal(5, (await connection.QueryKey<JsonDefaultRow>("b"))!.Retry!.Count);
+        }
+    }
+
+    /// <summary>Every initializer differs from the type default, so a value that is not written reads back wrong.</summary>
+    public sealed class RetryPolicy
+    {
+        public int Count { get; set; } = 3;
+        public bool Enabled { get; set; } = true;
+        public string? Label { get; set; } = "default";
+    }
+
+    [Table("Def660JsonDefault")]
+    public sealed class JsonDefaultRow
+    {
+        [Column(Name = "Code", Key = KeyType.Key, Length = 20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Column(Name = "Retry", Json = true)]
+        public RetryPolicy? Retry { get; set; }
     }
 
     [Table("Def660GeneratedKeyBulk")]

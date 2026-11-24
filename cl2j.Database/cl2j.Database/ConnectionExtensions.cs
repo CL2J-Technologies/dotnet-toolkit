@@ -3,7 +3,6 @@ using System.Data.Common;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using cl2j.Database.CommandBuilders;
 using cl2j.Database.Databases;
 using cl2j.Database.Descriptors;
@@ -19,9 +18,11 @@ namespace cl2j.Database
         public static ILogger? Logger { get; set; }
         public static DatabaseOptions DatabaseOptions { get; set; } = new();
 
+        //No DefaultIgnoreCondition: every property is written. WhenWritingDefault used to skip a
+        //value equal to its type's default, so Count = 0 on a class whose initializer is 3 was
+        //stored as {} and read back as 3, silently.
         public static readonly JsonSerializerOptions JsonSerializeOptions = new()
         {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 

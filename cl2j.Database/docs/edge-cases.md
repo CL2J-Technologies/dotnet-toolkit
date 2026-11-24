@@ -50,8 +50,8 @@ whether it was observed against SQL Server 2022 while writing these docs (**obse
 - **`string` and `char` are `varchar`**: characters outside the collation become `?` silently
   (`TypeEdgeValueTests`). JSON columns are `varchar` too, so non-Latin text is lost unless you set
   `TypeName = "nvarchar(max)"` (**observed**). See [JSON columns](json-columns.md).
-- **JSON omits properties that hold their type's default**, so `0`/`false`/`null` is not stored and a
-  non-default initializer wins on read. (**Observed.**)
+- **JSON writes every property**, including `0`/`false`/`null`, so a non-default initializer no longer wins on read
+  (fixed in 6.6.0; rows written earlier are unchanged). See [JSON columns](json-columns.md#write-options).
 - **A JSON `null`** is the text `null` on `Insert` and SQL `NULL` on `BulkInsert`; both read back as `null`.
   (`KeyAndJsonFixTests`.)
 
