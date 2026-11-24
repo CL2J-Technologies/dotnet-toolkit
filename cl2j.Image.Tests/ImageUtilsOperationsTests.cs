@@ -114,7 +114,7 @@ namespace cl2j.Image.Tests
             Assert.Same(image, cleaned);
         }
 
-        [Fact(Skip = "Bug: the public RasterImage constructor leaves Origin at Default instead of TopLeft, so ExifUtils.RotateFlipIfRequired reports a freshly created image as rotated")]
+        [Fact]
         public void CleanImage_on_a_RasterImage_leaves_a_freshly_created_image_alone()
         {
             using var image = new RasterImage(40, 20);

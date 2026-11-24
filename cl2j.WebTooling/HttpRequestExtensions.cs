@@ -55,7 +55,9 @@ namespace cl2j.WebTooling
 
         public static string GetRequestLanguage(this HttpRequest request)
         {
-            if (request.Path.ToString().StartsWith("/en", StringComparison.CurrentCultureIgnoreCase))
+            //A whole segment: "/en" and "/en/...", not "/entreprise". The prefix test it replaces
+            //reported every French page whose first segment began with "en" as English.
+            if (request.Path.StartsWithSegments("/en", StringComparison.OrdinalIgnoreCase))
                 return "en";
             return "fr";
         }

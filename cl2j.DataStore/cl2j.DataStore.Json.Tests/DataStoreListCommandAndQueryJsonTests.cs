@@ -143,7 +143,7 @@ namespace cl2j.DataStore.Json.Tests
         {
             await SeedAsync(P("1", "Lovelace"));
 
-            await store.InsertAsync(P("1", "Someone else"));
+            await Assert.ThrowsAnyAsync<Exception>(() => store.InsertAsync(P("1", "Someone else")));
 
             Assert.Equal("Lovelace", Assert.Single(await store.GetAllAsync()).Name);
         }
@@ -153,13 +153,18 @@ namespace cl2j.DataStore.Json.Tests
         {
             await SeedAsync(P("1", "Lovelace"));
 
-            await store.UpdateAsync(P("nobody", "Anyone"));
+            await Assert.ThrowsAnyAsync<Exception>(() => store.UpdateAsync(P("nobody", "Anyone")));
 
             Assert.Equal("Lovelace", Assert.Single(await store.GetAllAsync()).Name);
         }
 
+        /// <summary>
+        ///     Not an error, as in the dictionary store: the store ends up as the caller asked, and
+        ///     the cache decorator relies on it to drop an entry the file no longer holds. Throwing
+        ///     here would leave that entry in the cache, with no way to remove it until a refresh.
+        /// </summary>
         [Fact]
-        public async Task A_delete_of_a_missing_key_leaves_the_file_as_it_was()
+        public async Task A_delete_of_a_missing_key_is_not_an_error_and_leaves_the_file_as_it_was()
         {
             await SeedAsync(P("1", "Lovelace"));
 
@@ -168,7 +173,26 @@ namespace cl2j.DataStore.Json.Tests
             Assert.Equal("Lovelace", Assert.Single(await store.GetAllAsync()).Name);
         }
 
-        [Fact(Skip = "Bug: InsertAsync catches the ConflictException it throws for a duplicate key and only logs it at Trace, so the caller sees success; the dictionary store throws.")]
+        /// <summary>
+        ///     A file name under a "directory" that is in fact a file: reading finds nothing, and
+        ///     writing fails. Every write path used to catch that and log it at Trace, so a write
+        ///     that never reached the disk looked exactly like one that did.
+        /// </summary>
+        private async Task<DataStoreListCommandAndQueryJson<string, Person>> UnwritableStoreAsync()
+        {
+            await environment.Provider.WriteTextAsync("blocker", "not a directory");
+            return new DataStoreListCommandAndQueryJson<string, Person>(environment.Provider, "blocker/people.json", p => p.Id, NullLogger.Instance);
+        }
+
+        [Fact]
+        public async Task An_insert_whose_write_fails_is_reported()
+        {
+            var unwritable = await UnwritableStoreAsync();
+
+            await Assert.ThrowsAnyAsync<Exception>(() => unwritable.InsertAsync(P("1", "Lovelace")));
+        }
+
+        [Fact]
         public async Task Inserting_a_key_that_is_already_there_is_refused()
         {
             await SeedAsync(P("1", "Lovelace"));
@@ -176,20 +200,12 @@ namespace cl2j.DataStore.Json.Tests
             await Assert.ThrowsAsync<ConflictException>(() => store.InsertAsync(P("1", "Someone else")));
         }
 
-        [Fact(Skip = "Bug: UpdateAsync catches the NotFoundException it throws for a missing key and only logs it at Trace, so the caller sees success; the dictionary store throws.")]
+        [Fact]
         public async Task Updating_a_key_that_is_not_there_is_refused()
         {
             await SeedAsync(P("1", "Lovelace"));
 
             await Assert.ThrowsAsync<NotFoundException>(() => store.UpdateAsync(P("nobody", "Anyone")));
-        }
-
-        [Fact(Skip = "Bug: DeleteAsync catches the NotFoundException it throws for a missing key and only logs it at Trace, so the caller sees success.")]
-        public async Task Deleting_a_key_that_is_not_there_is_refused()
-        {
-            await SeedAsync(P("1", "Lovelace"));
-
-            await Assert.ThrowsAsync<NotFoundException>(() => store.DeleteAsync("nobody"));
         }
     }
 }

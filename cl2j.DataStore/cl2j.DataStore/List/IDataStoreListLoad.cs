@@ -2,7 +2,7 @@
 {
     public interface IDataStoreListLoad<TValue>
     {
-        //Retreive all the items
+        //Retrieve all the items
         Task<IReadOnlyList<TValue>> GetAllAsync();
     }
 }

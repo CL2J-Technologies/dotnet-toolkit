@@ -9,7 +9,12 @@
         ///     Sends an email whose <c>Reply-To</c> header is <paramref name="replyTo" />, so the
         ///     recipient's "Reply" goes to that address instead of <paramref name="from" />.
         /// </summary>
+        /// <param name="from">The sender address.</param>
+        /// <param name="subject">The subject line.</param>
+        /// <param name="body">The message body.</param>
+        /// <param name="toEmail">The recipient address.</param>
         /// <param name="replyTo">The reply address. Null, empty or whitespace means no <c>Reply-To</c> header.</param>
+        /// <param name="isBodyHtml">Whether the body is HTML rather than plain text.</param>
         /// <remarks>
         ///     The default implementation exists so that existing implementers of this interface keep
         ///     compiling. It ignores <paramref name="replyTo" /> and forwards to the overload without

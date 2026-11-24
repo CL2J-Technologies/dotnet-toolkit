@@ -2,7 +2,7 @@
 {
     public interface IDataStoreDictionaryLoad<TKey, TValue> where TKey : notnull
     {
-        //Retreive all the items
+        //Retrieve all the items
         Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync();
     }
 }
