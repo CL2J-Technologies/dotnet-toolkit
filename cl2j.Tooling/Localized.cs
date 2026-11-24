@@ -123,12 +123,18 @@ namespace cl2j.Tooling
 
         public override string ToString()
         {
+            //English first when there is one, then the other languages. A Localized without an
+            //English entry, Default() included, lists what it has rather than throwing.
             var sb = new StringBuilder();
-            sb.Append($"{DefaultLanguage}={data[DefaultLanguage]}");
+            if (data.TryGetValue(DefaultLanguage, out var english))
+                sb.Append($"{DefaultLanguage}={english}");
             foreach (KeyValuePair<string, T> item in data)
             {
-                if (item.Key != DefaultLanguage)
-                    sb.Append($", {item.Key}={item.Value}");
+                if (item.Key == DefaultLanguage)
+                    continue;
+                if (sb.Length > 0)
+                    sb.Append(", ");
+                sb.Append($"{item.Key}={item.Value}");
             }
             return sb.ToString();
         }
@@ -204,7 +210,9 @@ namespace cl2j.Tooling
 
             foreach (var kvp in this)
             {
-                if (!casted.TryGetValue(kvp.Key, out var castedValue))
+                //The exact language, not TryGetValue: that one falls back to English and then to
+                //the first value, which made {es=Hello} equal to {fr=Hello}.
+                if (!casted.data.TryGetValue(kvp.Key, out var castedValue))
                     return false;
 
                 if (kvp.Value == null)

@@ -8,28 +8,34 @@ namespace cl2j.Tooling
         private readonly string name;
         private readonly ILogger logger;
 
-        private readonly CacheLoader cacheLoader;
+        /// <summary>
+        ///     Created, and so started, on first use rather than in the constructor. The loader's
+        ///     timer fires straight away on a thread pool thread, so starting it here let the first
+        ///     <see cref="LoadCache"/> run before the derived constructor had assigned its fields:
+        ///     that load saw them unset, and the cache stayed empty until the next refresh.
+        /// </summary>
+        private readonly Lazy<CacheLoader> cacheLoader;
         private List<T> cache = [];
         protected static readonly SemaphoreSlim semaphore = new(1, 1);
 
         public CacheableObject(string name, TimeSpan refreshInterval, ILogger logger)
         {
-            cacheLoader = new CacheLoader(name, refreshInterval, RefreshCache, logger);
             this.name = name;
             this.logger = logger;
+            cacheLoader = new Lazy<CacheLoader>(() => new CacheLoader(name, refreshInterval, RefreshCache, logger), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         protected abstract Task<List<T>> LoadCache();
 
         protected async Task<List<T>> GetCache()
         {
-            await cacheLoader.WaitAsync();
+            await cacheLoader.Value.WaitAsync();
             return cache;
         }
 
         protected async Task WaitForCache()
         {
-            await cacheLoader.WaitAsync();
+            await cacheLoader.Value.WaitAsync();
         }
 
         protected async Task RefreshCache()
@@ -63,7 +69,7 @@ namespace cl2j.Tooling
 
         protected async Task<List<T>> AddCacheObject(T o)
         {
-            await cacheLoader.WaitAsync();
+            await cacheLoader.Value.WaitAsync();
 
             await semaphore.WaitAsync();
             try
@@ -80,7 +86,7 @@ namespace cl2j.Tooling
 
         protected async Task<List<T>> UpdateCacheObject(T oldObject, T newObject)
         {
-            await cacheLoader.WaitAsync();
+            await cacheLoader.Value.WaitAsync();
 
             await semaphore.WaitAsync();
             try
@@ -104,8 +110,8 @@ namespace cl2j.Tooling
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-                cacheLoader.Dispose();
+            if (disposing && cacheLoader.IsValueCreated)
+                cacheLoader.Value.Dispose();
         }
     }
 }
