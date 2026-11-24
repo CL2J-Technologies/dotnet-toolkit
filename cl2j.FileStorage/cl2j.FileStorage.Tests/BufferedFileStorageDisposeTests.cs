@@ -50,9 +50,9 @@ namespace cl2j.FileStorage.Tests
             await storage.AppendAsync("last line");
             await provider.Entered.WaitAsync(Deadline);
 
-            //The timer has taken the buffer and is held inside the write.
+            // The timer has taken the buffer and is held inside the write.
             var dispose = Task.Run(storage.Dispose);
-            var returnedEarly = dispose.Wait(TimeSpan.FromMilliseconds(500));
+            var returnedEarly = await Task.WhenAny(dispose, Task.Delay(TimeSpan.FromMilliseconds(500))) == dispose;
 
             provider.Release();
             await dispose.WaitAsync(Deadline);
