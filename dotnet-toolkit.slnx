@@ -16,6 +16,9 @@
     <Project Path="cl2j.DataStore/cl2j.DataStore.Json.Tests/cl2j.DataStore.Json.Tests.csproj" />
     <Project Path="cl2j.DataStore/cl2j.DataStore.Tests/cl2j.DataStore.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/cl2j.Database.Benchmarks/cl2j.Database.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/cl2j.FileStorage/" />
   <Folder Name="/cl2j.Scripting/" />
   <Folder Name="/DataStore/">
