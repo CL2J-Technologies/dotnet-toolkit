@@ -47,14 +47,14 @@ namespace cl2j.Logging
 
         public void Dispose()
         {
-            BufferedFile?.Dispose();
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
-                BufferedFile?.FlushAsync().Wait();
+                BufferedFile?.Dispose();
         }
     }
 }

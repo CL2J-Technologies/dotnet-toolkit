@@ -72,44 +72,36 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             };
         }
 
+        /// <summary>
+        ///     An empty path or "/" is the root; any other path is the folder "path/". The prefix always
+        ///     ends with a separator, so "photos" never matches the sibling "photos-old.txt".
+        /// </summary>
+        private static string FolderPrefix(string? path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+
+            var trimmed = path.TrimEnd('/');
+            return trimmed.Length == 0 ? string.Empty : trimmed + "/";
+        }
+
         public async Task<IEnumerable<string>> ListFilesAsync(string path)
         {
             if (container == null)
                 throw new BadRequestException("Container not defined");
 
+            var folder = FolderPrefix(path);
             var list = new List<string>();
 
-            var blobs = container.GetBlobs(prefix: path);
-            if (path != null && path.Length > 0)
+            await foreach (var blob in container.GetBlobsAsync(prefix: folder))
             {
-                foreach (var blob in blobs)
-                {
-                    var name = blob.Name;
-                    if (name.StartsWith(path))
-                    {
-                        name = name[(path.Length)..];
-                        if (name.StartsWith('/'))
-                            name = name[1..];
-                        if (name.IndexOf('/') < 0)
-                            list.Add(name);
-                    }
-                }
+                var name = blob.Name[folder.Length..];
+                if (name.IndexOf('/') < 0)
+                    list.Add(name);
             }
-            else
-            {
-                foreach (var blob in blobs)
-                {
-                    var name = blob.Name;
-                    if (name.IndexOf('/') < 0)
-                        list.Add(name);
-                }
-            }
-
-            await Task.CompletedTask;
 
             return list;
         }
-
         /// <summary>
         ///     The service narrows the listing itself: the folder and the name prefix make the request's
         ///     prefix, so only blobs whose name starts with both come back. A blob below a sub-folder is
@@ -120,7 +112,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             if (container == null)
                 throw new BadRequestException("Container not defined");
 
-            var folder = string.IsNullOrEmpty(path) ? string.Empty : path.TrimEnd('/') + "/";
+            var folder = FolderPrefix(path);
             var list = new List<string>();
 
             await foreach (var blob in container.GetBlobsAsync(prefix: folder + namePrefix))
@@ -138,26 +130,17 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             if (container == null)
                 throw new BadRequestException("Container not defined");
 
+            var folder = FolderPrefix(path);
             var list = new HashSet<string>();
 
-            var blobs = container.GetBlobs();
-            foreach (var blob in blobs)
+            await foreach (var blob in container.GetBlobsAsync(prefix: folder))
             {
-                var name = blob.Name;
-                if (name.StartsWith(path))
-                {
-                    name = name[(path.Length + 1)..];
+                var name = blob.Name[folder.Length..];
 
-                    var n = name.IndexOf('/');
-                    if (n > 0)
-                    {
-                        name = name[..n];
-                        list.Add(name);
-                    }
-                }
+                var n = name.IndexOf('/');
+                if (n > 0)
+                    list.Add(name[..n]);
             }
-
-            await Task.CompletedTask;
 
             return list;
         }

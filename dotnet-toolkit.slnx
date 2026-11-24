@@ -16,6 +16,9 @@
     <Project Path="cl2j.DataStore/cl2j.DataStore.Json.Tests/cl2j.DataStore.Json.Tests.csproj" />
     <Project Path="cl2j.DataStore/cl2j.DataStore.Tests/cl2j.DataStore.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/cl2j.Database.Benchmarks/cl2j.Database.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/cl2j.FileStorage/" />
   <Folder Name="/cl2j.Scripting/" />
   <Folder Name="/DataStore/">
@@ -25,6 +28,7 @@
     <Project Path="cl2j.FileStorage/cl2j.FileStorage.Provider.AzureBlobStorage/cl2j.FileStorage.Provider.AzureBlobStorage.csproj" />
     <Project Path="cl2j.FileStorage/cl2j.FileStorage.Provider.S3/cl2j.FileStorage.Provider.S3.csproj" />
     <Project Path="cl2j.FileStorage/cl2j.FileStorage.S3.IntegrationTests/cl2j.FileStorage.S3.IntegrationTests.csproj" />
+    <Project Path="cl2j.FileStorage/cl2j.FileStorage.AzureBlobStorage.IntegrationTests/cl2j.FileStorage.AzureBlobStorage.IntegrationTests.csproj" />
     <Project Path="cl2j.FileStorage/cl2j.FileStorage/cl2j.FileStorage.csproj" />
     <Project Path="cl2j.FileStorage/cl2j.FileStorage.Tests/cl2j.FileStorage.Tests.csproj" />
     <Project Path="cl2j.FileStorage.Disk.Tests/cl2j.FileStorage.Disk.Tests.csproj" />

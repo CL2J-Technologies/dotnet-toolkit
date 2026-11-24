@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- Benchmark methods are instance methods by requirement, whether or not they use state. -->
+    <NoWarn>$(NoWarn);CA1822</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="Dapper" Version="2.1.100" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\cl2j.Database\cl2j.Database\cl2j.Database.csproj" />
+    <ProjectReference Include="..\..\cl2j.Database\cl2j.Database.SqlServer\cl2j.Database.SqlServer.csproj" />
+  </ItemGroup>
+
+</Project>

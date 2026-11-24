@@ -181,6 +181,63 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
+        public async Task A_listing_of_the_root_names_the_top_level_folders_whole()
+        {
+            //An empty path has no separator after it. The Azure provider cut the name at path.Length + 1
+            //regardless, so every top-level folder came back missing its first character.
+            var top = $"contract-rootfolders-{Guid.NewGuid():N}";
+
+            await Provider.WriteTextAsync($"{top}/file.txt", "1");
+
+            try
+            {
+                Assert.Contains(top, await Provider.ListFoldersAsync(string.Empty));
+            }
+            finally
+            {
+                await Provider.DeleteAsync($"{top}/file.txt");
+            }
+        }
+
+        [Fact]
+        public async Task A_listing_of_a_folder_leaves_out_the_files_of_a_sibling_whose_name_starts_the_same()
+        {
+            var folder = Folder(nameof(A_listing_of_a_folder_leaves_out_the_files_of_a_sibling_whose_name_starts_the_same));
+
+            //"photos" must not match "photos-old.txt": the folder is "photos/", not the bare string.
+            await Provider.WriteTextAsync($"{folder}/in.txt", "1");
+            await Provider.WriteTextAsync($"{folder}-old.txt", "2");
+
+            try
+            {
+                Assert.Equal(["in.txt"], await Provider.ListFilesAsync(folder));
+            }
+            finally
+            {
+                await Provider.DeleteAsync($"{folder}-old.txt");
+            }
+        }
+
+        [Fact]
+        public async Task A_listing_of_a_folder_leaves_out_the_sub_folders_of_a_sibling_whose_name_starts_the_same()
+        {
+            var folder = Folder(nameof(A_listing_of_a_folder_leaves_out_the_sub_folders_of_a_sibling_whose_name_starts_the_same));
+
+            //"photos" must not match "photos22/theirs": the sibling's folders are not this folder's.
+            await Provider.WriteTextAsync($"{folder}/mine/a.txt", "1");
+            await Provider.WriteTextAsync($"{folder}22/theirs/b.txt", "2");
+
+            try
+            {
+                Assert.Equal(["mine"], await Provider.ListFoldersAsync(folder));
+            }
+            finally
+            {
+                await Provider.DeleteAsync($"{folder}22/theirs/b.txt");
+            }
+        }
+
+        [Fact]
         public async Task A_deleted_file_is_gone()
         {
             var file = File(nameof(A_deleted_file_is_gone));
