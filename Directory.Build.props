@@ -240,11 +240,11 @@
          a Reply-To address, declared as a default interface method so existing implementers keep
          compiling; the default drops the Reply-To, `EmailService` honours it.
 
-         6.6.2 is a patch bump: cl2j.WebTooling's GetRequestLanguage tested the path with a bare
+         6.5.3 is a patch bump: cl2j.WebTooling's GetRequestLanguage tested the path with a bare
          StartsWith("/en"), so a French page whose first segment begins with "en" (/entreprise,
          /entretien) was reported as English. It now requires a whole "/en" segment. Such pages
          change from "en" to "fr", which is what they always should have been. -->
-    <Version>6.6.2</Version>
+    <Version>6.5.3</Version>
         
   
     <Authors>CL2J Technologies</Authors>
