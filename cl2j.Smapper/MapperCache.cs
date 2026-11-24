@@ -6,11 +6,6 @@ namespace cl2j.Smapper
     {
         private static readonly ConcurrentDictionary<string, TypeMapper> cache = new();
 
-        public static TypeMapper GetOrCreateMapper<TSource, TDestination>()
-        {
-            return GetOrCreateMapper(typeof(TSource), typeof(TDestination));
-        }
-
         public static TypeMapper GetOrCreateMapper(Type source, Type destination)
         {
             var key = $"{source.FullName}->{destination.FullName}";
