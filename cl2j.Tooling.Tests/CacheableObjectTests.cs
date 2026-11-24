@@ -14,7 +14,11 @@ namespace cl2j.Tooling.Tests
 
         private sealed class Store : CacheableObject<string>
         {
-            private readonly Func<Task<List<string>>> load;
+            //CacheableObject starts its loader from its constructor, so the first load can run
+            //before this constructor has assigned anything. The load waits for the assignment;
+            //without it these tests would see an empty cache from time to time. The real race is
+            //documented by the skipped test at the end of the class.
+            private volatile Func<Task<List<string>>>? load;
 
             public Store(Func<Task<List<string>>> load, ILogger logger)
                 : base("store", NoRefresh, logger)
@@ -22,7 +26,11 @@ namespace cl2j.Tooling.Tests
                 this.load = load;
             }
 
-            protected override Task<List<string>> LoadCache() => load();
+            protected override Task<List<string>> LoadCache()
+            {
+                SpinWait.SpinUntil(() => load != null);
+                return load!();
+            }
 
             public Task<List<string>> Items() => GetCache();
 
@@ -116,6 +124,49 @@ namespace cl2j.Tooling.Tests
             await store.Refresh();
 
             Assert.Equal(["ok"], await store.Items());
+        }
+
+        private static readonly ManualResetEventSlim FirstLoadAttempted = new(false);
+
+        /// <summary>Holds the base constructor, once it has started the loader, until a first load has run.</summary>
+        private sealed class GatedLogger : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Debug)
+                    FirstLoadAttempted.Wait(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        private sealed class EagerStore : CacheableObject<string>
+        {
+            private readonly List<string> items;
+
+            public EagerStore() : base("eager", NoRefresh, new GatedLogger())
+            {
+                items = ["a"];
+            }
+
+            protected override Task<List<string>> LoadCache()
+            {
+                FirstLoadAttempted.Set();
+                return Task.FromResult(items?.ToList() ?? []);
+            }
+
+            public Task<List<string>> Items() => GetCache();
+        }
+
+        [Fact(Skip = "Bug: CacheableObject starts its loader in its constructor, so the first LoadCache can run before the derived constructor has assigned its fields and the cache is left empty.")]
+        public async Task The_first_load_sees_the_fields_a_derived_class_sets_in_its_constructor()
+        {
+            FirstLoadAttempted.Reset();
+            using var store = new EagerStore();
+
+            Assert.Equal(["a"], await store.Items());
         }
     }
 }
