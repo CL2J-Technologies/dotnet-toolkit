@@ -212,6 +212,13 @@ namespace cl2j.Database.Helpers
                 {
                     if (propType.IsEnum)
                         sb.AppendLine($"({propTypeName})context.GetInt32({ordinal});");
+                    else if (IsNullableEnum(propType))
+                    {
+                        //Read as the enum, not through GetValue: the provider hands back a boxed
+                        //int, and unboxing it straight to E? throws InvalidCastException.
+                        var enumTypeName = TypeUtils.GetTypeName(Nullable.GetUnderlyingType(propType)!);
+                        sb.AppendLine($"context.IsDBNull({ordinal}) ? ({propTypeName})null : ({enumTypeName})context.GetInt32({ordinal});");
+                    }
                     else
                         sb.AppendLine($"context.GetValue({ordinal});");
                 }
@@ -223,7 +230,7 @@ namespace cl2j.Database.Helpers
                 var c = tableDescriptor.Columns[i];
                 var propTypeName = TypeUtils.GetTypeName(c.Property.PropertyType);
                 var vi = $"v{i}";
-                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json || c.Property.PropertyType.IsEnum)
+                if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json || c.Property.PropertyType.IsEnum || IsNullableEnum(c.Property.PropertyType))
                     sb.Append($"\t\t{c.Name}={vi}");
                 else
                     sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName}){vi}");
@@ -232,6 +239,8 @@ namespace cl2j.Database.Helpers
             }
             sb.AppendLine("\t};");
         }
+
+        private static bool IsNullableEnum(Type type) => Nullable.GetUnderlyingType(type)?.IsEnum == true;
 
         private static Script CreateScript<T>(string code, TableDescriptor tableDescriptor)
         {
