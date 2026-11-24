@@ -1,25 +1,35 @@
 # CSharp Scripting
 
-Small, porwerfull and efficient library to compile and execute dynamic C# code at runtime in your .NET application.
+Small, powerful and efficient library to compile and execute dynamic C# code at runtime in your .NET application.
 
 Features:
 
-- Expression execution.
-- Expression evaluation.
-- Built-in caching provided quick execution of the same expression.
-- Stateless, so it's Thread safe and can be used in multi-thread application like Web applications.
+- Statement execution.
+- Expression evaluation, with an optional typed input and a typed result.
+- Compile once, execute many times: `Script.Create` compiles, `Execute` only calls the compiled method.
+- Compilation errors reported as a `ScriptException` that carries the compiler message and the generated source.
 - Override default namespaces and assemblies used in the compilation.
 
-Supports : .NET 6+
+Targets .NET 10 (`net10.0`). It compiles with Roslyn (`Microsoft.CodeAnalysis.CSharp`).
+
+```powershell
+dotnet add package cl2j.Scripting
+```
 
 # Getting started
 
 The following code will return the string `string1`.
 
 ```cs
-var expression = ScriptEngine.AddReturn(@"""string1""");
-var result = ScriptEngine.Create().Execute<string>(expression);
+using cl2j.Scripting;
+
+var options = ScriptOptions.Create<string>(ScriptOptions.AddReturn(@"""string1"""));
+var script = Script.Create(options);
+
+var result = script.Execute<string>();
 ```
+
+`ScriptOptions.AddReturn(expression)` wraps an expression into `return <expression>;`. Your code is the body of a generated method: write statements, and `return` a value when you ask for a result.
 
 ## Execute an expression
 
@@ -32,11 +42,11 @@ var expression = @"Debug.WriteLine(""Test"");";
 To execute the preceding code, we need to add the `System.Diagnostics` namespace. The following code will allow the execution of the expression:
 
 ```cs
-var scriptDefinition = ScriptDeclaration.CreateDefault();
-scriptDefinition.AddNamespaces("System.Diagnostics");
+var options = ScriptOptions.Create(expression);
+options.AddNamespaces("System.Diagnostics");
 
-var scriptEngine = ScriptEngine.Create(scriptDefinition);
-scriptEngine.Execute(expression);
+var script = Script.Create(options);
+script.Execute();
 ```
 
 ## Evaluation an expression
@@ -68,27 +78,47 @@ var expression = @"context.Text == ""Text1""";
 3. Evaluate the expression
 
 ```cs
-var scriptDefinition = ScriptDeclaration.CreateDefault();
-scriptDefinition.AddAssembly(typeof(TestScriptContext));
+var options = ScriptOptions.Create<TestScriptContext, bool>(ScriptOptions.AddReturn(expression));
+options.AddAssembly(typeof(TestScriptContext));
 
-var scriptEngine = ScriptEngine.Create(scriptDefinition);
+var script = Script.Create(options);
 
-var result = scriptEngine.Execute<TestScriptContext, bool>(ScriptEngine.AddReturn(expression), context);
+var result = script.Execute<TestScriptContext, bool>(context);
 ```
 
-We need to create a `ScriptDeclaration` and add our assembly that contains the class `TestScriptContext`.
+We need to create the `ScriptOptions` with the input and output types and add our assembly that contains the class `TestScriptContext`, since the generated code has to reference it.
 
-After we create the `ScriptEngine` using the default namespaces and assemblies. Since we added our assembly containing the class, the code will compile.
+The `ScriptOptions` created this way already contain the default namespaces and assemblies. Since we added our assembly containing the class, the code will compile.
 
 > Note: When a input is passed, the code generated always name it `context`.
 
+`Script.Create` is the expensive step. Keep the `Script` and call `Execute` as many times as needed instead of creating it for every evaluation.
+
+## Compilation errors
+
+Code that does not compile makes `Script.Create` throw a `ScriptException` (namespace `cl2j.Scripting.Exceptions`). The message carries the compiler diagnostics (for example `CS0029`), and `CompileSource` holds the complete generated source that was compiled.
+
 ## Default namespaces and assemblies
 
-ScriptDeclaration.CreateDefault() add the following dependencies so you don't have to add them:
+The `Create` methods of `ScriptOptions` call `AddDefault()` so you don't have to add them:
 
-- Namespaces : **System, System.Text, System.Collections, System.Threading.Tasks,System.Linq**
-- Asemblies : System.Private.CoreLib.dll, System.Linq.dll
+- Namespaces : **System, System.Text, System.Collections, System.Threading.Tasks, System.Linq**
+- Assemblies : the assemblies loaded in the current application domain, and the assemblies they reference
+
+`AddDefault()` also writes one summary line to the console.
 
 ### Change the default namespace and assemblies
 
-The `ScriptEngine` offer a static method SetDefaultScriptDeclaration to overrid the default configurations.
+Pass `addDefault: false` to `ScriptOptions.Create...` to start from nothing, then add what the code needs:
+
+```cs
+var options = ScriptOptions.Create<int>("return Math.Max(1, 2);", addDefault: false);
+options.AddNamespaces("System");
+options.AddAssembly(typeof(object));   // or AddAssembly(Assembly)
+
+var value = Script.Create(options).Execute<int>();
+```
+
+`AddNamespaces(params string[])` and `AddAssembly(Type | Assembly)` add to what is already there. `AddAssembly` returns `false` when a reference to the assembly could not be created.
+
+Other `ScriptOptions` members: `CompileWithDebug`, `ClassNamespace` (the namespace of the generated class), `MethodName` (default `Execute`), `InputName` (default `context`) and `InstanceCreator`, to replace how the compiled class is instantiated.

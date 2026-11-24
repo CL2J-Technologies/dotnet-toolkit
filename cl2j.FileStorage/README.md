@@ -1,10 +1,10 @@
-`cl2j.FileStorage` is a multi-providers .NET library written in C# that abstract file operations like read, write, delete and more. It's an open and extensible framework based on interfaces and Dependency Injection.
+`cl2j.FileStorage` is a multi-providers .NET library written in C# that abstracts file operations like read, write, delete and more. It's an open and extensible framework based on interfaces and Dependency Injection.
 
 Providers supported:
 
-- `FileStorageProviderDisk` provider for Local file system
-- `FileStorageProviderAzureBlobStorage` provider for Azure Blob Storage
-- `FileStorageProviderS3` provider for S3-compatible object storage (Amazon S3, Cloudflare R2, MinIO)
+- `FileStorageProviderDisk` provider for Local file system (built in `cl2j.FileStorage`)
+- `FileStorageProviderAzureBlobStorage` provider for Azure Blob Storage (`cl2j.FileStorage.Provider.AzureBlobStorage`)
+- `FileStorageProviderS3` provider for S3-compatible object storage (Amazon S3, Cloudflare R2, MinIO) (`cl2j.FileStorage.Provider.S3`)
 
 # Getting started
 
@@ -13,7 +13,7 @@ The setup is simple.
 Add the nuget package to your project:
 
 ```powershell
-Install-Package cl2j.FileStorage
+dotnet add package cl2j.FileStorage
 ```
 
 1. Add the following lines in the appsettings.json:
@@ -24,7 +24,7 @@ Install-Package cl2j.FileStorage
     "Storages": {
       "Data": {
         "Type": "Disk",
-        "Path": "c:\folder>"
+        "Path": "c:\\folder"
       }
     }
   }
@@ -33,64 +33,64 @@ Install-Package cl2j.FileStorage
 
 In the previous example, Data is the name of the FileStorage.
 Type is the type of the provider, Disk indicate that you want to use a provider that will use the File.IO operations.
-Path is the local path, i.e. c:\dev, where the file operations will be done.
+Path is the local path, i.e. c:\dev, where the file operations will be done. The folder is created if it does not exist.
 
-2. Configures the services by calling **AddFileStorage()** and then **UseFileStorageDisk()**
-3. Get the IFileProvider configured and perform file operations
+2. Register the `IConfigurationRoot` and call **AddFileStorage()**. The disk provider is built in; the other providers add their own registration (see below).
+3. Get the `IFileStorageProvider` configured, by name, from the `IFileStorageFactory`, and perform file operations
 
-IFileStorageProvider works with Streams. The library offer utilities, through extensions methods, to simplify text manipulations.
+IFileStorageProvider works with Streams. The library offer utilities, through extensions methods, to simplify text, JSON and binary manipulations.
+
+The factory reads the `cl2j:FileStorage:Storages` section from an `IConfigurationRoot` that it resolves from the container, so that
+instance must be registered.
 
 ## Web Application
 
 ```cs
-public void ConfigureServices(IServiceCollection services)
-{
-  ...
+var builder = WebApplication.CreateBuilder(args);
 
-  //Bootstrap the FileStorage to be available from DependencyInjection.
-  //This will allow accessing IFileStorageProviderFactory instance
-  services.AddFileStorage();
-}
+//The FileStorage factory resolves the IConfigurationRoot from the container
+builder.Services.AddSingleton<IConfigurationRoot>(builder.Configuration);
 
-public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-{
-  ...
-
-  //Add the Disk FileStorage provider
-  app.ApplicationServices.UseFileStorageDisk();
-}
+//Bootstrap the FileStorage to be available from DependencyInjection.
+//This will allow accessing the IFileStorageFactory instance
+builder.Services.AddFileStorage();
 ```
 
 ## Console Application
 
 ```cs
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: false)
+    .Build();
+
 var services = new ServiceCollection();
-...
+services.AddSingleton<IConfigurationRoot>(configuration);
 
 //Bootstrap the FileStorage to be available from DependencyInjection.
-//This will allow accessing IFileStorageProviderFactory instance
+//This will allow accessing the IFileStorageFactory instance
 services.AddFileStorage();
 
-//Add the Disk FileStorage provider
 var serviceProvider = services.BuildServiceProvider();
-serviceProvider.UseFileStorageDisk();
 ```
 
 # Sample code
 
 Here's a class that execute common file operations.
 
-The class receive, by Dependency Injection, the IFileStorageProviderFactory. It request the IFileStorageProvider, represented by the name Data, and execute file operations.
+The class receive, by Dependency Injection, the IFileStorageFactory. It request the IFileStorageProvider, represented by the name Data, and execute file operations.
 
 ```cs
+using cl2j.FileStorage.Core;
+using cl2j.FileStorage.Extensions;
+
 internal class FileOperationSample
 {
-    private IFileStorageProvider fileStorageProvider;
+    private readonly IFileStorageProvider fileStorageProvider;
 
-    public FileOperationExecutor(IFileStorageProviderFactory fileStorageFactory)
+    public FileOperationSample(IFileStorageFactory fileStorageFactory)
     {
-      //Retreive the FileStorage provider
-      fileStorageProvider = fileStorageFactory.Get("Data");
+      //Retrieve the FileStorage provider
+      fileStorageProvider = fileStorageFactory.GetProvider("Data");
     }
 
     public async Task ExecuteAsync()
@@ -114,56 +114,83 @@ internal class FileOperationSample
 
 ## Get the File Storage Provider
 
-To perform file operations, you need to get the IFileStorageProviderFactory and request the provider by passing it's name like:
+To perform file operations, you need to get the IFileStorageFactory and request the provider by passing it's name like:
 
 ```cs
-var fileStorageProviderFactory = serviceProvider.GetRequiredService<IFileStorageProviderFactory>();
-var fileStorageProvider = fileStorageProviderFactory.Get("Data");
+var fileStorageFactory = serviceProvider.GetRequiredService<IFileStorageFactory>();
+var fileStorageProvider = fileStorageFactory.GetProvider("Data");
 ```
+
+`GetProvider` throws a `NotFoundException` when no storage of that name is configured. `serviceProvider.GetFileStorageProvider("Data")` does both steps in one call.
 
 Here's the operations available from the `IFileStorageProvider` interface:
 
 ```cs
 public interface IFileStorageProvider
 {
-  // Write content
-  Task WriteAsync(string name, Stream stream);
+  // Name of the storage, as declared in the configuration
+  string Name { get; set; }
 
-  // Read content
-  Task<bool> ReadAsync(string name, Stream stream);
-
-  // Append content
-  Task AppendAsync(string name, Stream stream);
+  // Initialize itself from its configuration section (called by the factory)
+  void Initialize(string providerName, IConfigurationSection configuration);
 
   // Validate if a file exists
   Task<bool> ExistsAsync(string name);
 
-  // List files of directory
-  Task<IEnumerable<string>> ListAsync(string path);
+  // Get file information. null when the file doesn't exist
+  Task<FileStoreFileInfo?> GetInfoAsync(string name);
 
-  // Get file information
-  Task<FileStoreFileInfo> GetInfoAsync(string name);
+  // List the files directly in a path
+  Task<IEnumerable<string>> ListFilesAsync(string path);
+
+  // List the files directly in a path whose name starts with a prefix
+  Task<IEnumerable<string>> ListFilesAsync(string path, string namePrefix);
+
+  // List the folders directly in a path
+  Task<IEnumerable<string>> ListFoldersAsync(string path);
+
+  // Read content into a stream. false when the file doesn't exist
+  Task<bool> ReadAsync(string name, Stream stream);
+
+  // Write content. An existing file is overwritten
+  Task WriteAsync(string name, Stream stream, string? contentType = null);
+
+  // Append content. The file is created when it doesn't exist
+  Task AppendAsync(string name, Stream stream);
 
   // Delete file
   Task DeleteAsync(string name);
 }
 ```
 
+## Extension methods
+
+The `cl2j.FileStorage.Extensions` namespace adds helpers on `IFileStorageProvider`:
+
+- `ReadTextAsync`, `WriteTextAsync`, `AppendTextAsync` for text (UTF-8 unless an `Encoding` is given). `ReadTextAsync` returns an empty string when the file doesn't exist.
+- `ReadJsonObjectAsync<T>`, `WriteJsonObjectAsync` for JSON objects. A file name ending in `.json.gz` is compressed on write and decompressed on read.
+- `ReadBytesAsync`, `ReadObjectAsync`, `WriteBytesAsync` for binary content.
+- `ClearDirectoryAsync(path)` deletes the files of a path and returns how many were found.
+- `Copy(source, destination)` copies a file inside the same storage and returns `true` on success.
+- `BufferedFileStorage` buffers appended text in memory and writes it at an interval, with a file name pattern and size-based rollover. It is what [cl2j.Logging](../cl2j.Logging/README.md) uses to write log files.
+
 # Azure Blob Storage
 
-To use a Azure Blob Storage in youf project, add the following package:
+To use a Azure Blob Storage in your project, add the following package:
 
 ```powershell
-Install-Package cl2j.FileStorage.Provider.AzureBlobStorage
+dotnet add package cl2j.FileStorage.Provider.AzureBlobStorage
 ```
 
-In the application configuration, call `UseFileStorageAzureBlobStorage()` like this:
+In the application configuration, register the provider (it also calls `AddFileStorage()` for you):
 
 ```cs
-serviceProvider.UseFileStorageAzureBlobStorage();
+using cl2j.FileStorage.Provider.AzureBlobStorage;
+
+services.AddAzureBlobFileStorage();
 ```
 
-Add an entry in the appsetttings.json as follow:
+Add an entry in the appsettings.json as follow:
 
 ```json
 "cl2j": {
@@ -179,15 +206,23 @@ Add an entry in the appsetttings.json as follow:
 }
 ```
 
+| Setting | Default | |
+| --- | --- | --- |
+| `ConnectionString` | — | The connection string of the storage account. |
+| `Container` | — | Required. |
+| `CreateIfMissing` | `false` | Creates the container when it is not there. Off by default: a missing container is nearly always a name spelled wrong, so the provider fails to initialize with a `NotFoundException` rather than hide the mistake. |
+
 # S3-compatible object storage
 
 Works with Amazon S3 and with anything that speaks the same API — Cloudflare R2, MinIO, Backblaze B2.
 
 ```powershell
-Install-Package cl2j.FileStorage.Provider.S3
+dotnet add package cl2j.FileStorage.Provider.S3
 ```
 
 ```cs
+using cl2j.FileStorage.Provider.S3;
+
 services.AddS3FileStorage();
 ```
 
@@ -258,4 +293,4 @@ We expect to add `Google Cloud Storage` in the coming months.
 We will also like to add:
 
 - `FTP` FileStorageProvider
-- Copy and move utilities to simplify the operations
+- A move utility, to complement `Copy`

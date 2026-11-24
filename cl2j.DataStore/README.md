@@ -1,8 +1,11 @@
-`cl2j.DataStore` is a multi-providers CRUD repoository abstraction library written in C#. It's an open and extensible framework based on interfaces and Dependency Injection.
+`cl2j.DataStore` is a multi-providers CRUD repository abstraction library written in C#. It's an open and extensible framework based on interfaces and Dependency Injection.
 
-Providers supported:
+Two shapes of store are offered: a **list** (`IDataStoreList...`, items identified by a key read from the item, usually its `Id`) and a **dictionary** (`IDataStoreDictionary...`, items stored under an explicit key).
 
-- `JSON` - Data store that use a JSON file for CRUD
+Packages:
+
+- `cl2j.DataStore` - the interfaces, the named store registries (factories) and the memory cache decorators
+- `cl2j.DataStore.Json` - Data store that use a JSON file for CRUD, through [cl2j.FileStorage](../cl2j.FileStorage/README.md)
 
 The library also support a memory cache DataStore implemented as a [Decorator Pattern](https://en.wikipedia.org/wiki/Decorator_pattern). See below for more information.
 
@@ -10,13 +13,13 @@ The library also support a memory cache DataStore implemented as a [Decorator Pa
 
 The setup is simple.
 
-1. Add the nuget package to your project:
+1. Add the nuget package to your project (it brings `cl2j.DataStore` and `cl2j.FileStorage`):
 
 ```powershell
-Install-Package cl2j.DataStore.Json
+dotnet add package cl2j.DataStore.Json
 ```
 
-2. Add the following lines in the appsettings.json to configure the IFileStoreProvider:
+2. Add the following lines in the appsettings.json to configure the IFileStorageProvider:
 
 ```json
 "cl2j": {
@@ -34,42 +37,47 @@ Install-Package cl2j.DataStore.Json
 The settings configure a Disk FileStorage provider, which use `System.IO` classes.
 Path is the local path, i.e. c:\dev, where the json file will be.
 
-> cl2j.DataStore use [cl2j.FileStorage](https://github.com/jfblier/cl2j.FileStorage) library to abstract the access to the file system. This allow to use different providers like Disk, Azure, AWS, etc.
+> cl2j.DataStore use the [cl2j.FileStorage](../cl2j.FileStorage/README.md) library to abstract the access to the file system. This allow to use different providers like Disk, Azure Blob Storage or S3.
 
-3. Configures the services by calling `AddFileStorage()` and then `AddDataStoreListJson()` or `AddDataStoreDictionaryJson()`.
+3. Configures the services by calling `AddFileStorage()` and `AddDataStore()`, then, once the service provider is built, register your stores by name with the `CreateAndAdd...` extension methods, for example `CreateAndAddDataStoreListCommandAndQueryJsonWithCache` or `CreateAndAddDataStoreDictionaryJson`.
 
-4. Get the `IDataStoreList` or `IDataStoreDictionary` configured and perform CRUD operatons.
+4. Get the store from the `IDataStoreListFactory` (or `IDataStoreDictionaryFactory`) and perform CRUD operations.
 
-`AddDataStoreListJson` receive three parameters:
+`CreateAndAddDataStoreListCommandAndQueryJsonWithCache` receive four parameters:
 
-1. The name of the FileStore to use. That's the name declared in the appsettings.json.
-2. The name of the file were the data are persisted.
-3. A function that return the unique key to identify the item.
+1. The name of the store. It is the name you will ask the factory for.
+2. The name of the FileStorage to use. That's the name declared in the appsettings.json.
+3. The name of the file were the data are persisted.
+4. The interval at which the cache reloads the file.
+
+The item type must implement `IEntity<TKey>` (an `Id` property of type `TKey`); `Entity<TKey>` is a ready-made base class. To use another property as the key, use the overload of `CreateDataStoreListCommandAndQueryJson...` that takes a `Func<TValue, TKey>`.
+
+```cs
+public class Color : Entity<string>
+{
+    public string Value { get; set; } = "";
+}
+```
 
 ## Web Application
 
 ```cs
-public void ConfigureServices(IServiceCollection services)
-{
-  ...
+var builder = WebApplication.CreateBuilder(args);
 
-  //Bootstrap the FileStorage to be available from DependencyInjection.
-  //This will allow accessing IFileStorageProviderFactory instance
-  services.AddFileStorage();
+//The FileStorage factory resolves the IConfigurationRoot from the container
+builder.Services.AddSingleton<IConfigurationRoot>(builder.Configuration);
 
-  //Configure the JSON DataStore.
-  //The store will use the FileStorageProvider to access the file colors.json.
-  //The field Id represent the key for the Color class
-  services.AddDataStoreListJson<string, Color>("DataStore", "colors.json", (color) => color.Id);
-}
+//Bootstrap the FileStorage to be available from DependencyInjection.
+builder.Services.AddFileStorage();
 
-public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
-{
-  ...
+//Register the DataStore factories.
+builder.Services.AddDataStore();
 
-  //Add the Disk FileStorage provider
-  app.ApplicationServices.UseFileStorageDisk();
-}
+var app = builder.Build();
+
+//Register the stores. The store use the FileStorageProvider "DataStore" to access the file colors.json.
+//The Id property is the key of the Color class.
+app.Services.CreateAndAddDataStoreListCommandAndQueryJsonWithCache<string, Color>("Colors", "DataStore", "colors.json", TimeSpan.FromSeconds(5));
 ```
 
 ## Console Application
@@ -78,158 +86,173 @@ public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 var services = new ServiceCollection();
 ...
 
-//Bootstrap the FileStorage to be available from DependencyInjection.
-//This will allow accessing IFileStorageProviderFactory instance
+//The FileStorage factory resolves the IConfigurationRoot from the container
+services.AddSingleton<IConfigurationRoot>(configuration);
+
+services.AddLogging();
 services.AddFileStorage();
+services.AddDataStore();
 
-//Configure the JSON DataStore.
-//The store will use the FileStorageProvider to access the file colors.json.
-//The field Id represent the key for the Color class
-services.AddDataStoreListJson<string, Color>("DataStore", "colors.json", (color) => color.Id);
-
-//Add the Disk FileStorage provider
 var serviceProvider = services.BuildServiceProvider();
-serviceProvider.UseFileStorageDisk();
+
+//Register the store. The store use the FileStorageProvider "DataStore" to access the file colors.json.
+serviceProvider.CreateAndAddDataStoreListCommandAndQueryJsonWithCache<string, Color>("Colors", "DataStore", "colors.json", TimeSpan.FromSeconds(5));
 ```
+
+The extension methods live in the `cl2j.DataStore.Json.List` and `cl2j.DataStore.Json.Dictionary` namespaces.
 
 # Sample code
 
 Here's a class that execute common operations.
 
 ```cs
+using cl2j.DataStore.List;
+
 internal class DataStoreSample
 {
-    private readonly IDataStoreList<string, Color> dataStoreColorRead;
+    private readonly IDataStoreListCommandAndQuery<string, Color> colors;
 
-    public DataStoreSample(IDataStoreList<string, Color> dataStoreColorRead)
+    public DataStoreSample(IDataStoreListFactory factory)
     {
-        this.dataStoreColorRead = dataStoreColorRead;
+        colors = factory.GetDataStoreListCommandAndQuery<string, Color>("Colors");
     }
 
     public async Task ExecuteAsync()
     {
         //Create colors
-        await dataStoreColorRead.InsertAsync(new Color { Id = "red", Value = "#f00" });
-        await dataStoreColorRead.InsertAsync(new Color { Id = "green", Value = "#0f0" });
-        await dataStoreColorRead.InsertAsync(new Color { Id = "blue", Value = "#00f" });
-        await dataStoreColorRead.InsertAsync(new Color { Id = "cyan", Value = "#0ff" });
-        await dataStoreColorRead.InsertAsync(new Color { Id = "magenta", Value = "#f0f" });
-        await dataStoreColorRead.InsertAsync(new Color { Id = "yellow", Value = "#ff0" });
-        await dataStoreColorRead.InsertAsync(new Color { Id = "black", Value = "#000" });
+        await colors.InsertAsync(new Color { Id = "red", Value = "#f00" });
+        await colors.InsertAsync(new Color { Id = "green", Value = "#0f0" });
+        await colors.InsertAsync(new Color { Id = "blue", Value = "#00f" });
+        await colors.InsertAsync(new Color { Id = "cyan", Value = "#0ff" });
+        await colors.InsertAsync(new Color { Id = "magenta", Value = "#f0f" });
+        await colors.InsertAsync(new Color { Id = "yellow", Value = "#ff0" });
+        await colors.InsertAsync(new Color { Id = "black", Value = "#000" });
 
-        //Retreive all the colors
-        var colors = await dataStoreColorRead.GetAllAsync();
-        foreach (var color in colors)
+        //Retrieve all the colors
+        var all = await colors.GetAllAsync();
+        foreach (var color in all)
             Debug.WriteLine($"{color.Id} -> {color.Value}");
 
-        //Retreive the color black and update it's value
-        var black = await dataStoreColorRead.GetByIdAsync("black");
+        //Retrieve the color black and update it's value
+        var black = await colors.GetByIdAsync("black");
         if (black != null)
         {
             black.Value = "#111";
-            await dataStoreColorRead.UpdateAsync(black.Id, black);
+            await colors.UpdateAsync(black);
         }
 
         //Delete a color
-        await dataStoreColorRead.DeleteAsync("magenta");
+        await colors.DeleteAsync("magenta");
     }
 }
 ```
 
-The class receive, by Dependency Injection, the `IDataStoreList`. The ExecuteAsync method insert colors, retreive all the colors inserted, modify the black color value and remove the magenta color.
+The class receive, by Dependency Injection, the `IDataStoreListFactory`. The ExecuteAsync method insert colors, retrieve all the colors inserted, modify the black color value and remove the magenta color.
 
-A file named `colors.json` was created:
+A file named `colors.json` was created. It is written on one line, with camelCase property names (shown here on several lines for readability):
 
 ```json
 [
-  {
-    "Id": "red",
-    "Value": "#f00"
-  },
-  {
-    "Id": "green",
-    "Value": "#0f0"
-  },
-  {
-    "Id": "blue",
-    "Value": "#00f"
-  },
-  {
-    "Id": "cyan",
-    "Value": "#0ff"
-  },
-  {
-    "Id": "yellow",
-    "Value": "#ff0"
-  },
-  {
-    "Id": "black",
-    "Value": "#111"
-  }
+  { "value": "#f00", "id": "red" },
+  { "value": "#0f0", "id": "green" },
+  { "value": "#00f", "id": "blue" },
+  { "value": "#0ff", "id": "cyan" },
+  { "value": "#ff0", "id": "yellow" },
+  { "value": "#111", "id": "black" }
 ]
 ```
 
 # Operations
 
-Here's the operations available from the `IDataStoreList` interface:
+Here's the operations available from the `IDataStoreListCommandAndQuery` interface (it extends `IDataStoreListQuery`, which extends `IDataStoreListLoad`):
 
 ```cs
-public interface IDataStoreList<TKey, TValue>
+public interface IDataStoreListCommandAndQuery<TKey, TValue>
 {
-    //Retreive all the items
-    Task<IEnumerable<TValue>> GetAllAsync();
+    //Retrieve all the items
+    Task<IReadOnlyList<TValue>> GetAllAsync();
 
-    //Get an item by it's key (Id)
-    Task<TValue> GetByIdAsync(TKey key);
+    //Get an item by it's key (Id). null when it doesn't exist
+    Task<TValue?> GetByIdAsync(TKey key);
 
-    //Insert a new item. The key must not exists
+    //Insert a new item. The key must not exists, otherwise a ConflictException is thrown
     Task InsertAsync(TValue entity);
 
-    //Update an item
+    //Update an item. A NotFoundException is thrown when the key doesn't exist
     Task UpdateAsync(TValue entity);
 
-    //Delete an item
+    //Delete an item. A NotFoundException is thrown when the key doesn't exist
     Task DeleteAsync(TKey key);
+
+    //Replace the whole content
+    Task ReplaceAllByAsync(ICollection<TValue> items);
 }
 ```
 
-Here's the operations available from the `IDataStoreDictionary` interface:
+`ConflictException` and `NotFoundException` come from `cl2j.Tooling.Exceptions`.
+
+Here's the operations available from the `IDataStoreDictionaryCommandAndQuery` interface (it extends `IDataStoreDictionaryQuery`, which extends `IDataStoreDictionaryLoad`):
 
 ```cs
-public interface IDataStoreDictionary<TKey, TValue>
+public interface IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
 {
-    //Retreive all the items
-    Task<Dictionary<TKey, TValue>> GetAllAsync();
+    //Retrieve all the items
+    Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync();
 
-    //Get an item by it's key (Id)
-    Task<TValue> GetByIdAsync(TKey key);
+    //Get an item by it's key. null when it doesn't exist
+    Task<TValue?> GetByIdAsync(TKey key);
 
-    //Insert a new item. The key must not exists
-    Task InsertAsync(TValue entity);
+    //Insert a new item. The key must not exists, otherwise an ArgumentException is thrown
+    Task InsertAsync(TKey key, TValue entity);
 
-    //Update an item
-    Task UpdateAsync(TValue entity);
+    //Update an item. A KeyNotFoundException is thrown when the key doesn't exist
+    Task UpdateAsync(TKey key, TValue entity);
 
-    //Delete an item
+    //Delete an item. Deleting a key that is not there is not an error
     Task DeleteAsync(TKey key);
+
+    //Replace the whole content
+    Task ReplaceAllByAsync(Dictionary<TKey, TValue> items);
 }
 ```
+
+The read-only interfaces `IDataStoreListLoad<TValue>` and `IDataStoreListQuery<TKey, TValue>` (and the dictionary equivalents) are available from the factories with `GetDataStoreListLoad`, `GetDataStoreListQuery`... Asking for a name that was not registered throws a `NotFoundException`; asking for a type the store doesn't implement throws a `ConflictException`. Registering the same name twice throws a `ConflictException`.
+
+A store can also be created without being registered: `CreateDataStoreListCommandAndQueryJson<TKey, TValue>(fileStorageName, fileName)` and `CreateDataStoreDictionaryJson<TKey, TValue>(fileStorageName, fileName)` return the store itself.
 
 # Cache
 
-Adding a memory cache, that is thread-safe, and refresh itself at specified interval is as simple as adding the following line in your startup or program:
+Adding a memory cache, that is thread-safe, and refresh itself at specified interval is as simple as using the `...WithCache` variant of the registration in your startup or program:
 
 ```cs
-services.AddDataStoreListJsonWithCache<string, Color>("Color", "DataStore", "colors.json", (color) => color.Id, TimeSpan.FromSeconds(5));
+serviceProvider.CreateAndAddDataStoreListCommandAndQueryJsonWithCache<string, Color>("Colors", "DataStore", "colors.json", TimeSpan.FromSeconds(5));
 ```
 
-As the DataStoreCache is a `Decorator Pattern` and implement the `IDataStoreList` interface, using the cache is the same as using the `IDataStoreList`.
+As the DataStoreCache is a `Decorator Pattern` and implement the `IDataStoreListCommandAndQuery` interface, using the cache is the same as using the store.
 
-- `Cache name` Name of the cache - for logging purpose
+- `Cache name` Name of the cache, also the name the store is registered under. Used in the logs.
 - `FileStore name` Name of the FileStore to use. That's the name declared in the appsettings.json.
 - `File name` Name of the file were the data are persisted.
-- `Key identifier` A lambda expression that return the unique key of the item. In the example, It's the Id property of the Color class.
 - `Refresh interval` A TimeSpan indicating the interval that the cache will be refreshed. In the example, we indicate that the cache will be refreshed every 5 seconds.
+
+Reads are served from memory. Writes go to the underlying store first, then update the cache, so a failed write (for example a `ConflictException`) leaves the cache unchanged. A reload that fails is logged and the cache keeps serving what it has. If the very first load fails, reading throws an `InvalidOperationException` rather than answering as if the store were empty.
+
+The same variants exist for a dictionary (`CreateAndAddDataStoreDictionaryJsonWithCache`) and for a read-only list (`CreateAndAddDataStoreListLoadJsonWithCache`).
+
+## Warm-up
+
+Every registered store that has a cache can be filled ahead of the first request. `GetWarmable()` on the factories returns them as `IDataStoreWarmable` (a `Name` and a `WarmAsync()` that completes once the cache has loaded, or throws an `InvalidOperationException` if the source can't be read). When to warm, and whether a failure stops the application, is up to the application:
+
+```cs
+var warmables = provider.GetRequiredService<IDataStoreListFactory>().GetWarmable()
+    .Concat(provider.GetRequiredService<IDataStoreDictionaryFactory>().GetWarmable());
+
+await Task.WhenAll(warmables.Select(w => w.WarmAsync())).WaitAsync(TimeSpan.FromSeconds(30));
+```
+
+## Archive
+
+`DataStoreListCommandAndQueryArchive<TKey, TValue>` wraps a list store and, after every change, writes a snapshot of the whole store to a file storage. The file name is a format string in which `{0}` receives the timestamp (`yyyyMMdd-HHmm`), for example `colors-{0}.json`.
 
 # Feedback & Community
 
@@ -247,5 +270,4 @@ If you have a technical question or issue, please either:
 - Add new implementation
   - `Database` implementation using reflection to create, modify and delete objects
 - `CQRS` Use CQRS pattern to decouple the read and write. This will allow
-- `Cache` Add a simple builtin caching mecanism to have performant read DataStore
 - Helper to convert to Dictionary DataStore
