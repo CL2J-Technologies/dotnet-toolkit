@@ -169,7 +169,7 @@ namespace cl2j.Database.MySql.IntegrationTests
             await connection.CreateTable<MyKeyedRow>();
             await connection.Insert(new MyKeyedRow { Code = "a", Label = "Ça va" });
 
-            var found = await connection.Query<MyKeyedRow, MyKeyedRow>(new MyKeyedRow { Label = "CA VA" });
+            var found = await connection.Query<MyKeyedRow>(new { Label = "CA VA" });
 
             Assert.Equal("a", Assert.Single(found).Code);
         }
@@ -199,7 +199,7 @@ namespace cl2j.Database.MySql.IntegrationTests
 
             var ex = await Assert.ThrowsAsync<MySqlException>(() => connection.CreateTable<MyTooLongColumnRow>());
 
-            Assert.Equal(MySqlErrorCode.TooBigFieldlength, ex.ErrorCode);
+            Assert.Equal(MySqlErrorCode.TooBigFieldLength, ex.ErrorCode);
         }
 
         [Fact]
@@ -293,7 +293,7 @@ namespace cl2j.Database.MySql.IntegrationTests
 
             await Assert.ThrowsAnyAsync<Exception>(() => connection.BulkInsert(Rows(2500, (2100, "id-5")), CancellationToken.None, transaction));
 
-            var stored = (await connection.Query<MyBatchRow>(null, CancellationToken.None, transaction)).Count();
+            var stored = (await connection.Query<MyBatchRow>(null, CancellationToken.None, transaction)).Count;
             //Batched: the two full statements before the failing one stay (2 x 1000). Bulk copy: every
             //row but the duplicate was loaded.
             Assert.Equal(how == "batched" ? 2000 : 2499, stored);
