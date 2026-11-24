@@ -24,7 +24,7 @@ Other things that surface from the database or the reader:
 | A `SELECT` that lacks a column the class needs | `IndexOutOfRangeException` whose message is the column name |
 | A `NULL` in a `Required` column | `SqlNullValueException` |
 | Column type different from the property type | `InvalidCastException`; see [Type mapping](type-mapping.md) |
-| A get-only property that is not `[Ignore]`d | On the first read of the type, `ScriptException: ... error CS0200: Property or indexer 'X.Y' cannot be assigned to -- it is read only` |
+| A get-only property that is not `[Ignore]`d | On the first read of the type, a `DatabaseException`: `X.Y has no public setter, so a read cannot fill it. Mark it [Ignore] ... or give it a setter.` (before 6.6.0: a Roslyn `CS0200`) |
 | A value the type cannot hold (`TimeSpan` over a day, `NaN`, a `decimal` over the declared precision) | An exception from the server or the driver; the value is not truncated silently (except the cases listed in [Type mapping](type-mapping.md), such as extra decimals, which are rounded) |
 
 ## Logging

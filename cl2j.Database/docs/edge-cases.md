@@ -12,8 +12,8 @@ whether it was observed against SQL Server 2022 while writing these docs (**obse
   (`TypeKeyAndForeignTableTests`.) See [Type mapping](type-mapping.md#reading-tables-the-library-did-not-create).
 - **A `NULL` in a `Required` column throws** (`SqlNullValueException`); in an optional `int` it reads as `0`.
   Use `int?` to keep the `NULL`. (**Observed.**)
-- **Get-only properties must be `[Ignore]`d**, or the first read of the type fails to compile its mapper.
-  (**Observed.**)
+- **A get-only property that is not `[Ignore]`d** makes the first read throw a `DatabaseException` naming the type and
+  the property (before 6.6.0: a Roslyn `CS0200`); `Insert` still writes it. (`GetOnlyPropertyTests`.)
 - **Nested public classes work; non-public ones are refused.** (`TypeKeyAndForeignTableTests`,
   `DbReaderExtensionsTests`.)
 

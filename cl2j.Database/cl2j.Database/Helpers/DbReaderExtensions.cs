@@ -146,6 +146,16 @@ namespace cl2j.Database.Helpers
 
         private static void AddReadObjectCode<T>(StringBuilder sb, string typeName, TableDescriptor tableDescriptor)
         {
+            //The reader fills the entity with an object initializer, which needs a public setter
+            //(an init accessor counts). A get-only property used to fail the Roslyn compile with
+            //CS0200 on the first read, a message about generated code the caller never wrote.
+            //Insert still writes such a property, so only the reader needs to refuse it.
+            foreach (var column in tableDescriptor.Columns)
+            {
+                if (column.Property.SetMethod is not { IsPublic: true })
+                    throw new DatabaseException($"{typeof(T).Name}.{column.Property.Name} has no public setter, so a read cannot fill it. Mark it [Ignore] if it is not a column, or give it a setter.");
+            }
+
             for (var i = 0; i < tableDescriptor.Columns.Count; ++i)
             {
                 var c = tableDescriptor.Columns[i];

@@ -62,8 +62,9 @@ public class Sample
 - **Properties, not fields.** Only public instance properties with a getter are columns, inherited ones
   included. A field carrying `[Column]` is not mapped.
 - **Every mapped property needs a public setter** (`init` works). The mapper builds the object with an
-  object initializer, so a get-only property that is not marked `[Ignore]` fails on the first read with a
-  compile error (`error CS0200: Property or indexer '...' cannot be assigned to -- it is read only`).
+  object initializer, so a get-only property that is not marked `[Ignore]` makes the first read throw a
+  `DatabaseException` that names the type and the property (`X.Y has no public setter ... Mark it [Ignore] ... or give
+  it a setter`); before 6.6.0 it was a Roslyn compile error (`CS0200`). `Insert` still writes such a property.
   Put `[Ignore]` on computed or get-only properties.
 - **Column order follows the property order** of the type, and the `SELECT` the library builds lists the
   columns by name.
