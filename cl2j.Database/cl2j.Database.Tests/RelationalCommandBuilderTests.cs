@@ -21,6 +21,15 @@ namespace cl2j.Database.Tests
         private static ColumnDescriptor Column(RelationalCommandBuilder builder, Type type, string name)
             => TableDescriptorFactory.Create(type, builder.DatabaseFormatter).Columns.Single(c => c.Name == name);
 
+        [Fact]
+        public void The_base_refuses_a_string_key_without_a_length_whatever_the_provider()
+        {
+            var ex = Assert.Throws<DatabaseException>(() => Builder().GetCreateTableStatement(typeof(TpUnboundedKeyRow)));
+
+            Assert.Contains("Code", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("A string key needs a Length: [Column(Length = 50)]", ex.Message, StringComparison.Ordinal);
+        }
+
         #region Statements
 
         [Fact]

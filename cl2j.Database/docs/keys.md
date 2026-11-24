@@ -128,5 +128,6 @@ Proven by `DefectFixTests` (every provider) and the DDL text tests (`KeyDeclarat
   and `DeleteKey` still need exactly one key column.
 - **An entity with no key** can be created and inserted into, but `Update` and `Delete` produce invalid SQL
   (`Incorrect syntax near 'WHERE'`) and `QueryKey` throws.
-- **Give a string key a `Length`.** Without one the column is `varchar(max)`, which SQL Server refuses as a
-  key (`is of a type that is invalid for use as a key column in an index`).
+- **A string key needs a `Length`.** `CreateTable` throws a `DatabaseException` naming the property (`A string key needs
+  a Length: [Column(Length = 50)]`) instead of creating a `varchar(max)` key the server refuses, on every provider.
+  A `TypeName` is accepted in place of a `Length`.

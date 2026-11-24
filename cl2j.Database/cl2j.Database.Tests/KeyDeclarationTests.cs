@@ -128,6 +128,69 @@ namespace cl2j.Database.Tests
             Assert.True(CommandBuilderHelpers.IsSuppliedByTheServer(Column(typeof(LongKeyed), "Id")));
         }
 
+        [Theory]
+        [InlineData(typeof(UnboundedStringKey), "Code")]
+        [InlineData(typeof(UnboundedCompositeKey), "Code")]
+        public void A_string_key_without_a_length_is_refused_and_named(Type type, string property)
+        {
+            //varchar(max) cannot be a key, and the server's own message names neither the table
+            //nor the property.
+            var ex = Assert.Throws<Exceptions.DatabaseException>(() => Builder().GetCreateTableStatement(type));
+
+            Assert.Contains(property, ex.Message, StringComparison.Ordinal);
+            Assert.Contains("A string key needs a Length: [Column(Length = 50)]", ex.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void A_string_key_with_an_explicit_type_name_is_the_callers_choice()
+        {
+            var text = Builder().GetCreateTableStatement(typeof(StringKeyWithTypeName)).Text;
+
+            Assert.Contains("[Slug] nvarchar(100)", text, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void A_string_column_that_is_not_a_key_may_have_no_length()
+        {
+            var text = Builder().GetCreateTableStatement(typeof(UnboundedNonKey)).Text;
+
+            Assert.Contains("[Notes] varchar(max)", text, StringComparison.Ordinal);
+        }
+
+        [Table("UnboundedStringKey")]
+        public sealed class UnboundedStringKey
+        {
+            [Column(Name = "Code", Key = KeyType.Key)]
+            public string Code { get; set; } = string.Empty;
+        }
+
+        [Table("UnboundedCompositeKey")]
+        public sealed class UnboundedCompositeKey
+        {
+            [Column(Name = "Tenant", Key = KeyType.Key, Length = 20)]
+            public string Tenant { get; set; } = string.Empty;
+
+            [Column(Name = "Code", Key = KeyType.Key)]
+            public string Code { get; set; } = string.Empty;
+        }
+
+        [Table("StringKeyWithTypeName")]
+        public sealed class StringKeyWithTypeName
+        {
+            [Column(Name = "Slug", Key = KeyType.Key, TypeName = "nvarchar(100)")]
+            public string Slug { get; set; } = string.Empty;
+        }
+
+        [Table("UnboundedNonKey")]
+        public sealed class UnboundedNonKey
+        {
+            [Column(Name = "Id", Key = KeyType.Key)]
+            public int Id { get; set; }
+
+            [Column(Name = "Notes")]
+            public string? Notes { get; set; }
+        }
+
         [Table("OrderLine")]
         public sealed class OrderLine
         {

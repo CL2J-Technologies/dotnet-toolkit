@@ -17,6 +17,17 @@ namespace cl2j.Database.CommandBuilders
             //("multiple primary keys").
             var compositeKey = tableDescriptor.Keys.Count > 1;
 
+            //A string with no Length is varchar(max) (longtext, text), which SQL Server and MySQL
+            //refuse as a key and which no provider should index by accident. Refuse it here, with
+            //the property and the fix, the way a decimal without precision is refused; the server's
+            //own message names neither. An explicit TypeName is the caller's own choice.
+            foreach (var key in tableDescriptor.Keys)
+            {
+                var keyType = Nullable.GetUnderlyingType(key.Property.PropertyType) ?? key.Property.PropertyType;
+                if (keyType == Types.TypeString && key.ColumnAtribute.Length <= 0 && string.IsNullOrEmpty(key.ColumnAtribute.TypeName))
+                    throw new DatabaseException($"{tableDescriptor.Name}.{key.Property.Name}: A string key needs a Length: [Column(Length = 50)]");
+            }
+
             var lines = new List<string>();
             foreach (var column in tableDescriptor.Columns)
             {

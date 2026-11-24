@@ -211,6 +211,24 @@ namespace cl2j.Database.PostgreSql.Tests
             Assert.Contains("\"Id\" uuid DEFAULT gen_random_uuid() PRIMARY KEY", Normalise(Builder().GetCreateTableStatement(typeof(GuidKeyedRow)).Text), StringComparison.Ordinal);
         }
 
+        [Table("UnboundedKey")]
+        private sealed class UnboundedKeyRow
+        {
+            [Column(Name = "Code", Key = KeyType.Key)]
+            public string Code { get; set; } = string.Empty;
+        }
+
+        [Fact]
+        public void A_string_key_without_a_length_is_refused_and_named()
+        {
+            //text would index, but a key with no declared size is almost always a forgotten Length,
+            //and the other providers refuse it, so the schema must not depend on the provider.
+            var ex = Assert.Throws<DatabaseException>(() => Builder().GetCreateTableStatement(typeof(UnboundedKeyRow)));
+
+            Assert.Contains("Code", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("A string key needs a Length: [Column(Length = 50)]", ex.Message, StringComparison.Ordinal);
+        }
+
         [Fact]
         public void A_composite_key_is_one_table_level_constraint_with_no_identity()
         {

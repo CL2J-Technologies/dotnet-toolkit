@@ -45,6 +45,13 @@ namespace cl2j.Database.Tests
         public string Label { get; set; } = string.Empty;
     }
 
+    [Table("TpUnboundedKey")]
+    public sealed class TpUnboundedKeyRow
+    {
+        [Column(Name = "Code", Key = KeyType.Key)]
+        public string Code { get; set; } = string.Empty;
+    }
+
     [Table("TpSelfGenerated")]
     public sealed class TpSelfGeneratedRow
     {

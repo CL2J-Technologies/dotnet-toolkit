@@ -25,6 +25,23 @@ namespace cl2j.Database.MySql.IntegrationTests
             public string? Sku { get; set; }
         }
 
+        [Table("UnboundedKey")]
+        private sealed class UnboundedKeyRow
+        {
+            [Column(Name = "Code", Key = KeyType.Key)]
+            public string Code { get; set; } = string.Empty;
+        }
+
+        [Fact]
+        public void A_string_key_without_a_length_is_refused_and_named()
+        {
+            //longtext cannot be a key; the server's own message names neither table nor property.
+            var ex = Assert.Throws<Exceptions.DatabaseException>(() => Builder().GetCreateTableStatement(typeof(UnboundedKeyRow)));
+
+            Assert.Contains("Code", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("A string key needs a Length: [Column(Length = 50)]", ex.Message, StringComparison.Ordinal);
+        }
+
         private static ICommandBuilder Builder()
         {
             cl2j.Database.MySql.MySql.Register();
