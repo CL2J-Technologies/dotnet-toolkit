@@ -224,7 +224,7 @@ namespace cl2j.Database.Helpers
 
         /// <summary>
         ///     The expression that turns what the provider hands back into the property's own type,
-        ///     for the three types it does not hand back as themselves, or <c>null</c> when a plain
+        ///     for the types it does not always hand back as themselves, or <c>null</c> when a plain
         ///     cast is enough.
         ///
         ///     <para>
@@ -233,6 +233,25 @@ namespace cl2j.Database.Helpers
         ///     the boxed value straight to <see cref="DateOnly"/>, <see cref="TimeOnly"/> or
         ///     <see cref="char"/> threw InvalidCastException on the first row. See issue #46. A
         ///     value that already has the right type (another provider) is still cast as before.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     The generated reader is compiled once per entity type and cached by type only, so
+        ///     the code it emits has to read every provider's shapes. Npgsql returns a
+        ///     <see cref="short"/> for a <see cref="byte"/> property (PostgreSQL has no one-byte
+        ///     integer, the column is <c>smallint</c>), and both Npgsql (<c>timestamptz</c>) and
+        ///     MySqlConnector (<c>datetime</c> has no offset) return a <see cref="DateTime"/> for a
+        ///     <see cref="DateTimeOffset"/> property. A byte that does not fit throws rather than
+        ///     truncating. A <see cref="DateTime"/> is read as the UTC instant, which is how both
+        ///     drivers write a <see cref="DateTimeOffset"/> parameter: Unspecified and Utc kinds are
+        ///     taken as UTC, a Local kind is converted with <c>ToUniversalTime()</c>.
+        ///     </para>
+        ///
+        ///     <para>
+        ///     These are conversions on the boxed value rather than a typed
+        ///     <c>GetFieldValue&lt;DateTimeOffset&gt;</c> call: the emitted code can then be tested
+        ///     without a server, and it does not depend on each driver supporting that generic
+        ///     getter.
         ///     </para>
         /// </summary>
         /// <param name="propType">The property type, nullable or not.</param>
@@ -248,6 +267,11 @@ namespace cl2j.Database.Helpers
                 return $"{source} is TimeSpan t{index} ? TimeOnly.FromTimeSpan(t{index}) : (TimeOnly){source}";
             if (type == Types.TypeChar)
                 return $"{source} is string s{index} ? (s{index}.Length == 0 ? '\\0' : s{index}[0]) : (char){source}";
+
+            if (type == Types.TypeByte)
+                return $"{source} is byte b{index} ? b{index} : System.Convert.ToByte({source}, System.Globalization.CultureInfo.InvariantCulture)";
+            if (type == Types.TypeDateTimeOffset)
+                return $"{source} is DateTime m{index} ? new DateTimeOffset(m{index}.Kind == DateTimeKind.Local ? m{index}.ToUniversalTime() : DateTime.SpecifyKind(m{index}, DateTimeKind.Utc)) : (DateTimeOffset){source}";
 
             return null;
         }
