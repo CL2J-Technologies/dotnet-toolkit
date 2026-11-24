@@ -238,8 +238,18 @@
 
          6.5.0 is a minor bump: it adds API. `IEmailService.SendEmailAsync` gains an overload taking
          a Reply-To address, declared as a default interface method so existing implementers keep
-         compiling; the default drops the Reply-To, `EmailService` honours it. -->
-    <Version>6.5.0</Version>
+         compiling; the default drops the Reply-To, `EmailService` honours it.
+
+         6.6.0 is a minor bump: three defects in cl2j.Tooling, no signature change, but one of them
+         changes when work happens. CacheableObject starts its loader on first use instead of in
+         its constructor: the timer fired at once on another thread, so the first load could run
+         before the derived constructor had assigned its fields and leave the cache empty until the
+         next refresh. A cache is therefore no longer warming from the moment it is constructed;
+         its first reader waits for the load. Localized.ToString no longer throws on a value
+         without an English entry, Default() included. Localized.Equals compares language by
+         language: it read the other side through the fallback, so {es=Hello} equalled
+         {fr=Hello}. -->
+    <Version>6.6.0</Version>
         
   
     <Authors>CL2J Technologies</Authors>

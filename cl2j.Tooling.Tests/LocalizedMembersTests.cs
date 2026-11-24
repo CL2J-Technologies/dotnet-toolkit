@@ -74,7 +74,7 @@ namespace cl2j.Tooling.Tests
             Assert.Equal("en=Hello, fr=Bonjour", localized.ToString());
         }
 
-        [Fact(Skip = "Bug: ToString reads data[\"en\"] directly, so it throws KeyNotFoundException on any Localized without an English entry, including Default().")]
+        [Fact]
         public void ToString_works_without_an_english_entry()
         {
             Assert.Equal("*=Hello", Localized<string>.Default("Hello").ToString());
@@ -145,7 +145,7 @@ namespace cl2j.Tooling.Tests
             Assert.Equal(a.GetHashCode(), b.GetHashCode());
         }
 
-        [Fact(Skip = "Bug: Equals reads the other side through TryGetValue, which falls back to the first value, so {es=Hello} equals {fr=Hello}.")]
+        [Fact]
         public void Different_languages_are_not_equal()
         {
             var spanish = Localized<string>.Create("es", "Hello");

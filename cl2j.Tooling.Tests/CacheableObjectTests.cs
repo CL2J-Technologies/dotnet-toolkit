@@ -14,11 +14,7 @@ namespace cl2j.Tooling.Tests
 
         private sealed class Store : CacheableObject<string>
         {
-            //CacheableObject starts its loader from its constructor, so the first load can run
-            //before this constructor has assigned anything. The load waits for the assignment;
-            //without it these tests would see an empty cache from time to time. The real race is
-            //documented by the skipped test at the end of the class.
-            private volatile Func<Task<List<string>>>? load;
+            private readonly Func<Task<List<string>>> load;
 
             public Store(Func<Task<List<string>>> load, ILogger logger)
                 : base("store", NoRefresh, logger)
@@ -26,11 +22,7 @@ namespace cl2j.Tooling.Tests
                 this.load = load;
             }
 
-            protected override Task<List<string>> LoadCache()
-            {
-                SpinWait.SpinUntil(() => load != null);
-                return load!();
-            }
+            protected override Task<List<string>> LoadCache() => load();
 
             public Task<List<string>> Items() => GetCache();
 
@@ -128,7 +120,11 @@ namespace cl2j.Tooling.Tests
 
         private static readonly ManualResetEventSlim FirstLoadAttempted = new(false);
 
-        /// <summary>Holds the base constructor, once it has started the loader, until a first load has run.</summary>
+        /// <summary>
+        ///     Holds whoever starts the loader, once its timer is running, until a first load has run.
+        ///     Were the loader started from the base constructor again, that load would always run
+        ///     before the derived constructor's assignments instead of only now and then.
+        /// </summary>
         private sealed class GatedLogger : ILogger
         {
             public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -160,7 +156,7 @@ namespace cl2j.Tooling.Tests
             public Task<List<string>> Items() => GetCache();
         }
 
-        [Fact(Skip = "Bug: CacheableObject starts its loader in its constructor, so the first LoadCache can run before the derived constructor has assigned its fields and the cache is left empty.")]
+        [Fact]
         public async Task The_first_load_sees_the_fields_a_derived_class_sets_in_its_constructor()
         {
             FirstLoadAttempted.Reset();
