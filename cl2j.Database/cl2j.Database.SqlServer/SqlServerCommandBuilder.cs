@@ -201,7 +201,7 @@ namespace cl2j.Database.SqlServer
             foreach (var column in dataTable.Columns)
                 bulkCopy.ColumnMappings.Add(column.ToString(), column.ToString());
 
-            bulkCopy.BulkCopyTimeout = ConnectionExtensions.DatabaseOptions.BulkInsertTimeout?.Seconds ?? connection.ConnectionTimeout;
+            bulkCopy.BulkCopyTimeout = ConnectionExtensions.DatabaseOptions.GetBulkInsertTimeoutSeconds(connection.ConnectionTimeout);
             await bulkCopy.WriteToServerAsync(dataTable);
         }
 
