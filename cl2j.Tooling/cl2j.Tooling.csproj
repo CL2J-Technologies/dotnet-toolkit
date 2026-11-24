@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="cl2j.Tooling.Tests" />
   </ItemGroup>
 
