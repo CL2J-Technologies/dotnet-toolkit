@@ -282,6 +282,9 @@ namespace cl2j.Database.CommandBuilders
         /// <param name="rows">The values, one <see cref="System.Data.DataColumn"/> per entry of <paramref name="columns"/>.</param>
         /// <param name="cancellationToken">Cancellation of the write.</param>
         /// <param name="transaction">The caller's transaction, or <c>null</c>.</param>
+        //The order mirrors ICommandBuilder.BulkInsert (token, then the optional transaction), which is
+        //what a caller of the extension sees; reordering here would make the two read differently.
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1068:CancellationToken parameters must come last", Justification = "Mirrors ICommandBuilder.BulkInsert, where the transaction follows the token.")]
         protected abstract Task WriteBulkAsync(DbConnection connection, TableDescriptor table, IReadOnlyList<ColumnDescriptor> columns, System.Data.DataTable rows, CancellationToken cancellationToken, DbTransaction? transaction);
 
         #endregion

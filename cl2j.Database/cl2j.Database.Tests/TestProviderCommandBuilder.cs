@@ -76,10 +76,10 @@ namespace cl2j.Database.Tests
 
         protected override Task WriteBulkAsync(DbConnection connection, TableDescriptor table, IReadOnlyList<ColumnDescriptor> columns, DataTable rows, CancellationToken cancellationToken, DbTransaction? transaction)
         {
-            LastBulk = new BulkCall(connection, table, columns, rows, cancellationToken, transaction);
+            LastBulk = new BulkCall(connection, table, columns, rows, transaction, cancellationToken);
             return Task.CompletedTask;
         }
 
-        internal sealed record BulkCall(DbConnection Connection, TableDescriptor Table, IReadOnlyList<ColumnDescriptor> Columns, DataTable Rows, CancellationToken CancellationToken, DbTransaction? Transaction);
+        internal sealed record BulkCall(DbConnection Connection, TableDescriptor Table, IReadOnlyList<ColumnDescriptor> Columns, DataTable Rows, DbTransaction? Transaction, CancellationToken CancellationToken);
     }
 }
