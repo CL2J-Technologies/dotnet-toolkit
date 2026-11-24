@@ -240,15 +240,39 @@
          a Reply-To address, declared as a default interface method so existing implementers keep
          compiling; the default drops the Reply-To, `EmailService` honours it.
 
-         6.5.1 is a patch bump: three defects in cl2j.Tooling, no signature change. One of them
-         changes when work happens. CacheableObject starts its loader on first use instead of in
-         its constructor: the timer fired at once on another thread, so the first load could run
-         before the derived constructor had assigned its fields and leave the cache empty until the
-         next refresh. A cache is therefore no longer warming from the moment it is constructed;
-         its first reader waits for the load. Localized.ToString no longer throws on a value
-         without an English entry, Default() included. Localized.Equals compares language by
-         language: it read the other side through the fallback, so {es=Hello} equalled
-         {fr=Hello}. -->
+         6.5.1 is a patch bump: the defects the unit-test coverage campaign (#57, #64) surfaced.
+         No signature changes. Two of them change what a caller sees, and are called out first.
+
+           - cl2j.DataStore.Json: DataStoreListCommandAndQueryJson caught every exception in
+             InsertAsync, UpdateAsync and DeleteAsync and logged it at Trace, so a duplicate key, a
+             missing key and a write that never reached the disk all looked like success.
+             InsertAsync now throws ConflictException for a key already there, UpdateAsync throws
+             NotFoundException for a key that is not, and all three let a failed read or write
+             through. DeleteAsync of a missing key stays a no-op, as in the dictionary store: the
+             cache decorator relies on it to drop an entry the file no longer holds;
+           - cl2j.Tooling: CacheableObject starts its loader on first use instead of in its
+             constructor. The timer fired at once on another thread, so the first load could run
+             before the derived constructor had assigned its fields and leave the cache empty until
+             the next refresh. A cache is therefore no longer warming from the moment it is
+             constructed; its first reader waits for the load.
+
+         The rest correct a result without changing anything a correct caller relied on:
+
+           - cl2j.Tooling: Localized.ToString no longer throws on a value without an English
+             entry, Default() included; Localized.Equals compares language by language, where it
+             read the other side through the fallback, so {es=Hello} equalled {fr=Hello};
+           - cl2j.FileStorage: FileProviderExtensions.Copy returned false on every path, success
+             included. BufferedFileStorage.Dispose returned while a timer flush was still writing,
+             so lines written just before shutdown could be lost, and a tick that ran after Dispose
+             threw ObjectDisposedException from an async void callback, which terminates the
+             process. A flush now holds a lock for its whole duration, Dispose stops the timer
+             first, the first tick waits one interval, and the tick lets nothing escape;
+           - cl2j.WebTooling: GetRequestLanguage required only the prefix "/en", so a French page
+             such as /entreprise was reported as English. It now requires a whole segment;
+           - cl2j.Image: a RasterImage built with the public constructor did not start upright, so
+             CleanImage reported a blank image as modified and returned a copy;
+           - cl2j.Database: a nullable enum column could not be read; the generated reader unboxed
+             the provider's int straight to the nullable enum and threw InvalidCastException. -->
     <Version>6.5.1</Version>
         
   
