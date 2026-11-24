@@ -1,4 +1,4 @@
-`cl2j.Database` is a small attribute-based data-access layer for .NET: you describe a table with a plain class, and the library builds the SQL (create/drop table, insert, update, delete, queries by example or by key, bulk insert) and maps rows back to objects. It is split in two packages:
+`cl2j.Database` is a fast, attribute-driven micro-ORM for .NET: you describe a table with a plain class, and the library builds the SQL (create/drop table, insert, update, delete, queries by example or by key, bulk insert) and maps rows back to objects. It is split in two packages:
 
 - `cl2j.Database` - the abstraction: attributes, `IDatabase`, `DbConnection` extension methods, identifier generation.
 - `cl2j.Database.SqlServer` - the SQL Server provider, built on `Microsoft.Data.SqlClient`.

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Scripting</PackageId>
-    <Description>Dynamic C# code compilation and execution at runtime.</Description>
+    <Description>Compile C# snippets once at runtime with Roslyn and call them like regular methods, with a typed input and result and readable compiler errors.</Description>
   </PropertyGroup>
 
   <ItemGroup>

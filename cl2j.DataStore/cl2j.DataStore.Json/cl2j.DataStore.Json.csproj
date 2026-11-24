@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.DataStore.Json</PackageId>
-    <Description>JSON file provider for cl2j.DataStore.</Description>
+    <Description>JSON-file store for cl2j.DataStore: persistence without a database, on any cl2j.FileStorage provider.</Description>
   </PropertyGroup>
 
   <ItemGroup>

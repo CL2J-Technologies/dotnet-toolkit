@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.DataStore</PackageId>
-    <Description>Multi-provider CRUD repository abstraction. Extensible via Dependency Injection.</Description>
+    <Description>CRUD repositories behind one interface, with a memory-cache decorator. Swap the backing store through dependency injection.</Description>
   </PropertyGroup>
 
   <ItemGroup>

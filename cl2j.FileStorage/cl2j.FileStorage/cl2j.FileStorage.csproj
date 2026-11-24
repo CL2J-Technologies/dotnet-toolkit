@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.FileStorage</PackageId>
-    <Description>Multi-provider file storage abstraction: read, write, delete, and more. Extensible via Dependency Injection.</Description>
+    <Description>One file API for local disk, Azure Blob Storage and S3-compatible storage. Switch the provider in appsettings.json, not in your code.</Description>
   </PropertyGroup>
 
   <ItemGroup>
