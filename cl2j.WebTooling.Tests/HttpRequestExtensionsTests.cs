@@ -89,6 +89,7 @@ namespace cl2j.WebTooling.Tests
 
         [Theory]
         [InlineData("/en", "en")]
+        [InlineData("/en/", "en")]
         [InlineData("/en/products", "en")]
         [InlineData("/EN/products", "en")]
         [InlineData("/fr/produits", "fr")]
@@ -99,7 +100,7 @@ namespace cl2j.WebTooling.Tests
             Assert.Equal(expected, Context(path: path).Request.GetRequestLanguage());
         }
 
-        [Fact(Skip = "Bug: GetRequestLanguage tests StartsWith(\"/en\") without a segment boundary, so a French page such as /entreprise is reported as English.")]
+        [Fact]
         public void GetRequestLanguage_does_not_treat_a_path_that_merely_starts_with_en_as_english()
         {
             Assert.Equal("fr", Context(path: "/entreprise").Request.GetRequestLanguage());

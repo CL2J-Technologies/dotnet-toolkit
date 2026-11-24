@@ -238,8 +238,13 @@
 
          6.5.0 is a minor bump: it adds API. `IEmailService.SendEmailAsync` gains an overload taking
          a Reply-To address, declared as a default interface method so existing implementers keep
-         compiling; the default drops the Reply-To, `EmailService` honours it. -->
-    <Version>6.5.0</Version>
+         compiling; the default drops the Reply-To, `EmailService` honours it.
+
+         6.6.2 is a patch bump: cl2j.WebTooling's GetRequestLanguage tested the path with a bare
+         StartsWith("/en"), so a French page whose first segment begins with "en" (/entreprise,
+         /entretien) was reported as English. It now requires a whole "/en" segment. Such pages
+         change from "en" to "fr", which is what they always should have been. -->
+    <Version>6.6.2</Version>
         
   
     <Authors>CL2J Technologies</Authors>
