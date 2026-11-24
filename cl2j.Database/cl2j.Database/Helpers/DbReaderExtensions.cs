@@ -242,7 +242,9 @@ namespace cl2j.Database.Helpers
         ///     integer, the column is <c>smallint</c>), and both Npgsql (<c>timestamptz</c>) and
         ///     MySqlConnector (<c>datetime</c> has no offset) return a <see cref="DateTime"/> for a
         ///     <see cref="DateTimeOffset"/> property. A byte that does not fit throws rather than
-        ///     truncating. A <see cref="DateTime"/> is read as the UTC instant, which is how both
+        ///     truncating. MySQL stores a <see cref="float"/> in a double column (its FLOAT keeps six
+        ///     significant digits), so a double is accepted for a float property. A
+        ///     <see cref="DateTime"/> is read as the UTC instant, which is how both
         ///     drivers write a <see cref="DateTimeOffset"/> parameter: Unspecified and Utc kinds are
         ///     taken as UTC, a Local kind is converted with <c>ToUniversalTime()</c>.
         ///     </para>
@@ -270,6 +272,10 @@ namespace cl2j.Database.Helpers
 
             if (type == Types.TypeByte)
                 return $"({source} switch {{ byte b{index} => b{index}, var x{index} => System.Convert.ToByte(x{index}, System.Globalization.CultureInfo.InvariantCulture) }})";
+            //MySQL has to store a float in a double column (its FLOAT comes back with six significant digits),
+            //so MySqlConnector hands back a double for a float property.
+            if (type == Types.TypeFloat)
+                return $"({source} switch {{ float f{index} => f{index}, var x{index} => System.Convert.ToSingle(x{index}, System.Globalization.CultureInfo.InvariantCulture) }})";
             if (type == Types.TypeDateTimeOffset)
                 return $"({source} switch {{ DateTime m{index} => new DateTimeOffset(m{index}.Kind == DateTimeKind.Local ? m{index}.ToUniversalTime() : DateTime.SpecifyKind(m{index}, DateTimeKind.Utc)), var x{index} => (DateTimeOffset)x{index} }})";
 
