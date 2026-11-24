@@ -116,18 +116,12 @@ namespace cl2j.Database.Tests
             var statement = Builder().GetCreateTableStatement(typeof(TpStringKeyRow));
 
             var expected =
-                "CREATE TABLE `TpStringKey` 
-" +
-                "(
-" +
-                "	`Id` VARCHAR(20) NOT NULL
-" +
-                "	,CONSTRAINT `PK_TpStringKey` PRIMARY KEY (`Id`)
-" +
-                "	,`Label` VARCHAR(50)
-" +
-                ")
-";
+                "CREATE TABLE `TpStringKey` \n" +
+                "(\n" +
+                "\t`Id` VARCHAR(20) NOT NULL\n" +
+                "\t,CONSTRAINT `PK_TpStringKey` PRIMARY KEY (`Id`)\n" +
+                "\t,`Label` VARCHAR(50)\n" +
+                ")\n";
 
             Assert.Equal(expected, Normalise(statement.Text));
             Assert.DoesNotContain("CLUSTERED", statement.Text, StringComparison.Ordinal);
