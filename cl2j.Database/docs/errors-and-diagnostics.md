@@ -21,7 +21,7 @@ Other things that surface from the database or the reader:
 |---|---|
 | Missing schema | `SqlException: The specified schema name "x" either does not exist...` |
 | `DropTable` on a missing table | `SqlException` (use `DropTableIfExists`) |
-| A `SELECT` that lacks a column the class needs | An error that names the column |
+| A `SELECT` that lacks a column the class needs | `IndexOutOfRangeException` whose message is the column name |
 | A `NULL` in a `Required` column | `SqlNullValueException` |
 | Column type different from the property type | `InvalidCastException`; see [Type mapping](type-mapping.md) |
 | A get-only property that is not `[Ignore]`d | On the first read of the type, `ScriptException: ... error CS0200: Property or indexer 'X.Y' cannot be assigned to -- it is read only` |

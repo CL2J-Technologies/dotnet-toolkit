@@ -19,7 +19,8 @@ bool there = await database.Exists<Customer>(new { Id = id });
 - The property names must match **column names** (the `[Column(Name = ...)]` name when there is one).
 - **There is no `LIKE`, range, `OR` or `IN` in a query by example.** Use SQL for those.
 - **A `null` property matches nothing.** `new { Name = (string?)null }` becomes `= NULL`, which is never
-  true. Write `WHERE [Name] IS NULL` yourself. (A `null` example object, `Query<T>(null)`, returns every row.)
+  true. Write `WHERE [Name] IS NULL` yourself. (A `null` example object, `Query<T>((object?)null)`, returns every
+  row; a bare `null` literal binds to the SQL overload and throws.)
 - `Exists` returns `true` when at least one row matches.
 
 ## By key
