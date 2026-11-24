@@ -1,5 +1,8 @@
 ﻿using System.Data.Common;
+using cl2j.Database.Databases;
+using cl2j.Database.SqlServer;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Testcontainers.MsSql;
 using Xunit;
 
@@ -21,7 +24,7 @@ namespace cl2j.Database.IntegrationTests
     ///     to stop trusting a green run that never exercised anything.
     ///     </para>
     /// </summary>
-    public sealed class SqlServerFixture : IAsyncLifetime
+    public sealed class SqlServerFixture : IAsyncLifetime, IDatabaseFixture
     {
         //Pinned rather than floating: a test suite that silently changes server version is a suite
         //whose failures cannot be reproduced. The image goes to the constructor because the
@@ -30,6 +33,17 @@ namespace cl2j.Database.IntegrationTests
             new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
         public string ConnectionString { get; private set; } = string.Empty;
+
+        public Type ConnectionType => typeof(SqlConnection);
+
+        public Type ServerExceptionType => typeof(SqlException);
+
+        //One database and one schema per container: the catalog needs no narrowing.
+        public string CatalogScopeFilter => string.Empty;
+
+        //Typed as the interface on purpose: the facade tests exist to go through IDatabase.
+        public IDatabase CreateDatabase(DatabaseOptions options, ILogger logger)
+            => new SqlServerDatabase(ConnectionString, options, logger);
 
         public async Task InitializeAsync()
         {

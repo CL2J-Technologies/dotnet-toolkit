@@ -6,6 +6,12 @@ namespace cl2j.Database.IntegrationTests
     ///     One entity type per concern. Descriptors are cached by type for the life of the
     ///     process, and the table name comes from the type, so two test classes sharing a type
     ///     would share a table and interfere.
+    ///
+    ///     <para>
+    ///     These are the provider-neutral entities, shared by every provider's test project. Their
+    ///     namespace stays <c>cl2j.Database.IntegrationTests</c> on purpose: the SQL Server-only
+    ///     test files compile against them without a using directive.
+    ///     </para>
     /// </summary>
     [Table("RoundTrip")]
     public sealed class RoundTripRow
@@ -206,19 +212,6 @@ namespace cl2j.Database.IntegrationTests
 
         [Column(Name = "Label", Length = 50)]
         public string Label { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    ///     A <see cref="DateOnly"/> mapped to a <c>date</c> column. See issue #46.
-    /// </summary>
-    [Table("DateOnlyShapes")]
-    public sealed class DateOnlyRow
-    {
-        [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50)]
-        public string Id { get; set; } = string.Empty;
-
-        [Column(Name = "Day")]
-        public DateOnly Day { get; set; }
     }
 
     /// <summary>
