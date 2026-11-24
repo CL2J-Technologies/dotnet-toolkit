@@ -273,7 +273,7 @@
              CleanImage reported a blank image as modified and returned a copy;
            - cl2j.Database: a nullable enum column could not be read; the generated reader unboxed
              the provider's int straight to the nullable enum and threw InvalidCastException. -->
-    <Version>6.5.2</Version>
+    <Version>6.5.3</Version>
         
   
     <Authors>CL2J Technologies</Authors>

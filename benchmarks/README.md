@@ -183,3 +183,28 @@ fixed per-call cost, not a regression.
 | `Script.Execute` through a cached delegate instead of `InvokeMember` | 284 ns (-42%), 1.21 KB (-0.37 KB) | no change | ByKey -0.37 KB |
 | fixed ordinals instead of `GetOrdinal` | 461 ns (-6%, within noise), same bytes | no change | ByKey -0.4 KB |
 | `SequentialAccess` back in `ReadBehavior` | not applicable | | List/ByKey: no time or allocation change |
+
+Only the delegate was kept. Going back on the ordinals would bring back #25 for a gain within noise,
+and `SequentialAccess` changed nothing measurable while making the reader depend on column order.
+
+### 6.5.3: the bound delegate (default job, same machine)
+
+`Script.Execute<TIn, TOut>` now binds the generated method to a `Func<TIn, TOut>` once and calls that,
+instead of going through `Type.InvokeMember` on every call.
+
+| Method | Rows | Mean | Ratio | Allocated | Alloc ratio |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Hand-written mapping | 1 | 218 ns | 1.00 | 1.05 KB | 1.00 |
+| cl2j.Database `Read<T>` | 1 | 284 ns | 1.30 | 1.21 KB | 1.16 |
+| Dapper `Parse<T>` | 1 | 338 ns | 1.55 | 1.12 KB | 1.07 |
+| Hand-written mapping | 100 | 6.74 us | 1.00 | 19.34 KB | 1.00 |
+| cl2j.Database `Read<T>` | 100 | 6.68 us | 0.99 | 19.51 KB | 1.01 |
+| Dapper `Parse<T>` | 100 | 6.63 us | 0.98 | 19.41 KB | 1.00 |
+| Hand-written mapping | 10,000 | 1.88 ms | 1.00 | 1,898 KB | 1.00 |
+| cl2j.Database `Read<T>` | 10,000 | 2.07 ms | 1.11 | 1,898 KB | 1.00 |
+| Dapper `Parse<T>` | 10,000 | 2.01 ms | 1.07 | 1,898 KB | 1.00 |
+
+The fixed per-call cost drops from about 2.3 times hand-written code to 1.3 times, below Dapper's.
+The 10,000-row rows are noisy in this run (Dapper's error is ±160 us); the earlier runs had all three
+at 1.85 to 1.93 ms, and the delegate does not touch the per-row loop. End to end, the gain is
+invisible behind the round trip.
