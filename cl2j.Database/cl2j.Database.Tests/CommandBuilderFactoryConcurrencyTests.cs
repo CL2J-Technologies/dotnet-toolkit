@@ -28,7 +28,7 @@ namespace cl2j.Database.Tests
     public class CommandBuilderFactoryConcurrencyTests
     {
         [Fact]
-        public void Registering_while_resolving_does_not_break_the_registry()
+        public async Task Registering_while_resolving_does_not_break_the_registry()
         {
             var failures = new List<Exception>();
             var stop = false;
@@ -59,7 +59,7 @@ namespace cl2j.Database.Tests
                 cl2j.Database.SqlServer.SqlServer.Register();
 
             Volatile.Write(ref stop, true);
-            Task.WaitAll(resolvers, TimeSpan.FromSeconds(30));
+            await Task.WhenAll(resolvers).WaitAsync(TimeSpan.FromSeconds(30));
 
             Assert.Empty(failures);
         }
