@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\readme.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj" />
   </ItemGroup>
 </Project>
