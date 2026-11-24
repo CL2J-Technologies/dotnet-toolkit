@@ -26,7 +26,7 @@ opens a new connection per call.
 | Default schema | `dbo`. Other schemas must already exist. |
 | Keys | `int`/`long` `Key` is `IDENTITY(1,1)`; `Guid` `Key` is `DEFAULT NEWID()`; the string key constraint is `CONSTRAINT [PK_<Table>] PRIMARY KEY CLUSTERED`. |
 | Identity back | `Insert<TIn, TOut>` appends `SELECT CAST(SCOPE_IDENTITY() ...)`. |
-| Strings | `varchar`; use `TypeName = "nvarchar(n)"` for Unicode. See [Type mapping](../type-mapping.md). |
+| Strings | `varchar`; use `TypeName = "nvarchar(n)"` for Unicode. A `Json` column is `nvarchar(max)`. See [Type mapping](../type-mapping.md). |
 | `DateTime` | `datetime2`; parameters are `datetime2` too. |
 | Bulk insert | `SqlBulkCopy` with `SqlBulkCopyOptions.Default`. See [Bulk insert](../bulk-insert.md). |
 | Table existence | `INFORMATION_SCHEMA.TABLES`. |

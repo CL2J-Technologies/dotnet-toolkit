@@ -179,7 +179,7 @@ public class Sample
     [Column(Name = "CreatedAt")]
     public DateTimeOffset CreatedAt { get; set; }
 
-    [Column(Name = "Tags", Json = true)]             // serialized to a varchar(max) column
+    [Column(Name = "Tags", Json = true)]             // serialized to an nvarchar(max) column (SQL Server)
     public List<string> Tags { get; set; } = [];
 
     [Ignore]
@@ -222,11 +222,11 @@ A short prefix makes an identifier in a log attributable to its table. With no p
 
 ## Type mapping (SQL Server)
 
-`bool` -> `bit`, `byte` -> `tinyint`, `short` -> `smallint`, `int` -> `int`, `long` -> `bigint`, `float` -> `real`, `double` -> `float`, `decimal` -> `decimal(Length,Decimals)` (**`Length` is required**), `Guid` -> `uniqueidentifier`, `string` -> `varchar(Length)` or `varchar(max)`, `byte[]` -> `varbinary`, `DateTime` -> `datetime2`, `DateTimeOffset` -> `datetimeoffset`, `DateOnly` -> `date`, `TimeOnly`/`TimeSpan` -> `time`, `char` -> `char(1)`, enums -> `int` (not null), `Json = true` -> `varchar`. Nullable value types are unwrapped. Any other type throws `No column type for '...'. Declare one with [Column(TypeName = "...")].`
+`bool` -> `bit`, `byte` -> `tinyint`, `short` -> `smallint`, `int` -> `int`, `long` -> `bigint`, `float` -> `real`, `double` -> `float`, `decimal` -> `decimal(Length,Decimals)` (**`Length` is required**), `Guid` -> `uniqueidentifier`, `string` -> `varchar(Length)` or `varchar(max)`, `byte[]` -> `varbinary`, `DateTime` -> `datetime2`, `DateTimeOffset` -> `datetimeoffset`, `DateOnly` -> `date`, `TimeOnly`/`TimeSpan` -> `time`, `char` -> `char(1)`, enums -> `int` (not null), `Json = true` -> `nvarchar(max)` (`nvarchar(Length)`). Nullable value types are unwrapped. Any other type throws `No column type for '...'. Declare one with [Column(TypeName = "...")].`
 
 Three things to know:
 
-- **`string`, `char` and JSON columns are `varchar`, not `nvarchar`.** A character outside the column collation is stored as `?` with no error. Use `TypeName = "nvarchar(100)"` when you need Unicode.
+- **`string` and `char` columns are `varchar`, not `nvarchar`** (JSON columns are `nvarchar` since 6.6.0). A character outside the column collation is stored as `?` with no error. Use `TypeName = "nvarchar(100)"` when you need Unicode.
 - **`Default` is appended to the DDL as `DEFAULT <value>`, but the library's own `Insert` never relies on it:** it sends every non-generated column, so a `null` property is written as `NULL`.
 - **A key of type `Guid` is left to the server** (`DEFAULT NEWID()`): on `Insert`, a value set on the property is ignored.
 

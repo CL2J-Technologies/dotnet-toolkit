@@ -9,7 +9,7 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class DefectFixTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        private static readonly Type[] Tables = [typeof(GeneratedKeyBulkRow), typeof(JsonDefaultRow)];
+        private static readonly Type[] Tables = [typeof(GeneratedKeyBulkRow), typeof(JsonDefaultRow), typeof(JsonUnicodeRow)];
 
         public async Task InitializeAsync()
         {
@@ -92,6 +92,49 @@ namespace cl2j.Database.IntegrationTests
             Assert.Null(a.Label);
             Assert.Equal(5, (await connection.QueryKey<JsonDefaultRow>("b"))!.Retry!.Count);
         }
+
+        private static readonly string[] NonLatin = ["Привет", "日本", "café", "😀"];
+
+        [Fact]
+        public async Task Insert_round_trips_non_latin_text_in_a_json_column()
+        {
+            //SQL Server created the column as varchar, so every character outside the collation came
+            //back as '?'.
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<JsonUnicodeRow>();
+
+            await connection.Insert(new JsonUnicodeRow { Code = "a", Tags = [.. NonLatin] });
+
+            Assert.Equal(NonLatin, (await connection.QueryKey<JsonUnicodeRow>("a"))!.Tags);
+        }
+
+        [Fact]
+        public async Task BulkInsert_round_trips_non_latin_text_in_a_json_column()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<JsonUnicodeRow>();
+
+            await connection.BulkInsert(new[]
+            {
+                new JsonUnicodeRow { Code = "a", Tags = [.. NonLatin] },
+                new JsonUnicodeRow { Code = "b", Tags = ["plain"] },
+            });
+
+            Assert.Equal(NonLatin, (await connection.QueryKey<JsonUnicodeRow>("a"))!.Tags);
+            Assert.Equal(["plain"], (await connection.QueryKey<JsonUnicodeRow>("b"))!.Tags);
+        }
+
+        [Fact]
+        public async Task A_json_column_with_a_length_round_trips_non_latin_text()
+        {
+            //A bounded column is nvarchar(n) on SQL Server, varchar(n) elsewhere.
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<JsonUnicodeRow>();
+
+            await connection.Insert(new JsonUnicodeRow { Code = "a", Bounded = [.. NonLatin] });
+
+            Assert.Equal(NonLatin, (await connection.QueryKey<JsonUnicodeRow>("a"))!.Bounded);
+        }
     }
 
     /// <summary>Every initializer differs from the type default, so a value that is not written reads back wrong.</summary>
@@ -120,5 +163,18 @@ namespace cl2j.Database.IntegrationTests
 
         [Column(Name = "Label", Length = 50)]
         public string Label { get; set; } = string.Empty;
+    }
+
+    [Table("Def660JsonUnicode")]
+    public sealed class JsonUnicodeRow
+    {
+        [Column(Name = "Code", Key = KeyType.Key, Length = 20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Column(Name = "Tags", Json = true)]
+        public List<string>? Tags { get; set; }
+
+        [Column(Name = "Bounded", Json = true, Length = 200)]
+        public List<string>? Bounded { get; set; }
     }
 }

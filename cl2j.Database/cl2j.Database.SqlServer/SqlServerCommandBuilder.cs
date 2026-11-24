@@ -50,7 +50,9 @@ namespace cl2j.Database.SqlServer
         protected override string GetJsonColumnType(ColumnAttribute attribute)
         {
             var length = attribute.Length <= 0 ? "max" : attribute.Length.ToString();
-            return $"varchar({length})";
+            //nvarchar, not varchar: JSON is Unicode text, and a varchar column replaces every character
+            //outside its collation by ? without an error.
+            return $"nvarchar({length})";
         }
 
         protected override string? MapClrType(Type type, ColumnDescriptor column)

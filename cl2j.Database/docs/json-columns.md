@@ -20,7 +20,7 @@ public class Profile
 }
 ```
 
-- **Column type:** `varchar(max)`, or `varchar(Length)` when you give a `Length`.
+- **Column type:** SQL Server `nvarchar(max)` (`nvarchar(Length)` with a `Length`); MySQL `json`; PostgreSQL `jsonb`. MySQL and PostgreSQL give a `Length` as `varchar(Length)`.
 - **Insert and BulkInsert** serialize with `System.Text.Json`; reading uses the default
   `JsonSerializer.Deserialize` options. A class or a list of strings is the usual payload.
 - **`null`:** `Insert` writes the text `null`, `BulkInsert` writes SQL `NULL`. Both read back as `null`
@@ -46,24 +46,29 @@ Tested for `Insert`, `Update` and `BulkInsert` on every provider (`DefectFixTest
 > written before 6.6.0 are not changed: a property that was skipped is still missing from the stored text, and
 > still reads back as the initializer's value. Only new writes (and rewrites by `Update`) are complete.
 
-## Unicode: `varchar` loses non-Latin text
+## Unicode
 
-A JSON column is `varchar`, so characters outside the column collation (Windows-1252 by default) are
-silently replaced by `?`:
+JSON is Unicode text, so the column is too. On SQL Server it is `nvarchar(max)` (`nvarchar(Length)` with a
+`Length`), and non-Latin text round-trips on `Insert` and `BulkInsert`:
 
 ```
-["café", "Привет", "日本"]   ->   café / ?????? / ??
+["café", "Привет", "日本"]   ->   café / Привет / 日本
 ```
 
-This is true for `Insert` and `BulkInsert`. Declare the column as Unicode:
+MySQL (`json`, utf8mb4) and PostgreSQL (`jsonb`) were already Unicode. The shared suite checks the same payload
+on all three providers (`DefectFixTests`), and `SqlServerFormatterTests` pins the DDL text.
 
-```cs
-[Column(Name = "Tags", Json = true, TypeName = "nvarchar(max)")]
-public List<string> Tags { get; set; } = [];
-```
-
-With `TypeName = "nvarchar(max)"` the same payload round-trips (verified against SQL Server 2022; no test in the
-repository covers it yet).
+> **Migration note (6.6.0).** Before 6.6.0 a SQL Server JSON column was created as `varchar`, which replaced every
+> character outside the collation by `?`. The type only changes for tables that `CreateTable` creates from now on.
+> An existing column keeps its type, and text already stored as `?` cannot be recovered. To switch an existing
+> column over, so that new writes keep their Unicode:
+>
+> ```sql
+> ALTER TABLE [Profile] ALTER COLUMN [Settings] nvarchar(max) NULL;  -- add NOT NULL if the column had it
+> ```
+>
+> Use `nvarchar(n)` if the column is bounded by `Length = n`. The statement rewrites the column's data, which can
+> take a while on a large table.
 
 ## Querying inside JSON
 

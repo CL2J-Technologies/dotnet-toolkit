@@ -168,7 +168,7 @@ namespace cl2j.Database.Tests
                 "\t,[CustomerId] varchar(50)\n" +
                 "\t,CONSTRAINT [FK_Invoice_Customer] FOREIGN KEY ([CustomerId]) REFERENCES [Customer]([Id])\n" +
                 "\t,[Amount] decimal(18,2) NOT NULL\n" +
-                "\t,[Metadata] varchar(max)\n" +
+                "\t,[Metadata] nvarchar(max)\n" +
                 ")\n";
 
             Assert.Equal(expected, Normalise(statement.Text));

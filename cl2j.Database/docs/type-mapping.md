@@ -22,7 +22,7 @@ Eighteen types are exercised end to end, each as a plain, a `Required` and a nul
 | `TimeSpan` | `time` | up to just under 24 hours | a day or more, or a negative value, is **refused** (it throws; it is not truncated) |
 | `char` | `char(1)` | | a character outside the collation (see below) |
 | enum | `int`, `NOT NULL` | the numeric value, including a value that is not defined in the enum | |
-| `Json = true` | `varchar` | see [JSON columns](json-columns.md) | non-Latin text |
+| `Json = true` | `nvarchar(max)` (`nvarchar(Length)`) | see [JSON columns](json-columns.md); Unicode intact | |
 
 Nullable value types (`int?`, `DateTime?`) are unwrapped: the column type is that of the underlying type, and
 the column allows `NULL`. A non-nullable enum property is `NOT NULL`; `Kind?` gives a nullable `int`
