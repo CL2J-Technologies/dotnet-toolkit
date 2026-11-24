@@ -56,6 +56,11 @@ namespace cl2j.Tooling
                 return addNamespace ? GetTypeNameWithNamespace(representation, t.Namespace) : representation;
             }
 
+            //A plain type nested in a plain one is written Outer.Inner. Without this the argument of a
+            //generic, List<Inner>, lost its declaring type and the generated code did not compile.
+            if (addNamespace && t.DeclaringType is { IsGenericType: false })
+                return $"{GetCSharpRepresentation(t.DeclaringType, trimArgCount, true)}.{t.Name}";
+
             if (addNamespace)
                 return GetTypeNameWithNamespace(t.Name, t.Namespace);
 

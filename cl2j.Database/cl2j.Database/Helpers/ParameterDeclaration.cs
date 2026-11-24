@@ -32,13 +32,16 @@ namespace cl2j.Database.Helpers
         /// <summary>The longest <c>varchar</c> that is not <c>max</c>.</summary>
         internal const int AnsiSize = 8000;
 
-        /// <summary><c>decimal(38,18)</c>: twenty digits before the point, eighteen after.</summary>
+        /// <summary><c>decimal(38,18)</c>, used for the values that fit it safely: ten digits before the point, eighteen after.</summary>
         internal const byte DecimalPrecision = 38;
 
         internal const byte DecimalScale = 18;
 
-        //The smallest magnitude decimal(38,18) cannot hold: 10^20.
-        private const decimal DecimalLimit = 100_000_000_000_000_000_000m;
+        //The smallest magnitude that is no longer declared decimal(38,18): 10^10. The server type
+        //holds up to 10^20, but SqlClient scales the value to the declared scale in a System.Decimal,
+        //whose 96-bit mantissa stops at 28 digits. Ten before the point and eighteen after is the
+        //most that survives: from eleven digits the insert threw OverflowException.
+        private const decimal DecimalLimit = 10_000_000_000m;
 
         /// <summary>
         ///     Creates the parameter, gives it its value, type and declaration, and adds it to the
@@ -79,6 +82,9 @@ namespace cl2j.Database.Helpers
             if (declaredType is null)
                 return null;
 
+            if (declaredType == typeof(DateTime))
+                return ParameterTyping.DbTypeFor(column, default(DateTime)) ?? DbType.DateTime;
+
             //The key rule reads the value, and a null has none: ask it about an empty string of the
             //same column, which is what a value of that property would be.
             if (declaredType == typeof(string))
@@ -112,7 +118,7 @@ namespace cl2j.Database.Helpers
             }
         }
 
-        //decimal(38,18) would round the eighteenth decimal and overflow at 10^20. Such a value keeps
+        //decimal(38,18) would round the nineteenth decimal and overflow from 10^10. Such a value keeps
         //the provider's own declaration: a plan of its own is a fair price for keeping every digit.
         private static bool Fits(decimal number) => number.Scale <= DecimalScale && Math.Abs(number) < DecimalLimit;
     }

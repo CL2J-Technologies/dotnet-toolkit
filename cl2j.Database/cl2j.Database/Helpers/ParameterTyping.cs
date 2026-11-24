@@ -9,7 +9,8 @@ namespace cl2j.Database.Helpers
     ///     ADO.NET infers from the CLR type.
     ///
     ///     <para>
-    ///     There is one such case. A .NET <c>string</c> infers as <c>nvarchar</c>. Compared against
+    ///     There are two such cases; the second, <see cref="DateTime"/> bound as <c>datetime2</c>, is
+    ///     explained where it is decided. First: a .NET <c>string</c> infers as <c>nvarchar</c>. Compared against
     ///     a <c>varchar</c> column, SQL Server's data-type precedence puts <c>nvarchar</c> higher
     ///     and converts <b>the column</b> rather than the parameter — and a converted column cannot
     ///     be seeked. The index is still there; the query simply stops using it and scans instead.
@@ -26,8 +27,9 @@ namespace cl2j.Database.Helpers
     internal static class ParameterTyping
     {
         /// <summary>
-        ///     Returns <see cref="DbType.AnsiString"/> for a string bound to a key column, and
-        ///     <c>null</c> — meaning leave ADO.NET's inference alone — for everything else.
+        ///     Returns <see cref="DbType.AnsiString"/> for a string bound to a key column,
+        ///     <see cref="DbType.DateTime2"/> for a <see cref="DateTime"/>, and <c>null</c> —
+        ///     meaning leave ADO.NET's inference alone — for everything else.
         ///
         ///     <para>
         ///     <b>The narrowness is the point, and it is not a matter of taste.</b> Free-text
@@ -46,6 +48,14 @@ namespace cl2j.Database.Helpers
         /// </summary>
         internal static DbType? DbTypeFor(ColumnDescriptor? column, object? value)
         {
+            //A DateTime infers as datetime: 1753 onwards, rounded to 1/300 of a second. The column
+            //this library creates for it is datetime2, which holds year 1 and 100 ns, so the
+            //parameter has to be as wide as the column or DateTime.MinValue throws and a value with
+            //a tick in it is rounded on the way in. A column declared another type by TypeName is
+            //left alone.
+            if (value is DateTime)
+                return DeclaredOtherThanDateTime2(column?.ColumnAtribute.TypeName) ? null : DbType.DateTime2;
+
             if (value is not string)
                 return null;
 
@@ -61,6 +71,9 @@ namespace cl2j.Database.Helpers
 
             return DbType.AnsiString;
         }
+
+        private static bool DeclaredOtherThanDateTime2(string? typeName)
+            => !string.IsNullOrWhiteSpace(typeName) && !typeName.TrimStart().StartsWith("datetime2", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         ///     True when a declared column type is one of the Unicode ones. Matches on the prefix
