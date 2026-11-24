@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using cl2j.Database.DataAnnotations;
 using cl2j.Database.Descriptors;
+using cl2j.Database.Exceptions;
 using cl2j.Database.Helpers;
 
 namespace cl2j.Database.CommandBuilders
@@ -199,6 +200,78 @@ namespace cl2j.Database.CommandBuilders
             return type == Types.TypeInt
                 || type == Types.TypeLong
                 || type == Types.TypeGuid;
+        }
+
+        /// <summary>
+        ///     True when the column is an identity key: <c>KeyType.Key</c> on an <c>int</c> or a
+        ///     <c>long</c>, which is what the DDL declares as an auto-incremented primary key.
+        ///
+        ///     <para>
+        ///     Narrower than <see cref="IsSuppliedByTheServer"/>, which also covers a <c>Guid</c> key.
+        ///     A Guid comes from a column default and no "last identity" function reports it, so only
+        ///     an identity column has a value to read back after an insert.
+        ///     </para>
+        /// </summary>
+        public static bool IsIdentity(ColumnDescriptor column)
+        {
+            if (column.ColumnAtribute.Key != KeyType.Key)
+                return false;
+
+            var type = column.Property.PropertyType;
+
+            return type == Types.TypeInt || type == Types.TypeLong;
+        }
+
+        public static TextStatement GetQueryByKeyStatement(Type type, IDatabaseFormatter formatter)
+        {
+            var statement = GetQueryStatement(type, formatter);
+
+            var columnKeys = statement.TableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.None);
+            var sb = new StringBuilder();
+            foreach (var column in columnKeys)
+            {
+                //The separator is what is conditional, not the predicate. The two lines were
+                //transposed, so the buffer stayed empty on every pass and the statement went out
+                //without a WHERE clause — that is, unfiltered.
+                if (sb.Length > 0)
+                    sb.Append(" AND ");
+
+                sb.Append($"{column.NameFormatted}={formatter.FormatParameterName(column.Name)}");
+            }
+            if (sb.Length > 0)
+                statement.Text += " WHERE " + sb.ToString();
+
+            return statement;
+        }
+
+        public static TextStatement GetQueryByKeysStatement(Type type, IEnumerable<object> values, IDatabaseFormatter formatter)
+        {
+            var statement = GetQueryStatement(type, formatter);
+
+            var columnKeys = statement.TableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.None);
+            if (columnKeys.Count() != 1)
+                throw new DatabaseException("Only one Key must be defined for QueryByKeys");
+
+            var key = columnKeys.First();
+
+            var placeholders = new StringBuilder();
+            var index = 0;
+            foreach (var value in values)
+            {
+                if (placeholders.Length > 0)
+                    placeholders.Append(',');
+
+                //The name is generated, never derived from the value, so a key cannot pose as an
+                //identifier. The value travels beside the statement and is bound by whoever
+                //executes it — it never becomes SQL text.
+                var name = $"key{index++}";
+                placeholders.Append(formatter.FormatParameterName(name));
+                statement.Parameters.Add(new StatementParameter(name, value, key));
+            }
+
+            statement.Text += $" WHERE {key.NameFormatted} IN ({placeholders}) ";
+
+            return statement;
         }
 
         private static string GetColumnWhereClause(List<ColumnDescriptor> columns, IDatabaseFormatter formatter)

@@ -73,7 +73,7 @@ namespace cl2j.Database
             //reported as "the table does not exist". Swallowing them meant CreateTableIfRequired
             //would try to create a table that was already there.
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateStatementParameters(statement);
+            cmd.CreateStatementParameters(statement, commandBuilder);
 
             var result = await cmd.ExecuteScalarAsync(cancellationToken);
 
@@ -169,7 +169,7 @@ namespace cl2j.Database
             GenerateKeys(item, statement.TableDescriptor.Keys, commandBuilder.IdentifierGenerator);
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateParameters(item, statement.TableDescriptor);
+            cmd.CreateParameters(item, statement.TableDescriptor, commandBuilder);
             var result = await cmd.ExecuteScalarAsync(cancellationToken);
 
             Trace($"{statement.Text} --> '{result}'");
@@ -210,7 +210,7 @@ namespace cl2j.Database
             var statement = commandBuilder.GetUpdateStatement(typeof(TIn));
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateParameters(item, statement.TableDescriptor);
+            cmd.CreateParameters(item, statement.TableDescriptor, commandBuilder);
             var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
 
             Trace($"{statement.Text} --> '{result}'");
@@ -229,7 +229,7 @@ namespace cl2j.Database
             var statement = commandBuilder.GetUpdateColumnStatement(typeof(TIn), columnName);
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateParameters(item, statement.TableDescriptor, columnName, value);
+            cmd.CreateParameters(item, statement.TableDescriptor, columnName, value, commandBuilder);
             var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
 
             Trace($"{statement.Text} --> '{result}'");
@@ -246,7 +246,7 @@ namespace cl2j.Database
             var statement = commandBuilder.GetDeleteStatement(typeof(TIn));
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateKeyParameters(item, statement.TableDescriptor);
+            cmd.CreateKeyParameters(item, statement.TableDescriptor, commandBuilder);
             var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
 
             Trace($"{statement.Text} --> '{result}'");
@@ -265,7 +265,7 @@ namespace cl2j.Database
             var statement = commandBuilder.GetDeleteStatement(typeof(TIn));
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateKeyParameter<TIn>(key, statement.TableDescriptor);
+            cmd.CreateKeyParameter<TIn>(key, statement.TableDescriptor, commandBuilder);
             var result = await cmd.ExecuteNonQueryAsync(cancellationToken);
 
             Trace($"{statement.Text} --> '{result}'");
@@ -377,7 +377,7 @@ namespace cl2j.Database
             var statement = commandBuilder.GetQueryByKeyStatement(typeof(T));
 
             await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-            cmd.CreateKeyParameter<T>(key, statement.TableDescriptor);
+            cmd.CreateKeyParameter<T>(key, statement.TableDescriptor, commandBuilder);
             await using var reader = await cmd.ExecuteReaderAsync(ReadSingleBehavior, cancellationToken);
 
             return await reader.ReadSingle<T>(statement.TableDescriptor);
@@ -396,7 +396,7 @@ namespace cl2j.Database
             foreach (var statement in QueryKeyBatches.Build(commandBuilder, typeof(T), keys))
             {
                 await using var cmd = CreateExecuteCommand(connection, statement.Text, transaction);
-                cmd.CreateStatementParameters(statement);
+                cmd.CreateStatementParameters(statement, commandBuilder);
 
                 await using var reader = await cmd.ExecuteReaderAsync(ReadBehavior, cancellationToken);
 
@@ -425,34 +425,45 @@ namespace cl2j.Database
             return cmd;
         }
 
-        private static void CreateParameters<T>(this DbCommand command, T t, TableDescriptor tableDescriptor)
+        /// <summary>
+        ///     The one place a parameter is bound. Every parameter the library creates comes through
+        ///     here, so the provider's <see cref="ICommandBuilder.PrepareParameter"/> sees all of them
+        ///     and none can slip past it.
+        /// </summary>
+        private static void Bind(DbCommand command, ICommandBuilder commandBuilder, string name, ColumnDescriptor? column, object? value, DbType? dbType = null)
         {
-            CreateParameters(command, t!, tableDescriptor.Columns);
+            var parameter = ParameterDeclaration.Bind(command, name, column, value, dbType);
+            commandBuilder.PrepareParameter(parameter, column);
         }
 
-        private static void CreateParameters<T, TValue>(this DbCommand command, T t, TableDescriptor tableDescriptor, string columnName, TValue? value)
+        private static void CreateParameters<T>(this DbCommand command, T t, TableDescriptor tableDescriptor, ICommandBuilder commandBuilder)
+        {
+            CreateParameters(command, t!, tableDescriptor.Columns, commandBuilder);
+        }
+
+        private static void CreateParameters<T, TValue>(this DbCommand command, T t, TableDescriptor tableDescriptor, string columnName, TValue? value, ICommandBuilder commandBuilder)
         {
             var column = tableDescriptor.Columns.FirstOrDefault(c => c.Name.Equals(columnName, StringComparison.OrdinalIgnoreCase)) ?? throw new ValidationException($"column '{columnName}' doesn't exists");
-            CreateParameter(command, column, value);
+            CreateParameter(command, column, value, commandBuilder);
 
             //Ensure keys are also added for the where clause
-            CreateKeyParameters(command, t!, tableDescriptor);
+            CreateKeyParameters(command, t!, tableDescriptor, commandBuilder);
         }
 
         private static void CreateObjectParameters(this DbCommand command, object param, ICommandBuilder commandBuilder)
         {
             var type = param.GetType();
             var tableDescriptor = TableDescriptorFactory.Create(type, commandBuilder.DatabaseFormatter);
-            command.CreateParameters(param, tableDescriptor.Columns);
+            command.CreateParameters(param, tableDescriptor.Columns, commandBuilder);
         }
 
-        private static void CreateKeyParameters<T>(this DbCommand command, T t, TableDescriptor tableDescriptor)
+        private static void CreateKeyParameters<T>(this DbCommand command, T t, TableDescriptor tableDescriptor, ICommandBuilder commandBuilder)
         {
             var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != DataAnnotations.KeyType.None);
-            CreateParameters(command, t!, columns);
+            CreateParameters(command, t!, columns, commandBuilder);
         }
 
-        private static void CreateKeyParameter<T>(this DbCommand command, object key, TableDescriptor tableDescriptor)
+        private static void CreateKeyParameter<T>(this DbCommand command, object key, TableDescriptor tableDescriptor, ICommandBuilder commandBuilder)
         {
             var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != DataAnnotations.KeyType.None);
             if (columns.Count() != 1)
@@ -460,7 +471,7 @@ namespace cl2j.Database
 
             var column = columns.First();
 
-            ParameterDeclaration.Bind(command, column.Name, column, key);
+            Bind(command, commandBuilder, column.Name, column, key);
         }
 
         /// <summary>
@@ -468,32 +479,32 @@ namespace cl2j.Database
         ///     parameters do not derive from the columns of a type — the list of an <c>IN</c>,
         ///     whose length is only known at the call.
         /// </summary>
-        private static void CreateStatementParameters(this DbCommand command, TextStatement statement)
+        private static void CreateStatementParameters(this DbCommand command, TextStatement statement, ICommandBuilder commandBuilder)
         {
             foreach (var statementParameter in statement.Parameters)
-                ParameterDeclaration.Bind(command, statementParameter.Name, statementParameter.Column, statementParameter.Value);
+                Bind(command, commandBuilder, statementParameter.Name, statementParameter.Column, statementParameter.Value);
         }
 
-        private static void CreateParameters(this DbCommand command, object t, IEnumerable<ColumnDescriptor> columns)
+        private static void CreateParameters(this DbCommand command, object t, IEnumerable<ColumnDescriptor> columns, ICommandBuilder commandBuilder)
         {
             foreach (var column in columns)
-                command.CreateParameter(t, column);
+                command.CreateParameter(t, column, commandBuilder);
         }
 
-        private static void CreateParameter(this DbCommand command, object t, ColumnDescriptor column)
+        private static void CreateParameter(this DbCommand command, object t, ColumnDescriptor column, ICommandBuilder commandBuilder)
         {
             var value = column.Property.GetValue(t, null);
-            command.CreateParameter(column, value);
+            command.CreateParameter(column, value, commandBuilder);
         }
 
-        private static void CreateParameter(this DbCommand command, ColumnDescriptor column, object? value)
+        private static void CreateParameter(this DbCommand command, ColumnDescriptor column, object? value, ICommandBuilder commandBuilder)
         {
             if (column.ColumnAtribute.Json)
-                ParameterDeclaration.Bind(command, column.Name, column, ToJsonString(value), DbType.String);
+                Bind(command, commandBuilder, column.Name, column, ToJsonString(value), DbType.String);
             else if (value is null && column.Property.PropertyType == Types.TypeDateTimeOffset && string.IsNullOrEmpty(column.ColumnAtribute.Default))
-                ParameterDeclaration.Bind(command, column.Name, column, DateTimeOffset.UtcNow);
+                Bind(command, commandBuilder, column.Name, column, DateTimeOffset.UtcNow);
             else
-                ParameterDeclaration.Bind(command, column.Name, column, value);
+                Bind(command, commandBuilder, column.Name, column, value);
         }
 
         private static void GenerateKeys<TIn>(TIn item, IEnumerable<ColumnDescriptor> keys, IIdentifierGenerator identifierGenerator)

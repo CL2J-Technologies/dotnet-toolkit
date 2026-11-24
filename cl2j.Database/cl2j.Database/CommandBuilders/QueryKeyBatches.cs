@@ -16,9 +16,14 @@
 
         internal static IEnumerable<TextStatement> Build(ICommandBuilder commandBuilder, Type type, IEnumerable<object> keys)
         {
+            //The provider decides: SQL Server stops at 2100 parameters, PostgreSQL at 65,535.
+            var batchSize = commandBuilder.MaxKeysPerStatement;
+            if (batchSize <= 0)
+                throw new InvalidOperationException($"'{commandBuilder.GetType().Name}.MaxKeysPerStatement' must be greater than zero, got {batchSize}.");
+
             //Chunk yields no block for an empty source, which is exactly right: an empty IN is not
             //valid SQL, so no keys must produce no statement rather than one that fails.
-            foreach (var batch in keys.Chunk(MaxKeysPerStatement))
+            foreach (var batch in keys.Chunk(batchSize))
                 yield return commandBuilder.GetQueryByKeysStatement(type, batch);
         }
     }
