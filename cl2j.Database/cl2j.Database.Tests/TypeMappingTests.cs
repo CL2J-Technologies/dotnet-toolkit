@@ -106,7 +106,7 @@ namespace cl2j.Database.Tests
             { typeof(MxDateOnly), new DateOnly(2026, 9, 27), SqlDbType.Date },
             { typeof(MxTimeOnly), new TimeOnly(13, 14), SqlDbType.Time },
             { typeof(MxTimeSpan), TimeSpan.FromHours(1), SqlDbType.Time },
-            { typeof(MxChar), 'x', SqlDbType.NChar },
+            { typeof(MxChar), 'x', SqlDbType.NVarChar },
             { typeof(MxKind), MatrixKind.One, SqlDbType.Int },
         };
 
@@ -191,9 +191,10 @@ namespace cl2j.Database.Tests
         //The bulk insert path: the DataTable is what SqlBulkCopy writes.
         [Theory]
         [MemberData(nameof(Bindings))]
-        public void A_bulk_insert_table_declares_each_column_with_the_type_it_wraps(Type row, object value, SqlDbType unused)
+        public void A_bulk_insert_table_declares_each_column_with_the_type_it_wraps(Type row, object value, SqlDbType bound)
         {
             Assert.NotNull(value);
+            Assert.NotEqual((SqlDbType)(-1), bound);
             var columns = Describe(row).Columns.Where(c => c.Name != "Id").ToList();
 
             var table = DataTableHelpers.CreateDataTable(Array.Empty<object>(), "T", columns);

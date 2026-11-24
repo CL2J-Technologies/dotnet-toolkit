@@ -103,14 +103,16 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
-        public void A_DateTimeOffset_without_a_default_is_stamped_with_the_current_time()
+        public void A_DateTimeOffset_without_a_default_keeps_the_value_it_has()
         {
-            var old = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
-            var before = DateTimeOffset.UtcNow;
+            //Only a null is replaced by the current time, as Insert does and the README says. The
+            //table used to stamp every value, which replaced what the caller had set.
+            var old = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.FromHours(2));
 
             var row = Build(new BulkRow { CreatedAt = old }).Rows[0];
 
-            Assert.True((DateTimeOffset)row["CreatedAt"] >= before);
+            Assert.Equal(old, (DateTimeOffset)row["CreatedAt"]);
+            Assert.Equal(TimeSpan.FromHours(2), ((DateTimeOffset)row["CreatedAt"]).Offset);
         }
 
         [Fact]

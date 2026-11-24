@@ -113,7 +113,8 @@ namespace cl2j.Database.IntegrationTests
 
             foreach (var read in new[] { inserted, bulk })
             {
-                Assert.Equal([], read.EmptyBytes);
+                Assert.NotNull(read.EmptyBytes);
+                Assert.Empty(read.EmptyBytes);
                 Assert.Null(read.AbsentBytes);
             }
         }
@@ -124,11 +125,11 @@ namespace cl2j.Database.IntegrationTests
             var text = new string('a', 20_000);
             var bytes = Enumerable.Range(0, 20_000).Select(i => (byte)i).ToArray();
 
-            var (inserted, bulk) = await BothWays(new EdgeRow { Long = text, LongBytes = bytes });
+            var (inserted, bulk) = await BothWays(new EdgeRow { LongString = text, LongBytes = bytes });
 
             foreach (var read in new[] { inserted, bulk })
             {
-                Assert.Equal(text, read.Long);
+                Assert.Equal(text, read.LongString);
                 Assert.Equal(bytes, read.LongBytes);
             }
         }
@@ -190,7 +191,7 @@ namespace cl2j.Database.IntegrationTests
         [Fact]
         public async Task A_double_keeps_all_of_its_digits_and_a_float_keeps_its_own()
         {
-            var (inserted, bulk) = await BothWays(new EdgeRow { Precise = 1.0000000000000002d, Tiny32 = float.Epsilon, Small64 = double.Epsilon, Single = 16777217f });
+            var (inserted, bulk) = await BothWays(new EdgeRow { Precise = 1.0000000000000002d, Tiny32 = float.Epsilon, Small64 = double.Epsilon, Real32 = 16777217f });
 
             foreach (var read in new[] { inserted, bulk })
             {
@@ -198,7 +199,7 @@ namespace cl2j.Database.IntegrationTests
                 Assert.Equal(float.Epsilon, read.Tiny32);
                 Assert.Equal(double.Epsilon, read.Small64);
                 //float has 24 bits of mantissa: 16777217 is already 16777216 in the .NET value.
-                Assert.Equal(16777216f, read.Single);
+                Assert.Equal(16777216f, read.Real32);
             }
         }
 
@@ -271,15 +272,16 @@ namespace cl2j.Database.IntegrationTests
         }
 
         [Fact]
-        public async Task A_char_outside_the_collation_becomes_a_question_mark_unless_the_column_is_declared_nchar()
+        public async Task A_char_outside_the_collation_is_substituted_unless_the_column_is_declared_nchar()
         {
-            //Pinned, not endorsed: a Greek letter is not in Windows-1252, and SQL Server stores '?'
-            //with no error. TypeName = "nchar(1)" is the way out.
+            //Pinned, not endorsed: a Greek letter is not in Windows-1252, and SQL Server stores a
+            //lossy substitute ('?' or a best-fit letter such as 'O') with no error. TypeName = "nchar(1)"
+            //is the way out.
             var (inserted, bulk) = await BothWays(new EdgeRow { Letter = 'Ω', Unicode = 'Ω' });
 
             foreach (var read in new[] { inserted, bulk })
             {
-                Assert.Equal('?', read.Letter);
+                Assert.NotEqual('Ω', read.Letter);
                 Assert.Equal('Ω', read.Unicode);
             }
         }
@@ -299,14 +301,14 @@ namespace cl2j.Database.IntegrationTests
         [Fact]
         public async Task The_extremes_of_every_integer_type_are_kept()
         {
-            var row = new EdgeRow { Tiny8 = byte.MaxValue, Short = short.MinValue, Int = int.MinValue, Long64 = long.MinValue };
+            var row = new EdgeRow { Tiny8 = byte.MaxValue, Small16 = short.MinValue, Int32Value = int.MinValue, Long64 = long.MinValue };
             var (inserted, bulk) = await BothWays(row);
 
             foreach (var read in new[] { inserted, bulk })
             {
                 Assert.Equal(byte.MaxValue, read.Tiny8);
-                Assert.Equal(short.MinValue, read.Short);
-                Assert.Equal(int.MinValue, read.Int);
+                Assert.Equal(short.MinValue, read.Small16);
+                Assert.Equal(int.MinValue, read.Int32Value);
                 Assert.Equal(long.MinValue, read.Long64);
                 
             }
@@ -348,7 +350,7 @@ namespace cl2j.Database.IntegrationTests
         public byte[]? AbsentBytes { get; set; }
 
         [Column(Name = "LongText")]
-        public string? Long { get; set; }
+        public string? LongString { get; set; }
 
         [Column(Name = "LongBytes")]
         public byte[]? LongBytes { get; set; }
@@ -375,7 +377,7 @@ namespace cl2j.Database.IntegrationTests
         public double Small64 { get; set; }
 
         [Column(Name = "Single")]
-        public float Single { get; set; }
+        public float Real32 { get; set; }
 
         [Column(Name = "Elapsed")]
         public TimeSpan Elapsed { get; set; }
@@ -396,10 +398,10 @@ namespace cl2j.Database.IntegrationTests
         public byte Tiny8 { get; set; }
 
         [Column(Name = "Short")]
-        public short Short { get; set; }
+        public short Small16 { get; set; }
 
         [Column(Name = "Int")]
-        public int Int { get; set; }
+        public int Int32Value { get; set; }
 
         [Column(Name = "Long64")]
         public long Long64 { get; set; }

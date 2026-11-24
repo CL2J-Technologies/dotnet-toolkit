@@ -190,7 +190,10 @@ namespace cl2j.Database.Helpers
                 else
                 {
                     if (propType.IsEnum)
-                        sb.AppendLine($"({propTypeName})context.GetInt32({ordinal});");
+                        //A NULL reads as the default, like every other optional column. GetInt32 on it
+                        //threw InvalidCastException; only a table the library did not create can hold one,
+                        //as an enum column is declared NOT NULL.
+                        sb.AppendLine($"context.IsDBNull({ordinal}) ? default({propTypeName}) : ({propTypeName})context.GetInt32({ordinal});");
                     else if (IsNullableEnum(propType))
                     {
                         //Read as the enum, not through GetValue: the provider hands back a boxed
@@ -210,9 +213,9 @@ namespace cl2j.Database.Helpers
                 var propTypeName = TypeUtils.GetTypeName(c.Property.PropertyType);
                 var vi = $"v{i}";
                 if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json || c.Property.PropertyType.IsEnum || IsNullableEnum(c.Property.PropertyType))
-                    sb.Append($"\t\t{c.Name}={vi}");
+                    sb.Append($"\t\t{c.Property.Name}={vi}");
                 else
-                    sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName})({ConversionOf(c.Property.PropertyType, vi, i) ?? vi})");
+                    sb.Append($"\t\t{c.Property.Name}=({vi} == DBNull.Value) ? default : ({propTypeName})({ConversionOf(c.Property.PropertyType, vi, i) ?? vi})");
                 if (i < tableDescriptor.Columns.Count - 1) sb.Append(',');
                 sb.AppendLine();
             }

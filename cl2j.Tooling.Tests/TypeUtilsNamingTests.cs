@@ -51,6 +51,14 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public void A_plain_type_nested_in_a_plain_one_keeps_its_declaring_type_as_a_generic_argument()
+        {
+            Assert.Equal(
+                "System.Collections.Generic.List<cl2j.Tooling.Tests.TypeUtilsNamingTests.Outer.Inner>",
+                TypeUtils.GetTypeName<List<Outer.Inner>>());
+        }
+
+        [Fact]
         public void A_generic_type_nested_in_a_generic_one_lists_the_arguments_of_both()
         {
             var name = TypeUtils.GetTypeName<OuterGeneric<string>.Inner<int>>();
