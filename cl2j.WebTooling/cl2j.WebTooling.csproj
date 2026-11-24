@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.WebTooling</PackageId>
-    <Description>ASP.NET Core utilities: Claims, HttpClient, and HttpRequest extensions.</Description>
+    <Description>ASP.NET Core one-liners: claims, client IP and URL, language selection, and posting uploaded files with HttpClient. Nothing to configure.</Description>
   </PropertyGroup>
 
   <ItemGroup>

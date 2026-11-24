@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Logging</PackageId>
-    <Description>Logging extensions and unhandled exception handling for ASP.NET Core applications.</Description>
+    <Description>File logging for Microsoft.Extensions.Logging, to disk, Azure Blob or S3 through cl2j.FileStorage: buffered writes, daily and size-based rollover, timestamps in the time zone you choose.</Description>
   </PropertyGroup>
 
   <ItemGroup>

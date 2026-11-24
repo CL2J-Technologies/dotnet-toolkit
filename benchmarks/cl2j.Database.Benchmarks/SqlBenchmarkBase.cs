@@ -10,7 +10,7 @@ namespace cl2j.Database.Benchmarks;
 /// per operation, as it is normally used; its options (and so its compiled model) are built once.
 /// </summary>
 [MemoryDiagnoser]
-[ShortRunJob]
+[Config(typeof(SqlJobConfig))]
 public abstract class SqlBenchmarkBase
 {
     protected DbContextOptions<BenchContext> EfOptions { get; private set; } = null!;

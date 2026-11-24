@@ -116,5 +116,85 @@ namespace cl2j.Scripting.Tests
             Assert.Equal(1, first.Execute<int>());
             Assert.Equal(2, second.Execute<int>());
         }
+
+        [Fact]
+        public void What_a_script_with_a_context_throws_reaches_the_caller_unwrapped()
+        {
+            //The path cl2j.Database takes. Wrapped in a TargetInvocationException, a missing column
+            //surfaced as "Exception has been thrown by the target of an invocation".
+            var script = Script.Create(ScriptOptions.Create<string, int>("throw new InvalidOperationException(\"from the script: \" + context);"));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => script.Execute<string, int>("x"));
+
+            Assert.Equal("from the script: x", ex.Message);
+        }
+
+        [Fact]
+        public void What_a_script_without_a_context_throws_reaches_the_caller_unwrapped()
+        {
+            var script = Script.Create(ScriptOptions.Create<int>("throw new InvalidOperationException(\"no context\");"));
+
+            Assert.Throws<InvalidOperationException>(() => script.Execute<int>());
+        }
+
+        [Fact]
+        public void What_a_script_with_no_return_throws_reaches_the_caller_unwrapped()
+        {
+            var script = Script.Create(ScriptOptions.Create("throw new InvalidOperationException(\"void\");"));
+
+            Assert.Throws<InvalidOperationException>(() => script.Execute());
+        }
+
+        [Fact]
+        public void A_script_called_with_a_wider_return_type_still_runs()
+        {
+            //An int method asked for an object cannot be bound to a Func<int, object>; it falls back
+            //to the reflection call, which boxes the result.
+            var script = Script.Create(ScriptOptions.Create<int, int>("return context + 1;"));
+
+            Assert.Equal(2, script.Execute<int, object>(1));
+            Assert.Equal(3, script.Execute<int, object>(2));
+        }
+
+        [Fact]
+        public void What_a_script_throws_on_the_fallback_path_reaches_the_caller_unwrapped()
+        {
+            var script = Script.Create(ScriptOptions.Create<int, int>("throw new InvalidOperationException(\"fallback\");"));
+
+            Assert.Throws<InvalidOperationException>(() => script.Execute<int, object>(1));
+        }
+
+        [Fact]
+        public void A_script_called_with_two_signatures_answers_both()
+        {
+            //The bound delegate is a single slot: switching signatures rebinds or falls back, and
+            //neither returns the other signature's result.
+            var script = Script.Create(ScriptOptions.Create<int, int>("return context * 10;"));
+
+            Assert.Equal(10, script.Execute<int, int>(1));
+            Assert.Equal(20, script.Execute<int, object>(2));
+            Assert.Equal(30, script.Execute<int, int>(3));
+        }
+
+        [Fact]
+        public void A_static_script_method_is_called()
+        {
+            var options = ScriptOptions.Create<int, int>("return context - 1;");
+            options.MethodDeclaration = "public static int Execute(int context)";
+            var script = Script.Create(options);
+
+            Assert.Equal(4, script.Execute<int, int>(5));
+        }
+
+        [Fact]
+        public async Task One_script_shared_across_threads_returns_each_caller_its_own_result()
+        {
+            //cl2j.Database caches one script per type and every query uses it, from any thread.
+            var script = Script.Create(ScriptOptions.Create<int, int>("return context * 2;"));
+
+            var results = await Task.WhenAll(Enumerable.Range(0, 64).Select(i => Task.Run(() => script.Execute<int, int>(i))));
+
+            Assert.Equal(Enumerable.Range(0, 64).Select(i => i * 2), results);
+        }
     }
 }

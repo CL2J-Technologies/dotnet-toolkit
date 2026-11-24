@@ -1,8 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using cl2j.Database.Descriptors;
 using cl2j.Database.Exceptions;
@@ -48,20 +46,9 @@ namespace cl2j.Database.Helpers
 #endif
                 });
 
+                //Script.Execute lets what the generated reader throws through as itself, so a
+                //missing column or a value that would not convert surfaces with its own message.
                 return script.Execute<DbDataReader, List<T>>(reader) ?? [];
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException is not null)
-            {
-                Debug.WriteLine($"DbReaderExtensions.Read<{type.Name}> : GENERATED CODE");
-                if (script is not null)
-                    Debug.WriteLine(script.Options.Code);
-
-                //The generated reader runs through reflection, so everything it throws arrives
-                //wrapped in "Exception has been thrown by the target of an invocation" — which says
-                //nothing about the column that was missing or the value that would not convert.
-                //Rethrow the real one, keeping its stack.
-                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-                throw;
             }
             catch
             {
@@ -90,17 +77,7 @@ namespace cl2j.Database.Helpers
                     return CreateScript<T>(code, tableDescriptor);
                 });
 
-                try
-                {
-                    return script.Execute<DbDataReader, T>(reader);
-                }
-                catch (TargetInvocationException ex) when (ex.InnerException is not null)
-                {
-                    //Same unwrapping as Read: the reflection wrapper hides the only part of the
-                    //message a caller can act on.
-                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-                    throw;
-                }
+                return script.Execute<DbDataReader, T>(reader);
             }
             finally
             {
@@ -180,7 +157,9 @@ namespace cl2j.Database.Helpers
 
                 sb.Append($"\tvar {vi}=");
                 if (c.ColumnAtribute.Json)
-                    sb.AppendLine($"JsonSerializer.Deserialize<{propTypeName}>(context.GetString({ordinal}));");
+                    //SQL NULL reads as null. A bulk insert writes NULL for a null property, where Insert
+                    //writes the text 'null'; GetString on the NULL used to throw.
+                    sb.AppendLine($"context.IsDBNull({ordinal}) ? default({propTypeName}) : JsonSerializer.Deserialize<{propTypeName}>(context.GetString({ordinal}));");
                 else if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required)
                 {
                     if (propType == Types.TypeBool)
@@ -206,12 +185,15 @@ namespace cl2j.Database.Helpers
                     else if (propType.IsEnum)
                         sb.AppendLine($"({propTypeName})context.GetInt32({ordinal});");
                     else
-                        sb.AppendLine($"({propTypeName})context.GetValue({ordinal});");
+                        sb.AppendLine($"{ConversionOf(propType, $"context.GetValue({ordinal})", i) ?? $"({propTypeName})context.GetValue({ordinal})"};");
                 }
                 else
                 {
                     if (propType.IsEnum)
-                        sb.AppendLine($"({propTypeName})context.GetInt32({ordinal});");
+                        //A NULL reads as the default, like every other optional column. GetInt32 on it
+                        //threw InvalidCastException; only a table the library did not create can hold one,
+                        //as an enum column is declared NOT NULL.
+                        sb.AppendLine($"context.IsDBNull({ordinal}) ? default({propTypeName}) : ({propTypeName})context.GetInt32({ordinal});");
                     else if (IsNullableEnum(propType))
                     {
                         //Read as the enum, not through GetValue: the provider hands back a boxed
@@ -231,16 +213,46 @@ namespace cl2j.Database.Helpers
                 var propTypeName = TypeUtils.GetTypeName(c.Property.PropertyType);
                 var vi = $"v{i}";
                 if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required || c.ColumnAtribute.Json || c.Property.PropertyType.IsEnum || IsNullableEnum(c.Property.PropertyType))
-                    sb.Append($"\t\t{c.Name}={vi}");
+                    sb.Append($"\t\t{c.Property.Name}={vi}");
                 else
-                    sb.Append($"\t\t{c.Name}=({vi} == DBNull.Value) ? default : ({propTypeName}){vi}");
+                    sb.Append($"\t\t{c.Property.Name}=({vi} == DBNull.Value) ? default : ({propTypeName})({ConversionOf(c.Property.PropertyType, vi, i) ?? vi})");
                 if (i < tableDescriptor.Columns.Count - 1) sb.Append(',');
                 sb.AppendLine();
             }
             sb.AppendLine("\t};");
         }
 
-        private static bool IsNullableEnum(Type type) => Nullable.GetUnderlyingType(type)?.IsEnum == true;
+        /// <summary>
+        ///     The expression that turns what the provider hands back into the property's own type,
+        ///     for the three types it does not hand back as themselves, or <c>null</c> when a plain
+        ///     cast is enough.
+        ///
+        ///     <para>
+        ///     SqlClient returns a <c>date</c> as a <see cref="DateTime"/>, a <c>time</c> as a
+        ///     <see cref="TimeSpan"/> and a <c>char(1)</c> as a <see cref="string"/>, so casting
+        ///     the boxed value straight to <see cref="DateOnly"/>, <see cref="TimeOnly"/> or
+        ///     <see cref="char"/> threw InvalidCastException on the first row. See issue #46. A
+        ///     value that already has the right type (another provider) is still cast as before.
+        ///     </para>
+        /// </summary>
+        /// <param name="propType">The property type, nullable or not.</param>
+        /// <param name="source">An expression for the boxed value, never a DBNull.</param>
+        /// <param name="index">The column index, to keep the pattern variables apart.</param>
+        private static string? ConversionOf(Type propType, string source, int index)
+        {
+            var type = Nullable.GetUnderlyingType(propType) ?? propType;
+
+            if (type == Types.TypeDateOnly)
+                return $"{source} is DateTime d{index} ? DateOnly.FromDateTime(d{index}) : (DateOnly){source}";
+            if (type == Types.TypeTimeOnly)
+                return $"{source} is TimeSpan t{index} ? TimeOnly.FromTimeSpan(t{index}) : (TimeOnly){source}";
+            if (type == Types.TypeChar)
+                return $"{source} is string s{index} ? (s{index}.Length == 0 ? '\\0' : s{index}[0]) : (char){source}";
+
+            return null;
+        }
+
+        private static bool IsNullableEnum(Type type) =>Nullable.GetUnderlyingType(type)?.IsEnum == true;
 
         private static Script CreateScript<T>(string code, TableDescriptor tableDescriptor)
         {

@@ -182,8 +182,14 @@ namespace cl2j.Database.CommandBuilders
         ///     The CLR types listed here mirror what <c>GetColumnKeyType</c> emits. A provider that
         ///     declares its keys differently would need this to follow.
         ///     </para>
+        ///
+        ///     <para>
+        ///     Public so a provider's bulk insert leaves out the same columns as INSERT. SQL Server's
+        ///     used to leave out every <c>KeyType.Key</c> column, string keys included, so a bulk insert
+        ///     of a string-keyed entity sent no key and the NOT NULL primary key rejected it.
+        ///     </para>
         /// </summary>
-        private static bool IsSuppliedByTheServer(ColumnDescriptor column)
+        public static bool IsSuppliedByTheServer(ColumnDescriptor column)
         {
             if (column.ColumnAtribute.Key != KeyType.Key)
                 return false;

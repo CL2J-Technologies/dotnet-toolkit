@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Smapper</PackageId>
-    <Description>Lightweight reflection-based object-to-object mapper.</Description>
+    <Description>Zero-configuration object-to-object mapper: copies same-name, same-type properties and deep-clones through JSON. One extension method, nothing to register.</Description>
     <AssemblyName>cl2j.Smapper</AssemblyName>
     <RootNamespace>cl2j.Smapper</RootNamespace>
   </PropertyGroup>

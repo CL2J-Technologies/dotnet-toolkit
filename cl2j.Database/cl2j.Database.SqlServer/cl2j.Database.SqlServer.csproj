@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Database.SqlServer</PackageId>
-    <Description>SQL Server provider for cl2j.Database.</Description>
+    <Description>SQL Server provider for cl2j.Database, on Microsoft.Data.SqlClient, with SqlBulkCopy for bulk inserts.</Description>
   </PropertyGroup>
 
   <ItemGroup>

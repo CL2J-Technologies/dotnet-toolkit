@@ -13,9 +13,16 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- Version comparison: set CL2J_DB_VERSION (for example 4.1.1) to benchmark a published package
+       instead of the code in this repository. Unset, the benchmarks run against the project references. -->
+  <ItemGroup Condition="'$(CL2J_DB_VERSION)' == ''">
     <ProjectReference Include="..\..\cl2j.Database\cl2j.Database\cl2j.Database.csproj" />
     <ProjectReference Include="..\..\cl2j.Database\cl2j.Database.SqlServer\cl2j.Database.SqlServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(CL2J_DB_VERSION)' != ''">
+    <PackageReference Include="cl2j.Database" Version="$(CL2J_DB_VERSION)" />
+    <PackageReference Include="cl2j.Database.SqlServer" Version="$(CL2J_DB_VERSION)" />
   </ItemGroup>
 
 </Project>
