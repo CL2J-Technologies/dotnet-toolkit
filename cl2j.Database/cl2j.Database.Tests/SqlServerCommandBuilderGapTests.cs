@@ -108,7 +108,9 @@ namespace cl2j.Database.Tests
         {
             var statement = Builder().GetCreateTableStatement(typeof(GuidKeyedRow));
 
-            Assert.Contains("UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY", Normalise(statement.Text), StringComparison.Ordinal);
+            //The type is written once, by the data type; the key part only adds the default.
+            Assert.Contains("uniqueidentifier DEFAULT NEWID() PRIMARY KEY", Normalise(statement.Text), StringComparison.Ordinal);
+            Assert.DoesNotContain("UNIQUEIDENTIFIER", Normalise(statement.Text), StringComparison.Ordinal);
         }
 
         [Fact]

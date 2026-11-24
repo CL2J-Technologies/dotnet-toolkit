@@ -157,7 +157,9 @@ namespace cl2j.Database.Helpers
 
                 sb.Append($"\tvar {vi}=");
                 if (c.ColumnAtribute.Json)
-                    sb.AppendLine($"JsonSerializer.Deserialize<{propTypeName}>(context.GetString({ordinal}));");
+                    //SQL NULL reads as null. A bulk insert writes NULL for a null property, where Insert
+                    //writes the text 'null'; GetString on the NULL used to throw.
+                    sb.AppendLine($"context.IsDBNull({ordinal}) ? default({propTypeName}) : JsonSerializer.Deserialize<{propTypeName}>(context.GetString({ordinal}));");
                 else if (c.ColumnAtribute.Key == DataAnnotations.KeyType.Key || c.ColumnAtribute.Required)
                 {
                     if (propType == Types.TypeBool)

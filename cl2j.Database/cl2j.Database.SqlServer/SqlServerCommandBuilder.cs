@@ -191,7 +191,8 @@ namespace cl2j.Database.SqlServer
             var sqlConnection = connection as SqlConnection ?? throw new DatabaseException($"SqlConnection required. '{connection.GetType().Name}' received.");
 
             var tableDescriptor = TableDescriptorFactory.Create(typeof(TIn), this);
-            var columns = tableDescriptor.Columns.Where(c => c.ColumnAtribute.Key != KeyType.Key);
+            //The same columns as INSERT: only the keys the server fills in are left out.
+            var columns = tableDescriptor.Columns.Where(c => !CommandBuilderHelpers.IsSuppliedByTheServer(c));
 
             using var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction as SqlTransaction);
             var dataTable = DataTableHelpers.CreateDataTable(items, tableDescriptor.NameFormatted, columns);
@@ -312,12 +313,15 @@ namespace cl2j.Database.SqlServer
 
         public string GetColumnKeyType(ColumnDescriptor column)
         {
-            if (column.Property.PropertyType == Types.TypeInt)
+            //Appended after the data type GetColumnDataType already wrote, so it must not repeat it:
+            //the Guid branch used to add a second UNIQUEIDENTIFIER. A long key was refused outright,
+            //although INSERT and IsSuppliedByTheServer already treat it as an identity.
+            if (column.Property.PropertyType == Types.TypeInt || column.Property.PropertyType == Types.TypeLong)
                 return " IDENTITY(1,1) PRIMARY KEY";
             else if (column.Property.PropertyType == Types.TypeString)
                 return " NOT NULL";
             else if (column.Property.PropertyType == Types.TypeGuid)
-                return " UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY";
+                return " DEFAULT NEWID() PRIMARY KEY";
 
             throw new DatabaseException($"Unsupported key type '{column.Property.PropertyType.Name}'");
         }

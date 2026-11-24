@@ -185,7 +185,7 @@ await connection.Delete(sample);                              // by the key colu
 Notes:
 
 - `connection.Insert<TIn, TOut>(item)` returns the value of the `IDENTITY` column for `int`/`long` keys. `IDatabase.Insert` returns the entity and does not fill in an identity value.
-- `BulkInsert` leaves out `KeyType.Key` columns (the server fills them), and uses `DatabaseOptions.BulkInsertTimeout`, or the connection timeout when it is unset. It is not on `IDatabase`.
+- `BulkInsert` leaves out the same key columns as `Insert`: `int`, `long` and `Guid` `KeyType.Key` columns, which the server fills in. A `string` key is sent. It uses `DatabaseOptions.BulkInsertTimeout`, or the connection timeout when it is unset. It is not on `IDatabase`.
 - `CreateTable` generates a `CREATE TABLE` from the attributes; it does not migrate an existing table.
 - `BuildSelectStatement<T>(sql)` (on both `IDatabase` and a connection) returns the `SELECT` the library would build for `T`, optionally followed by your own `WHERE`/`ORDER BY` text.
 
