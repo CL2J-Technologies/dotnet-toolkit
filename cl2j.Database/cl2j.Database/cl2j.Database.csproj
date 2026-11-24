@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <PackageId>cl2j.Database</PackageId>
-    <Description>A fast, attribute-driven micro-ORM for SQL Server: describe a table with a plain class and get CRUD, queries by key or by example, bulk insert and table creation generated for you. Dapper-level speed, no DbContext, a fraction of EF Core's memory.</Description>
+    <Description>A fast, attribute-driven micro-ORM for SQL Server: describe a table with a plain class and get CRUD, queries by key or by example, generated string keys, JSON columns, bulk insert and table creation, all derived from the class. Dapper-level speed, no DbContext, a fraction of EF Core's memory.</Description>
   </PropertyGroup>
 
   <ItemGroup>
