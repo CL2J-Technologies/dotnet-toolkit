@@ -169,8 +169,8 @@ The provider-neutral tests live in `cl2j.Database.IntegrationTests.Shared` as ab
     double precision; numeric; uuid; text; bytea; timestamp without time zone;
     timestamp with time zone; date; time without time zone (TimeOnly); interval (TimeSpan);
     character.
-  - MySQL: tinyint (bool, byte); smallint; int; bigint; float; double; decimal; char (Guid, char);
-    longtext; longblob; datetime (DateTime, DateTimeOffset); date; time (TimeOnly, TimeSpan).
+  - MySQL: tinyint (bool, byte); smallint; int; bigint; double (float and double); decimal; char (Guid, char);
+    varchar (a string with a length); longblob; datetime (DateTime, DateTimeOffset); date; time (TimeOnly, TimeSpan).
 
 - [ ] Raw SQL in a test is written with `[Name]` and passed through `TestSql.Quote(connection, sql)`,
   which applies the provider's quoting.
@@ -193,6 +193,7 @@ work for every driver. It already accepts what the known drivers hand back for a
 | `TimeOnly` | `TimeOnly` or `TimeSpan` |
 | `DateTimeOffset` | `DateTimeOffset`, or `DateTime` read as UTC (`Local` converted first) |
 | enum | the integer |
+| `float` | `float`, or any other number converted (MySQL keeps a float in a `double` column) |
 
 If a new driver hands back yet another shape, extend `DbReaderExtensions.ConversionOf`, keeping the
 emitted code provider-neutral; never branch on the provider there.
