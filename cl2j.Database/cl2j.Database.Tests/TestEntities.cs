@@ -147,7 +147,7 @@ namespace cl2j.Database.Tests
 
     /// <summary>
     ///     Nullable value types and a byte array. Every one of these used to fall through to the
-    ///     varchar(MAX) default, because Nullable<T> is not the type it wraps. See issue #27.
+    ///     varchar(MAX) default, because Nullable{T} is not the type it wraps. See issue #27.
     /// </summary>
     [Table("Nullables")]
     public sealed class NullablesRow

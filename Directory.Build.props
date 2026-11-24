@@ -280,8 +280,24 @@
     <Company>CL2J Technologies</Company>
     <RepositoryUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/CL2J-Technologies/dotnet-toolkit</PackageProjectUrl>
+    <PackageTags>cl2j;dotnet</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <!-- Symbols, determinism and IntelliSense. IncludeSymbols only takes effect on pack, so it is
+       harmless on the test projects. The snupkg sits next to each nupkg and `dotnet nuget push
+       *.nupkg` pushes it too. SourceLink comes from the SDK (.NET 8+), which embeds the repository
+       URL and commit; ContinuousIntegrationBuild makes the paths in the pdb deterministic and is
+       only set on GitHub Actions so local debugging keeps real paths. CS1591 is silenced: the
+       XML file is generated for the comments that exist, not to demand them everywhere. -->
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <EditorConfigFiles Remove=".editorconfig" />

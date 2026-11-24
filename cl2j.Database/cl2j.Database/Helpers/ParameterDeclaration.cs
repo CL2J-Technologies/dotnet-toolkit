@@ -44,8 +44,11 @@ namespace cl2j.Database.Helpers
         ///     Creates the parameter, gives it its value, type and declaration, and adds it to the
         ///     command.
         /// </summary>
+        /// <param name="command">The command the parameter is added to.</param>
+        /// <param name="name">The parameter name.</param>
         /// <param name="column">The property the value came from, when there is one. Its type is
         ///     what declares a null.</param>
+        /// <param name="value">The value to send; null is sent as a database null.</param>
         /// <param name="dbType">A type the caller insists on. Without one, <see cref="ParameterTyping"/>
         ///     decides, and a null takes the type of its property.</param>
         internal static DbParameter Bind(DbCommand command, string name, ColumnDescriptor? column, object? value, DbType? dbType = null)

@@ -15,7 +15,7 @@ namespace cl2j.FileStorage.Provider.S3
     ///     <para>
     ///     Object storage has no directories: a key containing slashes only looks like a path. The
     ///     listing operations reproduce the hierarchy the interface expects by asking S3 to group
-    ///     on the delimiter, so <see cref="ListFilesAsync"/> returns what sits directly at a prefix
+    ///     on the delimiter, so <see cref="ListFilesAsync(string)"/> returns what sits directly at a prefix
     ///     rather than everything beneath it.
     ///     </para>
     /// </summary>

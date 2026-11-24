@@ -7,6 +7,8 @@ namespace cl2j.DataStore.List
     /// <summary>
     ///     Writes a snapshot of the whole store to file storage after every change.
     /// </summary>
+    /// <param name="dataStore">The store whose changes are archived.</param>
+    /// <param name="fileStorageProvider">Where the snapshots are written.</param>
     /// <param name="filename">
     ///     A composite format string; <c>{0}</c> receives the timestamp, to the minute.
     /// </param>

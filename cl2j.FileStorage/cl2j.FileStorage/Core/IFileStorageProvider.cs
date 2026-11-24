@@ -16,7 +16,8 @@ namespace cl2j.FileStorage.Core
         /// <summary>
         /// Initialize itself using the configuration
         /// </summary>
-        /// <param name="configuration"></param>
+        /// <param name="providerName">The name this provider instance is registered under.</param>
+        /// <param name="configuration">The configuration section holding the provider settings.</param>
         /// <returns></returns>
         void Initialize(string providerName, IConfigurationSection configuration);
 
@@ -28,7 +29,7 @@ namespace cl2j.FileStorage.Core
         Task<bool> ExistsAsync(string name);
 
         /// <summary>
-        /// Retreive the information related to the file
+        /// Retrieve the information related to the file
         /// </summary>
         /// <param name="name">Name of the file to return the information</param>
         /// <returns>The file information of the name. null if the name doesn't exists</returns>
@@ -77,6 +78,7 @@ namespace cl2j.FileStorage.Core
         /// </summary>
         /// <param name="name">The name of the file to write to</param>
         /// <param name="stream">The content of the file to be written</param>
+        /// <param name="contentType">The MIME type to store with the file, when the provider supports it; null leaves it unset.</param>
         Task WriteAsync(string name, Stream stream, string? contentType = null);
 
         /// <summary>

@@ -30,6 +30,11 @@ namespace cl2j.FileStorage.Extensions
         private int currentTotalSize;
         private DateTime lastWrite;
 
+        /// <param name="fileStorageProvider">The provider the buffered content is flushed to.</param>
+        /// <param name="fileNamePattern">The pattern the file name is built from.</param>
+        /// <param name="maxSize">The buffered size that triggers a flush.</param>
+        /// <param name="flushInterval">How often the buffer is flushed.</param>
+        /// <param name="clearFile">Whether an existing file is cleared when the storage starts.</param>
         /// <param name="clock">
         /// The clock that names the files and decides when to roll over. UTC by default, which
         /// preserves the behaviour of existing callers.
