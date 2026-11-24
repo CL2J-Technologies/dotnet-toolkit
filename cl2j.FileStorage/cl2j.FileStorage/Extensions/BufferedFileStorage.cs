@@ -18,6 +18,14 @@ namespace cl2j.FileStorage.Extensions
         private readonly int maxSize;
 
         private readonly SemaphoreSlim semaphoreSlim = new(1);
+
+        // Held for the whole of a flush, write included. `semaphoreSlim` guards the buffer and is
+        // released before the write, so without this a second flush that started during the write
+        // found an empty buffer and returned at once. When that second flush was the one in
+        // `Dispose`, the instance reported itself disposed while the timer was still writing its
+        // last lines — lost if the process was on its way out.
+        private readonly SemaphoreSlim flushLock = new(1, 1);
+        private int disposed;
         private readonly Func<DateTime> clock;
         private int currentTotalSize;
         private DateTime lastWrite;
@@ -47,7 +55,9 @@ namespace cl2j.FileStorage.Extensions
             if (clearFile)
                 ClearFileAsync().Wait();
 
-            timer = new Timer(RefreshAsync, null, TimeSpan.Zero, flushInterval);
+            // First tick after one interval: the buffer is empty at construction, and a tick due
+            // at once only raced whatever the caller did next.
+            timer = new Timer(RefreshAsync, null, flushInterval, flushInterval);
         }
 
         private async Task ClearFileAsync()
@@ -75,6 +85,11 @@ namespace cl2j.FileStorage.Extensions
 
         public void Dispose()
         {
+            if (Interlocked.Exchange(ref disposed, 1) == 1)
+                return;
+
+            // Stop the ticks first, then flush: the flush waits for one the timer already started.
+            timer.Dispose();
             FlushAsync().Wait();
 
             Dispose(true);
@@ -82,6 +97,19 @@ namespace cl2j.FileStorage.Extensions
         }
 
         public async Task FlushAsync()
+        {
+            await flushLock.WaitAsync();
+            try
+            {
+                await FlushBufferAsync();
+            }
+            finally
+            {
+                flushLock.Release();
+            }
+        }
+
+        private async Task FlushBufferAsync()
         {
             if (buffer.Length == 0)
                 return;
@@ -145,8 +173,9 @@ namespace cl2j.FileStorage.Extensions
         {
             if (disposing)
             {
-                semaphoreSlim.Dispose();
                 timer.Dispose();
+                semaphoreSlim.Dispose();
+                flushLock.Dispose();
             }
         }
 
@@ -174,7 +203,24 @@ namespace cl2j.FileStorage.Extensions
 
         public async void RefreshAsync(object? state)
         {
-            await FlushAsync();
+            // async void: anything that escapes here terminates the process rather than failing a
+            // call, so nothing may escape. A tick queued before `Dispose` stopped the timer can
+            // still arrive afterwards, and finds the semaphores disposed.
+            if (Volatile.Read(ref disposed) == 1)
+                return;
+
+            try
+            {
+                await FlushAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Disposed while this tick was queued; `Dispose` has already flushed.
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"BufferedFileStorage: Exception occured flushing to file '{CurrentFileName}' : {e.Message}");
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ namespace cl2j.FileStorage.Tests
     ///     without touching a disk. It records the content type of each write, and can be told to
     ///     fail the operations that matter to the tests.
     /// </summary>
-    internal sealed class InMemoryFileStorageProvider : IFileStorageProvider
+    internal class InMemoryFileStorageProvider : IFileStorageProvider
     {
         public Dictionary<string, byte[]> Files { get; } = [];
 
@@ -58,7 +58,20 @@ namespace cl2j.FileStorage.Tests
             ContentTypes[Normalize(name)] = contentType;
         }
 
-        public Task AppendAsync(string name, Stream stream) => throw new NotSupportedException();
+        public virtual async Task AppendAsync(string name, Stream stream)
+        {
+            ThrowIfFailing();
+            using var copy = new MemoryStream();
+            await stream.CopyToAsync(copy);
+            lock (Files)
+                Files[Normalize(name)] = Files.TryGetValue(Normalize(name), out var existing) ? [.. existing, .. copy.ToArray()] : copy.ToArray();
+        }
+
+        public string Text(string name)
+        {
+            lock (Files)
+                return Files.TryGetValue(Normalize(name), out var bytes) ? System.Text.Encoding.UTF8.GetString(bytes) : string.Empty;
+        }
 
         public Task DeleteAsync(string name)
         {

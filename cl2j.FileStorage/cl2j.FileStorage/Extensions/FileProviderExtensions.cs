@@ -23,18 +23,18 @@ namespace cl2j.FileStorage.Extensions
         {
             try
             {
-                var memoryStream = new MemoryStream();
-                if (await fileStorageProvider.ReadAsync(sourcePath, memoryStream))
-                {
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    await fileStorageProvider.WriteAsync(destinationPath, memoryStream);
-                }
+                using var memoryStream = new MemoryStream();
+                if (!await fileStorageProvider.ReadAsync(sourcePath, memoryStream))
+                    return false;
+
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                await fileStorageProvider.WriteAsync(destinationPath, memoryStream);
+                return true;
             }
             catch
             {
+                return false;
             }
-
-            return false;
         }
     }
 }
