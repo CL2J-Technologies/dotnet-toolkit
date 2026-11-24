@@ -262,16 +262,16 @@ namespace cl2j.Database.Helpers
             var type = Nullable.GetUnderlyingType(propType) ?? propType;
 
             if (type == Types.TypeDateOnly)
-                return $"{source} is DateTime d{index} ? DateOnly.FromDateTime(d{index}) : (DateOnly){source}";
+                return $"({source} switch {{ DateTime d{index} => DateOnly.FromDateTime(d{index}), var x{index} => (DateOnly)x{index} }})";
             if (type == Types.TypeTimeOnly)
-                return $"{source} is TimeSpan t{index} ? TimeOnly.FromTimeSpan(t{index}) : (TimeOnly){source}";
+                return $"({source} switch {{ TimeSpan t{index} => TimeOnly.FromTimeSpan(t{index}), var x{index} => (TimeOnly)x{index} }})";
             if (type == Types.TypeChar)
-                return $"{source} is string s{index} ? (s{index}.Length == 0 ? '\\0' : s{index}[0]) : (char){source}";
+                return $"({source} switch {{ string s{index} => s{index}.Length == 0 ? '\\0' : s{index}[0], var x{index} => (char)x{index} }})";
 
             if (type == Types.TypeByte)
-                return $"{source} is byte b{index} ? b{index} : System.Convert.ToByte({source}, System.Globalization.CultureInfo.InvariantCulture)";
+                return $"({source} switch {{ byte b{index} => b{index}, var x{index} => System.Convert.ToByte(x{index}, System.Globalization.CultureInfo.InvariantCulture) }})";
             if (type == Types.TypeDateTimeOffset)
-                return $"{source} is DateTime m{index} ? new DateTimeOffset(m{index}.Kind == DateTimeKind.Local ? m{index}.ToUniversalTime() : DateTime.SpecifyKind(m{index}, DateTimeKind.Utc)) : (DateTimeOffset){source}";
+                return $"({source} switch {{ DateTime m{index} => new DateTimeOffset(m{index}.Kind == DateTimeKind.Local ? m{index}.ToUniversalTime() : DateTime.SpecifyKind(m{index}, DateTimeKind.Utc)), var x{index} => (DateTimeOffset)x{index} }})";
 
             return null;
         }
