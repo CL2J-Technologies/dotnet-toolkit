@@ -238,8 +238,19 @@
 
          6.5.0 is a minor bump: it adds API. `IEmailService.SendEmailAsync` gains an overload taking
          a Reply-To address, declared as a default interface method so existing implementers keep
-         compiling; the default drops the Reply-To, `EmailService` honours it. -->
-    <Version>6.5.0</Version>
+         compiling; the default drops the Reply-To, `EmailService` honours it.
+
+         7.0.0 is a major bump: no signature changes, but cl2j.DataStore.Json's list store now
+         throws where it used to report success. A caller that relied on the old behaviour keeps
+         compiling and starts failing, which is what made 5.0.0 a major too.
+         DataStoreListCommandAndQueryJson caught every exception in InsertAsync, UpdateAsync and
+         DeleteAsync and logged it at Trace, so a duplicate key, a missing key and a write that
+         never reached the disk all looked like success. InsertAsync now throws ConflictException
+         for a key already there, UpdateAsync throws NotFoundException for a key that is not, and
+         all three let a failed read or write through. DeleteAsync of a missing key stays a
+         no-op, as in the dictionary store: the cache decorator relies on it to drop an entry the
+         file no longer holds. -->
+    <Version>7.0.0</Version>
         
   
     <Authors>CL2J Technologies</Authors>

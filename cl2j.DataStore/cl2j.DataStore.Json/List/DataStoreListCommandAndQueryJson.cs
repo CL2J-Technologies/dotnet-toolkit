@@ -36,10 +36,6 @@ namespace cl2j.DataStore.Json.List
 
                 await WriteAsync(list);
             }
-            catch (Exception ex)
-            {
-                logger.LogTrace(ex, "Unexpected error during Insert");
-            }
             finally
             {
                 semaphore.Release();
@@ -61,10 +57,6 @@ namespace cl2j.DataStore.Json.List
 
                 await WriteAsync(list);
             }
-            catch (Exception ex)
-            {
-                logger.LogTrace(ex, "Unexpected error during Updte");
-            }
             finally
             {
                 semaphore.Release();
@@ -78,15 +70,11 @@ namespace cl2j.DataStore.Json.List
             {
                 var list = new List<TValue>(await GetAllAsync());
 
-                var nb = RemoveAll(list, key);
-                if (nb <= 0)
-                    throw new NotFoundException();
-
-                await WriteAsync(list);
-            }
-            catch (Exception ex)
-            {
-                logger.LogTrace(ex, "Unexpected error during Delete");
+                //A key that is not there is not an error, as in the dictionary store: the store
+                //ends up as the caller asked, and the cache decorator relies on it to drop an entry
+                //the file no longer holds.
+                if (RemoveAll(list, key) > 0)
+                    await WriteAsync(list);
             }
             finally
             {
