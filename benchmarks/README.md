@@ -142,3 +142,44 @@ your own setup before drawing a conclusion.
   hand-written code), which a real round trip of hundreds of microseconds makes invisible.
 - The ShortRun `Error` values are wide (tens of percent in places). Differences of a few percent
   between cl2j.Database, Dapper and ADO.NET in the end-to-end tables are not significant.
+
+## Comparing cl2j.Database versions
+
+The same benchmark code can run against a published package instead of this repository's source:
+
+```bash
+CL2J_DB_VERSION=4.1.1 CL2J_BENCH_JOB=default dotnet run -c Release --project benchmarks/cl2j.Database.Benchmarks -- --filter "*Mapping*"
+```
+
+`CL2J_DB_VERSION` swaps the project references for `cl2j.Database` and `cl2j.Database.SqlServer` at that
+version (4.1.1 and 5.0.0 compile against the benchmarks unchanged). `CL2J_BENCH_JOB=default` switches
+the end-to-end suites from `ShortRun` to BenchmarkDotNet's default job, which gives tight error bars.
+
+### Was there a read regression? (one run, same machine as above)
+
+No. cl2j.Database 4.1.1 (before the `SequentialAccess` removal and the `GetOrdinal` change), 5.0.0 and
+6.5.2 are within noise of each other on time; the end-to-end calls sit at hand-written ADO.NET speed
+in all three. The only visible change is allocations: 4.1.1 allocated more per call
+(List 1 row 10.05 KB vs 6.83 KB, ByKey 11.7 KB vs 7.8 KB), because `SequentialAccess` was costing
+memory, not saving it.
+
+| Mean (default job) | 4.1.1 | 5.0.0 | 6.5.2 |
+| --- | ---: | ---: | ---: |
+| Mapping 1 row | 472 ns | 483 ns | 493 ns |
+| Mapping 100 rows | 6.97 us | 6.98 us | 7.09 us |
+| Mapping 10,000 rows | 1.85 ms | 1.85 ms | 1.88 ms |
+| List 100 rows | 757 us | 723 us | 699 us |
+| List 10,000 rows | 5.00 ms | 4.80 ms | 4.97 ms |
+| ByKey (QuerySingle) | 735 us | 709 us | 680 us |
+
+The 1-row mapping case is about 2.3 times hand-written code (Dapper: 1.5 times) in every version: a
+fixed per-call cost, not a regression.
+
+### Where the fixed per-call cost goes (throwaway experiments on 6.5.2)
+
+| Experiment | Mapping 1 row | Mapping 100 / 10k | End-to-end |
+| --- | ---: | ---: | ---: |
+| baseline 6.5.2 | 493 ns, 1.58 KB | 7.09 us / 1.88 ms | |
+| `Script.Execute` through a cached delegate instead of `InvokeMember` | 284 ns (-42%), 1.21 KB (-0.37 KB) | no change | ByKey -0.37 KB |
+| fixed ordinals instead of `GetOrdinal` | 461 ns (-6%, within noise), same bytes | no change | ByKey -0.4 KB |
+| `SequentialAccess` back in `ReadBehavior` | not applicable | | List/ByKey: no time or allocation change |
