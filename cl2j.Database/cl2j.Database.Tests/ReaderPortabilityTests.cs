@@ -126,6 +126,8 @@ namespace cl2j.Database.Tests
         {
             var local = new DateTime(2024, 5, 6, 7, 8, 9, DateTimeKind.Local);
             var table = Table(("Id", typeof(string)), ("Moment", typeof(DateTime)));
+            //The default mode would hand the value back with its Kind erased.
+            table.Columns["Moment"]!.DateTimeMode = DataSetDateTime.Local;
             table.Rows.Add("a", local);
 
             var rows = await table.CreateDataReader().Read<PortableRequiredMomentRow>(Describe(typeof(PortableRequiredMomentRow)));
