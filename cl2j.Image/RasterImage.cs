@@ -28,6 +28,9 @@ namespace cl2j.Image
 
             bitmap = new SKBitmap(Info(width, height));
             bitmap.Erase(SKColors.Transparent);
+            //Upright. Left unassigned, Origin was 0, which is not TopLeft, so RotateFlipIfRequired
+            //reported a blank image as rotated and CleanImage as modified.
+            Origin = SKEncodedOrigin.TopLeft;
         }
 
         internal RasterImage(SKBitmap bitmap, SKEncodedOrigin origin = SKEncodedOrigin.TopLeft, bool hasMetadata = false)
