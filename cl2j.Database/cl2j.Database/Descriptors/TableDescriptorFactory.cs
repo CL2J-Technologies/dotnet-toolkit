@@ -46,12 +46,22 @@ namespace cl2j.Database.Descriptors
             }
 
             var tableMetaData = type.GetTableMetaData();
+            var keys = columnsDescriptors.GetKeys();
+
+            //Several key columns make one composite primary key, and none of them can be generated
+            //by the server. The statements ask the column, which does not know its table.
+            if (keys.Count > 1)
+            {
+                foreach (var key in keys)
+                    key.IsPartOfCompositeKey = true;
+            }
+
             var tableDescriptor = new TableDescriptor
             {
                 Name = tableMetaData.Table,
                 NameFormatted = formatter.FormatTableName(tableMetaData.Table, tableMetaData.Schema),
                 Schema = tableMetaData.Schema,
-                Keys = columnsDescriptors.GetKeys(),
+                Keys = keys,
                 Columns = columnsDescriptors
             };
             return tableDescriptor;

@@ -12,6 +12,11 @@ namespace cl2j.Database.CommandBuilders
         {
             var tableDescriptor = TableDescriptorFactory.Create(type, formatter);
 
+            //More than one key column is a composite primary key: one table-level constraint over
+            //all of them. A PRIMARY KEY on each column would make the server refuse the table
+            //("multiple primary keys").
+            var compositeKey = tableDescriptor.Keys.Count > 1;
+
             var lines = new List<string>();
             foreach (var column in tableDescriptor.Columns)
             {
@@ -23,19 +28,25 @@ namespace cl2j.Database.CommandBuilders
                 sbLine.Append(" " + dataType);
 
                 var isKey = tableDescriptor.IsKey(column);
+                var required = column.ColumnAtribute.Required || column.Property.PropertyType.IsEnum;
 
                 //Primary Key
-                if (isKey)
+                if (isKey && !compositeKey)
                     sbLine.Append(formatter.GetColumnKeyType(column));
+                else if (isKey && !required)
+                    //A column of a composite key is plain: the caller supplies it, so it has no
+                    //identity and no server default, and it cannot be NULL. The constraint that
+                    //joins the columns is written once, after the last column.
+                    sbLine.Append(" NOT NULL");
 
                 //Required
-                if (column.ColumnAtribute.Required || column.Property.PropertyType.IsEnum)
+                if (required)
                     sbLine.Append(" NOT NULL");
 
                 lines.Add(sbLine.ToString());
 
                 //Primary Key
-                if (isKey)
+                if (isKey && !compositeKey)
                 {
                     //Plain PRIMARY KEY, with neither CLUSTERED nor ASC: MySQL refuses the first and
                     //PostgreSQL refuses the second, and neither is needed. On SQL Server a primary key
@@ -50,6 +61,9 @@ namespace cl2j.Database.CommandBuilders
                 if (foreignKeyAttr is not null)
                     lines.Add($"CONSTRAINT {formatter.FormatColumnName(foreignKeyAttr.Name)} FOREIGN KEY ({column.NameFormatted}) REFERENCES {formatter.FormatTableName(foreignKeyAttr.ReferenceTable, foreignKeyAttr.ReferenceSchema)}({formatter.FormatColumnName(foreignKeyAttr.ReferenceField)})");
             }
+
+            if (compositeKey)
+                lines.Add($"CONSTRAINT {formatter.FormatColumnName($"PK_{tableDescriptor.Name}")} PRIMARY KEY ({string.Join(", ", tableDescriptor.Keys.Select(k => k.NameFormatted))})");
 
             //Generate statement
             var sb = new StringBuilder();
@@ -199,6 +213,11 @@ namespace cl2j.Database.CommandBuilders
             if (column.ColumnAtribute.Key != KeyType.Key)
                 return false;
 
+            //A server-generated key only makes sense alone: each column of a composite key is
+            //supplied by the caller and declared NOT NULL with no identity and no default.
+            if (column.IsPartOfCompositeKey)
+                return false;
+
             var type = column.Property.PropertyType;
 
             return type == Types.TypeInt
@@ -219,6 +238,10 @@ namespace cl2j.Database.CommandBuilders
         public static bool IsIdentity(ColumnDescriptor column)
         {
             if (column.ColumnAtribute.Key != KeyType.Key)
+                return false;
+
+            //No identity inside a composite key. See IsSuppliedByTheServer.
+            if (column.IsPartOfCompositeKey)
                 return false;
 
             var type = column.Property.PropertyType;

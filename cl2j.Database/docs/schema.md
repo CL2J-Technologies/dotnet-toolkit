@@ -80,5 +80,5 @@ CREATE TABLE [billing].[Invoice]
 
 ## Not generated
 
-Indexes (other than the primary key), unique constraints, check constraints, computed columns and
-composite primary keys. Create those with `Execute("CREATE INDEX ...")` after `CreateTable`.
+Indexes (other than the primary key), unique constraints, check constraints and computed columns. Create those
+with `Execute("CREATE INDEX ...")` after `CreateTable`.

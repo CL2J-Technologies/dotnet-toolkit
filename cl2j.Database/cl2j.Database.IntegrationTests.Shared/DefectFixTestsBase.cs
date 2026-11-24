@@ -9,7 +9,7 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class DefectFixTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        private static readonly Type[] Tables = [typeof(GeneratedKeyBulkRow), typeof(JsonDefaultRow), typeof(JsonUnicodeRow)];
+        private static readonly Type[] Tables = [typeof(GeneratedKeyBulkRow), typeof(JsonDefaultRow), typeof(JsonUnicodeRow), typeof(CompositeKeyRow), typeof(CompositeGuidKeyRow)];
 
         public async Task InitializeAsync()
         {
@@ -135,6 +135,125 @@ namespace cl2j.Database.IntegrationTests
 
             Assert.Equal(NonLatin, (await connection.QueryKey<JsonUnicodeRow>("a"))!.Bounded);
         }
+
+        [Fact]
+        public async Task A_composite_key_table_is_created_and_Insert_sends_every_key_column()
+        {
+            //One PRIMARY KEY per key column failed with "multiple primary keys". Both columns are
+            //now one table-level constraint, and both are supplied by the caller: an int that is
+            //part of a composite key is not an identity.
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeKeyRow>();
+
+            await connection.Insert(new CompositeKeyRow { TenantId = "a", Number = 1, Label = "a1" });
+            await connection.Insert(new CompositeKeyRow { TenantId = "a", Number = 2, Label = "a2" });
+            await connection.Insert(new CompositeKeyRow { TenantId = "b", Number = 1, Label = "b1" });
+
+            var rows = await connection.Query<CompositeKeyRow>();
+            Assert.Equal(3, rows.Count);
+            Assert.Equal("b1", Assert.Single(await connection.Query<CompositeKeyRow>(new { TenantId = "b", Number = 1 })).Label);
+        }
+
+        [Fact]
+        public async Task A_composite_key_refuses_a_duplicate()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeKeyRow>();
+            await connection.Insert(new CompositeKeyRow { TenantId = "a", Number = 1, Label = "first" });
+
+            //The same pair twice: the primary key spans both columns, not each one alone.
+            await Assert.ThrowsAsync(fixture.ServerExceptionType, () => connection.Insert(new CompositeKeyRow { TenantId = "a", Number = 1, Label = "second" }));
+        }
+
+        [Fact]
+        public async Task BulkInsert_sends_every_column_of_a_composite_key()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeKeyRow>();
+
+            await connection.BulkInsert(new[]
+            {
+                new CompositeKeyRow { TenantId = "a", Number = 1, Label = "a1" },
+                new CompositeKeyRow { TenantId = "a", Number = 2, Label = "a2" },
+                new CompositeKeyRow { TenantId = "b", Number = 1, Label = "b1" },
+            });
+
+            var rows = await connection.Query<CompositeKeyRow>();
+            Assert.Equal(3, rows.Count);
+            Assert.Equal(["a1", "a2", "b1"], rows.OrderBy(r => r.TenantId).ThenBy(r => r.Number).Select(r => r.Label));
+        }
+
+        [Fact]
+        public async Task Update_and_Delete_find_a_composite_key_row_by_every_key_column()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeKeyRow>();
+            await connection.BulkInsert(new[]
+            {
+                new CompositeKeyRow { TenantId = "a", Number = 1, Label = "a1" },
+                new CompositeKeyRow { TenantId = "a", Number = 2, Label = "a2" },
+                new CompositeKeyRow { TenantId = "b", Number = 1, Label = "b1" },
+            });
+
+            await connection.Update(new CompositeKeyRow { TenantId = "a", Number = 2, Label = "changed" });
+
+            var rows = await connection.Query<CompositeKeyRow>();
+            Assert.Equal("changed", rows.Single(r => r.TenantId == "a" && r.Number == 2).Label);
+            Assert.Equal("a1", rows.Single(r => r.TenantId == "a" && r.Number == 1).Label);
+            Assert.Equal("b1", rows.Single(r => r.TenantId == "b").Label);
+
+            await connection.Delete(new CompositeKeyRow { TenantId = "a", Number = 1 });
+
+            rows = await connection.Query<CompositeKeyRow>();
+            Assert.Equal(2, rows.Count);
+            Assert.DoesNotContain(rows, r => r.TenantId == "a" && r.Number == 1);
+        }
+
+        [Fact]
+        public async Task UpdateColumn_works_on_a_composite_key_row()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeKeyRow>();
+            await connection.BulkInsert(new[]
+            {
+                new CompositeKeyRow { TenantId = "a", Number = 1, Label = "a1" },
+                new CompositeKeyRow { TenantId = "a", Number = 2, Label = "a2" },
+            });
+
+            await connection.UpdateColumn(new CompositeKeyRow { TenantId = "a", Number = 2 }, "Label", "only this one");
+
+            var rows = await connection.Query<CompositeKeyRow>();
+            Assert.Equal("a1", rows.Single(r => r.Number == 1).Label);
+            Assert.Equal("only this one", rows.Single(r => r.Number == 2).Label);
+        }
+
+        [Fact]
+        public async Task QueryKey_still_requires_exactly_one_key()
+        {
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeKeyRow>();
+
+            await Assert.ThrowsAsync<Exceptions.DatabaseException>(() => connection.QueryKey<CompositeKeyRow>("a"));
+            await Assert.ThrowsAsync<Exceptions.DatabaseException>(() => connection.DeleteKey<CompositeKeyRow>("a"));
+        }
+
+        [Fact]
+        public async Task A_guid_that_is_part_of_a_composite_key_is_supplied_by_the_caller()
+        {
+            //A Guid key alone is filled by the server (DEFAULT NEWID()); inside a composite key it is
+            //an ordinary NOT NULL column with no default, so the value sent must be the one stored.
+            await using var connection = await fixture.OpenAsync();
+            await connection.CreateTable<CompositeGuidKeyRow>();
+            var group = Guid.NewGuid();
+            var other = Guid.NewGuid();
+
+            await connection.Insert(new CompositeGuidKeyRow { GroupId = group, Code = "x", Label = "inserted" });
+            await connection.BulkInsert(new[] { new CompositeGuidKeyRow { GroupId = other, Code = "y", Label = "bulk" } });
+
+            var rows = await connection.Query<CompositeGuidKeyRow>();
+            Assert.Equal("inserted", rows.Single(r => r.GroupId == group && r.Code == "x").Label);
+            Assert.Equal("bulk", rows.Single(r => r.GroupId == other && r.Code == "y").Label);
+        }
     }
 
     /// <summary>Every initializer differs from the type default, so a value that is not written reads back wrong.</summary>
@@ -176,5 +295,31 @@ namespace cl2j.Database.IntegrationTests
 
         [Column(Name = "Bounded", Json = true, Length = 200)]
         public List<string>? Bounded { get; set; }
+    }
+
+    [Table("Def660CompositeKey")]
+    public sealed class CompositeKeyRow
+    {
+        [Column(Name = "TenantId", Key = KeyType.Key, Length = 20)]
+        public string TenantId { get; set; } = string.Empty;
+
+        [Column(Name = "Number", Key = KeyType.Key)]
+        public int Number { get; set; }
+
+        [Column(Name = "Label", Length = 50)]
+        public string Label { get; set; } = string.Empty;
+    }
+
+    [Table("Def660CompositeGuidKey")]
+    public sealed class CompositeGuidKeyRow
+    {
+        [Column(Name = "GroupId", Key = KeyType.Key)]
+        public Guid GroupId { get; set; }
+
+        [Column(Name = "Code", Key = KeyType.Key, Length = 20)]
+        public string Code { get; set; } = string.Empty;
+
+        [Column(Name = "Label", Length = 50)]
+        public string Label { get; set; } = string.Empty;
     }
 }

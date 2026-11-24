@@ -58,7 +58,8 @@ whether it was observed against SQL Server 2022 while writing these docs (**obse
 
 ## Schema
 
-- **`CreateTable` supports one key column**; a composite key fails on the server. (**Observed.**)
+- **A composite key is one table-level `PRIMARY KEY`** and you supply every key column (none is an identity or
+  a default). `QueryKey`/`DeleteKey` still need one key. See [Keys](keys.md#composite-keys). (`DefectFixTests`.)
 - **A string key needs a `Length`** (`varchar(max)` cannot be a key). (**Observed.**)
 - **A missing database schema is not created.** (**Observed.**)
 - **An entity with no key** can be created and inserted into, but `Update` and `Delete` fail and `QueryKey`
