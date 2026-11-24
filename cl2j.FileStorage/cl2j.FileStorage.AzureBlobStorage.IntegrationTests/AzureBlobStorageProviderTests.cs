@@ -508,9 +508,9 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             Assert.Equal(60, (await provider.ListFilesAsync("many", "f")).Count());
         }
 
-        // ---- Known defects: the tests are right, the provider is not ----
+        // ---- Listing boundaries (formerly known defects) ----
 
-        [Fact(Skip = "Bug: ListFoldersAsync with an empty path drops the first character of every folder name (name[(path.Length + 1)..]).")]
+        [Fact]
         public async Task Listing_folders_at_the_root_names_the_top_level_folders()
         {
             var provider = Provider();
@@ -520,7 +520,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             Assert.Equal(["first", "second"], Sorted(await provider.ListFoldersAsync(string.Empty)));
         }
 
-        [Fact(Skip = "Bug: ListFilesAsync(path) matches on a bare string prefix, so 'photos' also lists 'photos-old.txt' as 'old.txt'.")]
+        [Fact]
         public async Task Listing_a_folder_does_not_include_files_of_a_sibling_whose_name_starts_the_same()
         {
             var provider = Provider();
@@ -530,7 +530,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             Assert.Equal(["in.txt"], await provider.ListFilesAsync("photos"));
         }
 
-        [Fact(Skip = "Bug: ListFoldersAsync(path) matches on a bare string prefix, so 'photos' also lists a folder named '2' from the sibling 'photos22' (the cut falls inside its name).")]
+        [Fact]
         public async Task Listing_folders_does_not_include_the_sub_folders_of_a_sibling_whose_name_starts_the_same()
         {
             var provider = Provider();
