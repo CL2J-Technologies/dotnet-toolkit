@@ -73,6 +73,18 @@ namespace cl2j.Tooling.Email
             return await SendEmailAsync(smtpSettings.From, subject, details + Environment.NewLine + ex.Message, smtpSettings.ErrorTo, isBodyHtml);
         }
 
+        /// <summary>
+        ///     Builds the client that sends every message. It is private on purpose: it is not an
+        ///     extension point, so a test cannot swap it for a client that writes <c>.eml</c> files to a
+        ///     pickup directory.
+        ///
+        ///     <para>
+        ///     Known limitation: the successful send path is therefore not exercised, because it needs
+        ///     a server. What happens to the message before the send is covered one level up, through
+        ///     <see cref="CreateMailMessage"/>, including a comma-separated list of recipients with or
+        ///     without a space after the comma.
+        ///     </para>
+        /// </summary>
         private static SmtpClient CreateSmtpClient(SmtpSettings smtpSettings)
         {
             return new SmtpClient(smtpSettings.Server)
