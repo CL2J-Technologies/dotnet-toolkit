@@ -23,11 +23,6 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Data.SqlClient"
         update-types: ["version-update:semver-major"]
-      # xunit v3 and its matching runner: the migration touches every test project.
-      - dependency-name: "xunit"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "xunit.*"
-        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"

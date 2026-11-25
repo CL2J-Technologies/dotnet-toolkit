@@ -20,9 +20,13 @@ namespace cl2j.Database.MySql.IntegrationTests
             typeof(MyShortRow), typeof(MyBatchRow), typeof(MyTemporalRow),
         ];
 
-        public async Task InitializeAsync() => await DropAll();
+        public async ValueTask InitializeAsync() => await DropAll();
 
-        public async Task DisposeAsync() => await DropAll();
+        public async ValueTask DisposeAsync()
+        {
+            await DropAll();
+            GC.SuppressFinalize(this);
+        }
 
         private async Task DropAll()
         {
@@ -289,7 +293,7 @@ namespace cl2j.Database.MySql.IntegrationTests
         {
             await using var connection = await OpenFor(how);
             await connection.CreateTable<MyBatchRow>();
-            await using var transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
             await Assert.ThrowsAnyAsync<Exception>(() => connection.BulkInsert(Rows(2500, (2100, "id-5")), CancellationToken.None, transaction));
 
@@ -298,7 +302,7 @@ namespace cl2j.Database.MySql.IntegrationTests
             //row but the duplicate was loaded.
             Assert.Equal(how == "batched" ? 2000 : 2499, stored);
 
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(TestContext.Current.CancellationToken);
             Assert.Empty(await connection.Query<MyBatchRow>());
         }
 

@@ -15,6 +15,15 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>10.0</AnalysisLevel>
 
+    <!-- xunit v3 test projects are Microsoft.Testing.Platform applications by default, and from the
+         .NET 10 SDK on, `dotnet test` refuses to run those through VSTest ("opt-in to the new
+         dotnet test experience"). This repository runs them through VSTest on purpose: CI
+         collects coverage with the VSTest "Code Coverage" collector, which
+         Microsoft.Testing.Platform does not offer. Switching the flag off keeps
+         Microsoft.NET.Test.Sdk and xunit.runner.visualstudio in charge; the projects are still
+         xunit v3 executables. The property means nothing to a project that is not a test project. -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+
     <!-- Shared versioning: every package in this repository publishes this number, and no
          .csproj overrides it. Bump it here, commit to main, and the workflow publishes the whole
          set together.

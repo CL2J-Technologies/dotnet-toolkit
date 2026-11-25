@@ -21,17 +21,18 @@ namespace cl2j.Database.IntegrationTests
         /// <summary>The catalog type of a <c>Guid</c> column. SQL Server: <c>uniqueidentifier</c>.</summary>
         protected virtual string GuidTypeName => "uniqueidentifier";
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(WideValuesRow), CancellationToken.None);
             await connection.CreateTable<WideValuesRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(WideValuesRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

@@ -100,7 +100,7 @@ namespace cl2j.Tooling.Tests
             }, new RecordingLogger());
 
             await loader.WaitAsync();
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
 
             Assert.True(Volatile.Read(ref loads) >= 3, $"expected several reloads, saw {Volatile.Read(ref loads)}");
         }
@@ -119,9 +119,9 @@ namespace cl2j.Tooling.Tests
             loader.Dispose();
 
             //Let anything already in flight finish before taking the reading.
-            await Task.Delay(TimeSpan.FromMilliseconds(100));
+            await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
             var afterDispose = Volatile.Read(ref loads);
-            await Task.Delay(TimeSpan.FromMilliseconds(400));
+            await Task.Delay(TimeSpan.FromMilliseconds(400), TestContext.Current.CancellationToken);
 
             Assert.Equal(afterDispose, Volatile.Read(ref loads));
         }
@@ -192,7 +192,7 @@ namespace cl2j.Tooling.Tests
 
             //Give any refresh that was queued behind the first one a chance to reach the disposed
             //semaphore. Nothing should escape.
-            await Task.Delay(TimeSpan.FromMilliseconds(200));
+            await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
         }
     }
 }

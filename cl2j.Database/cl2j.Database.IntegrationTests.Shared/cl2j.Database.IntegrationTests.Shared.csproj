@@ -6,7 +6,7 @@
        test project, and deliberately not referencing any provider. -->
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <!-- xunit.core's build props mark any project that references it as a test project, so
+    <!-- xunit's build props mark any project that references it as a test project, so
          `dotnet test` on the solution looked for a testhost here and aborted the run. -->
     <IsTestProject>false</IsTestProject>
     <!-- CA1707: underscore-separated test names are intentional, they read as sentences
@@ -15,10 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- xunit.core carries [Fact], [Theory] and IAsyncLifetime, xunit.assert the Assert class.
-         Same version as the test projects, which reference the xunit metapackage. -->
-    <PackageReference Include="xunit.core" Version="2.9.3" />
-    <PackageReference Include="xunit.assert" Version="2.9.3" />
+    <!-- xunit.v3.extensibility.core carries [Fact], [Theory] and IAsyncLifetime, xunit.v3.assert the
+         Assert class. Same version as the test projects, which reference the xunit.v3 metapackage. -->
+    <PackageReference Include="xunit.v3.extensibility.core" Version="4.0.3" />
+    <PackageReference Include="xunit.v3.assert" Version="4.0.3" />
   </ItemGroup>
 
   <ItemGroup>

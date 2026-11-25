@@ -49,7 +49,7 @@ namespace cl2j.Database.MySql.IntegrationTests
         public IDatabase CreateDatabase(DatabaseOptions options, ILogger logger)
             => new MySqlDatabase(ConnectionString, options, logger);
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             cl2j.Database.MySql.MySql.Register();
 
@@ -59,7 +59,7 @@ namespace cl2j.Database.MySql.IntegrationTests
             BulkCopy = new BulkCopyView(this);
         }
 
-        public async Task DisposeAsync() => await container.DisposeAsync();
+        public async ValueTask DisposeAsync() => await container.DisposeAsync();
 
         /// <summary>A new open connection, so a test that leaves a transaction open cannot poison the next.</summary>
         public Task<DbConnection> OpenAsync() => OpenAsync(ConnectionString);

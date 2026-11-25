@@ -147,19 +147,19 @@ namespace cl2j.FileStorage.S3.IntegrationTests
                         // Stopped while waiting for a request.
                     }
                 }
-            });
+            }, TestContext.Current.CancellationToken);
 
             try
             {
                 var ex = await Assert.ThrowsAsync<BadRequestException>(() => Task.Run(() =>
-                    new FileStorageProviderS3().Initialize("S3", Section(NewBucket(), serviceUrl: $"http://127.0.0.1:{port}"))));
+                    new FileStorageProviderS3().Initialize("S3", Section(NewBucket(), serviceUrl: $"http://127.0.0.1:{port}")), TestContext.Current.CancellationToken));
 
                 Assert.Contains("cannot reach bucket", ex.Message);
             }
             finally
             {
                 listener.Stop();
-                await serving.WaitAsync(TimeSpan.FromSeconds(5));
+                await serving.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
             }
         }
 
@@ -291,7 +291,7 @@ namespace cl2j.FileStorage.S3.IntegrationTests
             var bucket = NewBucket();
             var provider = Provider(bucket);
             using (var raw = RawClient())
-                await raw.PutObjectAsync(new PutObjectRequest { BucketName = bucket, Key = "marked/", ContentBody = string.Empty });
+                await raw.PutObjectAsync(new PutObjectRequest { BucketName = bucket, Key = "marked/", ContentBody = string.Empty }, TestContext.Current.CancellationToken);
             await provider.WriteTextAsync("marked/real.txt", "r");
 
             Assert.Equal(["real.txt"], await provider.ListFilesAsync("marked"));
@@ -334,7 +334,7 @@ namespace cl2j.FileStorage.S3.IntegrationTests
             await provider.WriteAsync("typed.json", content, "application/json");
 
             using var raw = RawClient();
-            var metadata = await raw.GetObjectMetadataAsync(bucket, "typed.json");
+            var metadata = await raw.GetObjectMetadataAsync(bucket, "typed.json", TestContext.Current.CancellationToken);
             Assert.Equal("application/json", metadata.Headers.ContentType);
         }
 
@@ -348,7 +348,7 @@ namespace cl2j.FileStorage.S3.IntegrationTests
             await provider.WriteAsync("untyped.bin", content);
 
             using var raw = RawClient();
-            var metadata = await raw.GetObjectMetadataAsync(bucket, "untyped.bin");
+            var metadata = await raw.GetObjectMetadataAsync(bucket, "untyped.bin", TestContext.Current.CancellationToken);
             Assert.NotEqual("application/json", metadata.Headers.ContentType);
             Assert.False(string.IsNullOrEmpty(metadata.Headers.ContentType));
         }

@@ -96,7 +96,7 @@ namespace cl2j.FileStorage.Disk.Tests
             //A process killed mid-write can leave a temporary behind. It must never pass for data
             //in the eyes of a caller scanning the folder.
             await WriteFileAsync("file.bin", Content(100));
-            await File.WriteAllTextAsync(Path.Combine(root, "file.bin.abcdef.tmp"), "reliquat");
+            await File.WriteAllTextAsync(Path.Combine(root, "file.bin.abcdef.tmp"), "reliquat", TestContext.Current.CancellationToken);
 
             var files = (await provider.ListFilesAsync(string.Empty)).ToList();
 
@@ -131,9 +131,9 @@ namespace cl2j.FileStorage.Disk.Tests
             var fileLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             var relache = Task.Run(async () =>
             {
-                await Task.Delay(120);
+                await Task.Delay(120, TestContext.Current.CancellationToken);
                 fileLock.Dispose();
-            });
+            }, TestContext.Current.CancellationToken);
 
             var updated = Content(2000);
             await WriteFileAsync("file.bin", updated);

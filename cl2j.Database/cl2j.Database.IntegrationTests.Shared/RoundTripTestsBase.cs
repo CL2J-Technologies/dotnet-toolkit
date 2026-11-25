@@ -8,7 +8,7 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class RoundTripTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
 
@@ -18,10 +18,11 @@ namespace cl2j.Database.IntegrationTests
             await connection.CreateTable<RoundTripRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(RoundTripRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

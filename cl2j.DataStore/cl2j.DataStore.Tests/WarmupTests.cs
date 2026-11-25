@@ -88,7 +88,7 @@ namespace cl2j.DataStore.Tests
 
             var warming = Assert.Single(factory.GetWarmable()).WarmAsync();
 
-            var raced = await Task.WhenAny(warming, Task.Delay(TimeSpan.FromMilliseconds(300)));
+            var raced = await Task.WhenAny(warming, Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken));
             Assert.NotSame(warming, raced);
 
             release.SetResult();
