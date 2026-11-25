@@ -8,7 +8,9 @@ namespace cl2j.FileStorage.Tests
     /// <summary>
     ///     What a <c>$type</c> property in a stored JSON file is allowed to do. Reading used to run
     ///     with <c>TypeNameHandling.Auto</c> and no binder, so anyone who could write to the storage
-    ///     chose which .NET type the reader instantiated.
+    ///     chose which .NET type the reader instantiated. It now runs with Auto and a binder that
+    ///     refuses every type not on a list, empty by default: a stored <c>$type</c> or a
+    ///     polymorphic write fails loudly instead of being followed, or silently dropped.
     /// </summary>
     public sealed class JsonTypeNameTests
     {
@@ -60,12 +62,64 @@ namespace cl2j.FileStorage.Tests
         private static JsonStorageOptions AllowShapes() => new() { AllowedTypes = [typeof(Circle), typeof(Square)] };
 
         [Fact]
-        public void Writing_does_not_emit_a_type_unless_the_caller_opted_in()
+        public void Writing_a_polymorphic_member_is_refused_unless_the_caller_opted_in()
         {
-            var json = JsonExtensions.SerializeJsonObject(new Holder { Shape = new Circle { Radius = 3 } }, indented: false);
+            //Quietly writing it without $type would lose the derived properties on the next read.
+            var failure = Assert.Throws<JsonSerializationException>(() =>
+                JsonExtensions.SerializeJsonObject(new Holder { Shape = new Circle { Radius = 3 } }, indented: false));
+
+            Assert.Contains(nameof(Circle), failure.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task Writing_a_polymorphic_member_to_a_file_is_refused_and_writes_nothing()
+        {
+            await Assert.ThrowsAsync<JsonSerializationException>(() =>
+                provider.WriteJsonObjectAsync("holder.json", new Holder { Shape = new Circle { Radius = 3 } }));
+
+            Assert.False(await provider.ExistsAsync("holder.json"));
+        }
+
+        [Fact]
+        public void An_ordinary_object_is_written_without_a_type()
+        {
+            var json = JsonExtensions.SerializeJsonObject(new Holder { Shape = new Shape { Name = "s" }, Payload = "text" }, indented: false);
 
             Assert.DoesNotContain("$type", json, StringComparison.Ordinal);
-            Assert.Contains("\"radius\":3", json, StringComparison.Ordinal);
+        }
+
+        public sealed class InterfaceHolder
+        {
+            public IList<string>? Names { get; set; }
+            public IDictionary<string, int>? Counts { get; set; }
+        }
+
+        [Fact]
+        public async Task A_member_declared_as_an_interface_collection_is_not_polymorphic()
+        {
+            //Characterisation: Auto writes no $type for a collection member declared as an interface,
+            //so the most ordinary models neither need the list nor meet the refusal.
+            var holder = new InterfaceHolder { Names = new List<string> { "a" }, Counts = new Dictionary<string, int> { ["a"] = 1 } };
+
+            await provider.WriteJsonObjectAsync("holder.json", holder);
+            var read = await provider.ReadJsonObjectAsync<InterfaceHolder>("holder.json");
+
+            Assert.DoesNotContain("$type", await provider.ReadTextAsync("holder.json"), StringComparison.Ordinal);
+            Assert.Equal("a", Assert.Single(read.Names!));
+            Assert.Equal(1, read.Counts!["a"]);
+        }
+
+        [Fact]
+        public async Task A_file_without_a_type_round_trips_by_default()
+        {
+            var holder = new Holder { Shape = new Shape { Name = "s" }, Shapes = [new Shape { Name = "a" }], Payload = "text" };
+
+            await provider.WriteJsonObjectAsync("holder.json", holder);
+            var read = await provider.ReadJsonObjectAsync<Holder>("holder.json");
+
+            Assert.Equal("s", read.Shape!.Name);
+            Assert.Equal("a", Assert.Single(read.Shapes!).Name);
+            Assert.Equal("text", read.Payload);
         }
 
         [Fact]
@@ -77,24 +131,23 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
-        public async Task A_hostile_type_is_ignored_by_default()
+        public async Task A_hostile_type_is_refused_by_default()
         {
             var created = Gadget.Created;
             await provider.WriteTextAsync("hostile.json", $"{{\"payload\":{{\"$type\":\"{GadgetType}\",\"command\":\"calc\"}}}}");
 
-            var read = await provider.ReadJsonObjectAsync<Holder>("hostile.json");
+            await Assert.ThrowsAsync<JsonSerializationException>(() => provider.ReadJsonObjectAsync<Holder>("hostile.json"));
 
             Assert.Equal(created, Gadget.Created);
-            Assert.IsNotType<Gadget>(read.Payload);
         }
 
         [Fact]
-        public async Task A_hostile_type_is_ignored_by_default_in_a_compressed_file()
+        public async Task A_hostile_type_is_refused_by_default_in_a_compressed_file()
         {
             var created = Gadget.Created;
             await provider.WriteBytesAsync("hostile.json.gz", CompressionUtils.Compress($"{{\"payload\":{{\"$type\":\"{GadgetType}\"}}}}"));
 
-            await provider.ReadJsonObjectAsync<Holder>("hostile.json.gz");
+            await Assert.ThrowsAsync<JsonSerializationException>(() => provider.ReadJsonObjectAsync<Holder>("hostile.json.gz"));
 
             Assert.Equal(created, Gadget.Created);
         }
@@ -136,15 +189,14 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
-        public async Task A_hostile_type_is_ignored_when_an_empty_allow_list_is_given()
+        public async Task A_hostile_type_is_refused_when_an_empty_allow_list_is_given()
         {
             var created = Gadget.Created;
             await provider.WriteTextAsync("hostile.json", $"{{\"payload\":{{\"$type\":\"{GadgetType}\"}}}}");
 
-            var read = await provider.ReadJsonObjectAsync<Holder>("hostile.json", new JsonStorageOptions());
+            await Assert.ThrowsAsync<JsonSerializationException>(() => provider.ReadJsonObjectAsync<Holder>("hostile.json", new JsonStorageOptions()));
 
             Assert.Equal(created, Gadget.Created);
-            Assert.IsNotType<Gadget>(read.Payload);
         }
 
         [Fact]
@@ -198,16 +250,16 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
-        public async Task A_file_written_with_type_names_reads_as_the_declared_type_by_default()
+        public async Task A_file_written_with_a_legitimate_derived_type_is_refused_by_default()
         {
-            //The behaviour change, pinned: a $type already on disk is no longer followed, so a
-            //polymorphic member comes back as its declared type and the derived properties are lost.
+            //The behaviour change, pinned: a $type already on disk is not followed unless the type is
+            //listed. Reading it as the declared type would drop the derived properties without a word,
+            //and the next write would remove them from the file.
             await provider.WriteTextAsync("holder.json", $"{{\"shape\":{{\"$type\":\"{CircleType}\",\"name\":\"c\",\"radius\":3}}}}");
 
-            var read = await provider.ReadJsonObjectAsync<Holder>("holder.json");
+            var failure = await Assert.ThrowsAsync<JsonSerializationException>(() => provider.ReadJsonObjectAsync<Holder>("holder.json"));
 
-            Assert.Equal("c", read.Shape!.Name);
-            Assert.IsNotType<Circle>(read.Shape);
+            Assert.Contains(nameof(Circle), failure.Message, StringComparison.Ordinal);
         }
 
         [Fact]

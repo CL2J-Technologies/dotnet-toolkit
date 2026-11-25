@@ -30,12 +30,18 @@ namespace cl2j.DataStore.List
     ///     Where a failed archive write is reported, at <see cref="LogLevel.Error"/>. Optional; a
     ///     failure is not reported anywhere when there is none, but it never reaches the caller.
     /// </param>
+    /// <param name="jsonOptions">
+    ///     The types a <c>$type</c> may name, for entities that have polymorphic members. None by
+    ///     default, in which case a snapshot of such an entity is refused: it is logged at Error
+    ///     like any failed snapshot, and the change itself is not affected.
+    /// </param>
     public class DataStoreListCommandAndQueryArchive<TKey, TValue>(
         IDataStoreListCommandAndQuery<TKey, TValue> dataStore,
         IFileStorageProvider fileStorageProvider,
         string filename,
         Func<DateTimeOffset>? now = null,
-        ILogger? logger = null) : IDataStoreListCommandAndQuery<TKey, TValue>
+        ILogger? logger = null,
+        JsonStorageOptions? jsonOptions = null) : IDataStoreListCommandAndQuery<TKey, TValue>
     {
         private readonly Func<DateTimeOffset> now = now ?? (() => DateTimeOffset.UtcNow);
         private readonly ILogger logger = logger ?? NullLogger.Instance;
@@ -89,7 +95,7 @@ namespace cl2j.DataStore.List
                 //name and the afternoon snapshot overwrote the morning one — half a day of archives
                 //gone, with nothing to show for it.
                 fn = string.Format(CultureInfo.InvariantCulture, filename, now().ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture));
-                await fileStorageProvider.WriteJsonObjectAsync(fn, entities);
+                await fileStorageProvider.WriteJsonObjectAsync(fn, entities, jsonOptions);
             }
             catch (Exception ex)
             {

@@ -76,11 +76,13 @@ namespace cl2j.FileStorage.Extensions
                 DateTimeZoneHandling = DateTimeZoneHandling.Utc,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 NullValueHandling = NullValueHandling.Ignore,
-                //A $type is neither written nor followed unless the caller listed the types it expects.
-                //Auto with no binder let a stored file choose the type the reader instantiated.
-                TypeNameHandling = allowedTypes.Count > 0 ? TypeNameHandling.Auto : TypeNameHandling.None,
-                //Always set, even with an empty list: a member marked [JsonProperty(TypeNameHandling = ...)]
-                //turns type names back on for itself, and must still be held to the list.
+                //Auto, as it always was, but with a binder that refuses every type the caller did not
+                //list, and the list is empty by default. A $type in a file, or a value whose runtime
+                //type differs from its declared one (the only case Auto writes a $type for), throws
+                //instead of being followed or quietly dropped: a stored file never chooses the type
+                //the reader instantiates, and no derived property is lost without a word. A file
+                //with no $type reads exactly as before.
+                TypeNameHandling = TypeNameHandling.Auto,
                 SerializationBinder = new AllowListSerializationBinder(allowedTypes)
             };
             var camelCaseResolver = new CamelCasePropertyNamesContractResolver();

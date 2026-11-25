@@ -209,6 +209,47 @@ namespace cl2j.DataStore.Tests
             Assert.Equal(LogLevel.Error, Assert.Single(logger.Entries).Level);
         }
 
+        public class Pet
+        {
+            public string Id { get; set; } = "";
+        }
+
+        public sealed class Cat : Pet
+        {
+            public int Lives { get; set; }
+        }
+
+        [Fact]
+        public async Task A_snapshot_of_a_polymorphic_entity_is_refused_by_default_and_logged_without_failing_the_change()
+        {
+            var store = new InMemoryListStore<string, Pet>(p => p.Id);
+            var storage = new InMemoryFileStorage();
+            var logger = new RecordingLogger();
+            var archive = new DataStoreListCommandAndQueryArchive<string, Pet>(store, storage, "pets-{0}.json", () => Afternoon, logger);
+
+            await archive.InsertAsync(new Cat { Id = "1", Lives = 9 });
+
+            Assert.Single(store.Contents);
+            Assert.Empty(storage.Files);
+            Assert.Equal(LogLevel.Error, Assert.Single(logger.Entries).Level);
+        }
+
+        [Fact]
+        public async Task A_snapshot_of_a_polymorphic_entity_is_written_when_its_type_is_listed()
+        {
+            var store = new InMemoryListStore<string, Pet>(p => p.Id);
+            var storage = new InMemoryFileStorage();
+            var logger = new RecordingLogger();
+            var archive = new DataStoreListCommandAndQueryArchive<string, Pet>(
+                store, storage, "pets-{0}.json", () => Afternoon, logger,
+                new FileStorage.Extensions.JsonStorageOptions { AllowedTypes = [typeof(Cat)] });
+
+            await archive.InsertAsync(new Cat { Id = "1", Lives = 9 });
+
+            Assert.Contains("\"lives\":9", Assert.Single(storage.Files).Value, StringComparison.Ordinal);
+            Assert.Empty(logger.Entries);
+        }
+
         private sealed class UnreadableAfterWriteStore(InMemoryListStore<string, Person> inner) : IDataStoreListCommandAndQuery<string, Person>
         {
             public Task<IReadOnlyList<Person>> GetAllAsync() => throw new InvalidOperationException("the store cannot be read");
