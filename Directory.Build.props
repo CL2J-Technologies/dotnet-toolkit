@@ -277,7 +277,7 @@
          6.6.0 is a minor bump: it adds two packages, cl2j.Database.MySql and
          cl2j.Database.PostgreSql, on a provider base shared with cl2j.Database.SqlServer. Nothing
          that was already here changes for a caller that does not reference them. -->
-    <Version>6.6.1</Version>
+    <Version>6.6.2</Version>
         
   
     <Authors>CL2J Technologies</Authors>
