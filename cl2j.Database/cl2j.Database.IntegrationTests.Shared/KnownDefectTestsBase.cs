@@ -8,9 +8,7 @@ namespace cl2j.Database.IntegrationTests
     /// <summary>
     ///     Defects that are filed and not fixed here, and that reach a server. Each test states
     ///     the behaviour the issue asks for and is skipped until the issue is closed; remove the
-    ///     <c>Skip</c> with the fix. The one defect that needs no server (the logger that
-    ///     <c>UseDatabase</c> publishes) is not here: it stays with SQL Server's tests so that it
-    ///     is listed once, not once per provider.
+    ///     <c>Skip</c> with the fix.
     ///
     ///     <para>
     ///     No hooks: the <c>DateOnly</c> test asks for the same value back on every provider, and
