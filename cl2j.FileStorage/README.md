@@ -169,10 +169,31 @@ The `cl2j.FileStorage.Extensions` namespace adds helpers on `IFileStorageProvide
 
 - `ReadTextAsync`, `WriteTextAsync`, `AppendTextAsync` for text (UTF-8 unless an `Encoding` is given). `ReadTextAsync` returns an empty string when the file doesn't exist.
 - `ReadJsonObjectAsync<T>`, `WriteJsonObjectAsync` for JSON objects. A file name ending in `.json.gz` is compressed on write and decompressed on read.
+  Type names (`$type`) are **off by default**: see [JSON and `$type`](#json-and-type).
 - `ReadBytesAsync`, `ReadObjectAsync`, `WriteBytesAsync` for binary content.
 - `ClearDirectoryAsync(path)` deletes the files of a path and returns how many were found.
 - `Copy(source, destination)` copies a file inside the same storage and returns `true` on success.
 - `BufferedFileStorage` buffers appended text in memory and writes it at an interval, with a file name pattern and size-based rollover. It is what [cl2j.Logging](../cl2j.Logging/README.md) uses to write log files.
+
+## JSON and `$type`
+
+A `$type` property in a JSON file names the .NET type to instantiate. If anyone who can write to the storage (a shared folder, a bucket, an uploaded file) could choose that type, they would choose what the reader constructs. So `ReadJsonObjectAsync`, `WriteJsonObjectAsync` and `SerializeJsonObject` neither write nor follow a `$type` unless you list the types you expect.
+
+> **Behaviour change (6.6.1).** These helpers used to read with `TypeNameHandling.Auto` and no binder. A `$type` is now ignored by default: a polymorphic member comes back as its **declared type**, and the properties only the derived type has are dropped. If you read a file and write it back, they are gone from the file. Files that were written with `$type` need the opt-in below.
+
+To keep polymorphism, pass the types you expect:
+
+```cs
+var options = new JsonStorageOptions { AllowedTypes = [typeof(Circle), typeof(Square)] };
+
+await provider.WriteJsonObjectAsync("shapes.json", holder, options);
+var read = await provider.ReadJsonObjectAsync<Holder>("shapes.json", options);
+```
+
+- With a list, `$type` is written for a polymorphic value and resolved on read, but **only** to a type on the list. Any other `$type` throws a `JsonSerializationException`, and nothing is instantiated. The check holds for members that ask for type names through `[JsonProperty(TypeNameHandling = ...)]` as well.
+- Writing a value whose type is not on the list also throws, because the file could not be read back.
+- A closed generic type is matched with its arguments: list `typeof(List<Shape>)` for a member declared as `object` that holds one. The version and token of an assembly in a stored name are ignored.
+- `cl2j.DataStore.Json` does not offer the option: its stores read and write without type names.
 
 # Azure Blob Storage
 
