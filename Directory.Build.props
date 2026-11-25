@@ -5,6 +5,16 @@
     <Nullable>enable</Nullable>
     <AnalysisMode>Recommended</AnalysisMode>
 
+    <!-- Warnings fail the build, in every project, tests included (#72). A new warning used to land
+         unnoticed because nothing broke; now it is fixed in the change that introduces it.
+
+         AnalysisLevel is pinned so that an SDK update cannot add an analyzer rule and break the
+         build on its own. The cost: picking up newer rules is a deliberate bump of this number.
+         There is no blanket NoWarn and no per-project opt-out; a rule that does not fit is
+         suppressed at the line that needs it, with the reason beside it. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>10.0</AnalysisLevel>
+
     <!-- Shared versioning: every package in this repository publishes this number, and no
          .csproj overrides it. Bump it here, commit to main, and the workflow publishes the whole
          set together.

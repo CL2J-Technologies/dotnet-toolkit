@@ -44,6 +44,15 @@ together. A single top-level `tests/` folder was considered and rejected for tha
 `benchmarks/`, `Samples/` and `Tools/` hold the projects that are not packages. They are in
 `dotnet-toolkit.slnx` as well, so CI keeps them compiling.
 
+## Warnings are errors
+
+`TreatWarningsAsErrors` is on for every project, tests included, and `AnalysisLevel` is pinned in
+`Directory.Build.props`. Fix a warning where it is raised. If a rule genuinely does not fit one
+line, suppress it at that line with the reason beside it; do not add a `NoWarn` to a project.
+
+Pinning `AnalysisLevel` means a new SDK cannot add rules and break the build on its own. The cost is
+that picking up newer rules is a deliberate bump of that number, in a pull request of its own.
+
 ## Tests
 
 New behaviour and bug fixes come with tests, and the test is written before the fix. A test written
