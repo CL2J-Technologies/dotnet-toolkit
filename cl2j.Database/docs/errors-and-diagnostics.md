@@ -42,10 +42,10 @@ There are two loggers, and they are configured in different places.
 - Exceptions are logged at `ExceptionLevel`, which defaults to `Debug`: with a typical `Information` minimum
   nothing is written. Set `ExceptionLevel = LogLevel.Error` to see failures. The exception is always rethrown.
 - Only `Query<T>(sql, param)` traces the row count and duration, at `TraceLevel` (default `Trace`).
-- `UseDatabase` resolves a non-generic `ILogger`. A default host registers only `ILogger<T>`, so the static
-  logger stays `null` and statement tracing by the connection extensions is silent
-  ([#68](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/68)). Register a non-generic `ILogger`
-  yourself, or assign `ConnectionExtensions.Logger`.
+- `UseDatabase` takes its logger from `ILoggerFactory.CreateLogger("cl2j.Database")`, so the logging of a standard
+  host works with nothing extra. The category is `cl2j.Database`; filter it in `Logging:LogLevel`. Without an
+  `ILoggerFactory` it falls back to a registered non-generic `ILogger`; if there is none either, the static logger
+  stays `null` and statement tracing is off. You can also assign `ConnectionExtensions.Logger` yourself.
 - Static state is shared by the whole process, so two databases in one process share the logger and the
   `BulkInsertTimeout`.
 - When a read fails, the generated mapper source is written to `Debug.WriteLine`, which helps when the cause

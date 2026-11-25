@@ -146,7 +146,7 @@ cl2j.Database.Exceptions.DatabaseException: No CommandBuilder registered for con
 
 Notes on the other steps:
 
-- `UseDatabase` is defined on `IHost` and on `ServiceProvider`. It sets **static** state (`ConnectionExtensions.Logger` and `ConnectionExtensions.DatabaseOptions`), so call it once, at startup. It resolves a non-generic `ILogger` from the container; if none is registered the static logger stays `null` and the statement tracing done by the `DbConnection` extensions is off ([#68](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/68)).
+- `UseDatabase` is defined on `IHost` and on `ServiceProvider`. It sets **static** state (`ConnectionExtensions.Logger` and `ConnectionExtensions.DatabaseOptions`), so call it once, at startup. The logger comes from `ILoggerFactory.CreateLogger("cl2j.Database")`, so the logging of a standard host works with nothing extra and the category `cl2j.Database` can be filtered in `Logging:LogLevel`. Without an `ILoggerFactory` it falls back to a registered non-generic `ILogger`; if there is none either, the static logger stays `null` and the statement tracing done by the `DbConnection` extensions is off.
 - The optional `register` parameter of `AddDatabase(databaseOptions, register)` is only a callback that receives the `IServiceCollection`. It does not register the provider.
 - `DatabaseOptions` has `TraceLevel` (default `Trace`), `ExceptionLevel` (default `Debug`) and `BulkInsertTimeout`. `AddDatabase(o => ...)` configures the options read by `UseDatabase`; the instance given to `SqlServerDatabase` is the one used by `IDatabase` calls. Pass the same settings to both.
 
@@ -337,6 +337,6 @@ Add `TrustServerCertificate=True` in development (a server with a valid certific
 
 # Known limitations
 
-- **ANSI key binding only applies to `QueryKey`.** `QuerySingle<T>(new { ... })` and the other anonymous-parameter paths do not get it, which can defeat the index on a `varchar` key column. See [#43](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/43).
+- **The `varchar` key binding does not apply to anonymous parameters.** It covers `QueryKey`, `QueryKeys`, `DeleteKey` and the entity-based `Insert`/`Update`/`Delete`, but not `QuerySingle<T>(sql, new { Id = id })`, which sends `nvarchar` and can turn an index seek on a `varchar` key into a scan. Cast in the SQL: `WHERE Id = CAST(@id AS varchar(36))`. See [Anonymous parameters and varchar keys](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/parameters-and-plan-cache.md#anonymous-parameters-and-varchar-keys).
 - **Roslyn is a runtime dependency**, needed on the first read, and nothing checks for it at startup. See [#42](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/42).
 - **Providers are not interchangeable.** SQL Server, MySQL and PostgreSQL differ in column types and in a few behaviours, and each provider page lists them. The schema is created from the class and never migrated; there are no joins, LINQ or change tracking. The full list of behaviours worth knowing is in [Edge cases](https://github.com/CL2J-Technologies/dotnet-toolkit/blob/main/cl2j.Database/docs/edge-cases.md).
