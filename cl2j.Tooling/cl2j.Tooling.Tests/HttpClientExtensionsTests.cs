@@ -166,7 +166,7 @@ namespace cl2j.Tooling.Tests
                 var result = await response.ParseResponseAsync<Result>(path);
 
                 Assert.Equal("Renée", result?.FirstName);
-                Assert.Equal("{\"firstName\":\"Renée\",\"itemCount\":3}", await File.ReadAllTextAsync(path));
+                Assert.Equal("{\"firstName\":\"Renée\",\"itemCount\":3}", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             }
             finally
             {
@@ -186,7 +186,7 @@ namespace cl2j.Tooling.Tests
 
                 await Assert.ThrowsAnyAsync<JsonException>(() => response.ParseResponseAsync<Result>(path));
 
-                Assert.Equal("{ this is not json", await File.ReadAllTextAsync(path));
+                Assert.Equal("{ this is not json", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             }
             finally
             {

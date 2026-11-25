@@ -17,7 +17,7 @@ namespace cl2j.Database.IntegrationTests
     [Collection(SqlServerCollection.Name)]
     public class ParameterDeclarationPlanTests(SqlServerFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.Execute("""
@@ -30,10 +30,11 @@ namespace cl2j.Database.IntegrationTests
                 """);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.Execute("IF OBJECT_ID('DecimalSeek') IS NOT NULL DROP TABLE [DecimalSeek];");
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

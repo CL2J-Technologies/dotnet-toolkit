@@ -35,9 +35,9 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
 
         public string ConnectionString => container.GetConnectionString();
 
-        public async Task InitializeAsync() => await container.StartAsync();
+        public async ValueTask InitializeAsync() => await container.StartAsync();
 
-        public async Task DisposeAsync() => await container.DisposeAsync();
+        public async ValueTask DisposeAsync() => await container.DisposeAsync();
     }
 
     [CollectionDefinition(Name)]

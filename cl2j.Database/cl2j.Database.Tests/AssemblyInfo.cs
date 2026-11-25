@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Xunit.Sdk;
+using Xunit.v3;
 
 //xUnit runs test classes in parallel by default. Much of what this package keeps is process-wide
 //and mutable — the command builder registry, the descriptor cache, ConnectionExtensions.Logger and
@@ -13,4 +14,4 @@
 //The concurrency this used to provide incidentally is covered on purpose now:
 //CommandBuilderFactoryConcurrencyTests spawns its own threads and reproduces the race it guards.
 //The suite runs in tens of milliseconds either way.
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+[assembly: Parallelization(Mode = ParallelMode.None)]

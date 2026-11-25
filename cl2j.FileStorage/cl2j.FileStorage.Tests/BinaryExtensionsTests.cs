@@ -50,7 +50,7 @@ namespace cl2j.FileStorage.Tests
             Assert.Equal(Payload.Length, stream.Length);
             stream.Seek(0, SeekOrigin.Begin);
             var read = new byte[Payload.Length];
-            await stream.ReadExactlyAsync(read);
+            await stream.ReadExactlyAsync(read, TestContext.Current.CancellationToken);
             Assert.Equal(Payload, read);
         }
 

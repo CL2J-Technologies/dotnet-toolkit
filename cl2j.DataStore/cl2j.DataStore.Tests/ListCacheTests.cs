@@ -366,7 +366,7 @@ namespace cl2j.DataStore.Tests
             await firstIsInside.Task;
 
             var other = unrelated.InsertAsync(new Person("2", "Ari"));
-            var finished = await Task.WhenAny(other, Task.Delay(TimeSpan.FromSeconds(5)));
+            var finished = await Task.WhenAny(other, Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
 
             Assert.Same(other, finished);
             Assert.Single(unrelatedStore.Contents);

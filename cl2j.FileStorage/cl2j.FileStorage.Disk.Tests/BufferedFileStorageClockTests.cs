@@ -86,8 +86,8 @@ namespace cl2j.FileStorage.Disk.Tests
             Assert.Equal("test_20260906_01.log", buffered.CurrentFileName);
 
             // And each line did go into the file for its own day.
-            Assert.Contains("the evening of the 5th", await File.ReadAllTextAsync(Path.Combine(root, "test_20260905_01.log")), StringComparison.Ordinal);
-            Assert.Contains("the morning of the 6th", await File.ReadAllTextAsync(Path.Combine(root, "test_20260906_01.log")), StringComparison.Ordinal);
+            Assert.Contains("the evening of the 5th", await File.ReadAllTextAsync(Path.Combine(root, "test_20260905_01.log"), TestContext.Current.CancellationToken), StringComparison.Ordinal);
+            Assert.Contains("the morning of the 6th", await File.ReadAllTextAsync(Path.Combine(root, "test_20260906_01.log"), TestContext.Current.CancellationToken), StringComparison.Ordinal);
         }
 
         [Fact]

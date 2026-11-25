@@ -18,7 +18,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
             typeof(PgLongKeyRow), typeof(PgGuidKeyRow), typeof(PgCopyRow), typeof(PgOddRow)
         ];
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await DropAll(connection);
@@ -26,10 +26,11 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
                 await connection.CreateTable(table, CancellationToken.None);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await DropAll(connection);
+            GC.SuppressFinalize(this);
         }
 
         private static async Task DropAll(DbConnection connection)
@@ -352,12 +353,12 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public async Task A_copy_in_a_transaction_is_rolled_back_with_it()
         {
             await using var connection = await fixture.OpenAsync();
-            await using (var transaction = await connection.BeginTransactionAsync())
+            await using (var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken))
             {
                 await connection.BulkInsert(ShortRows(100), CancellationToken.None, transaction);
                 Assert.Equal(100L, await Count(connection, "PgShort", transaction));
 
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(TestContext.Current.CancellationToken);
             }
 
             Assert.Equal(0L, await Count(connection, "PgShort"));
@@ -367,14 +368,14 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public async Task A_copy_in_a_transaction_is_kept_when_it_commits()
         {
             await using var connection = await fixture.OpenAsync();
-            await using (var transaction = await connection.BeginTransactionAsync())
+            await using (var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken))
             {
                 await connection.BulkInsert(ShortRows(100), CancellationToken.None, transaction);
                 //Invisible to another connection until the commit.
                 await using var other = await fixture.OpenAsync();
                 Assert.Equal(0L, await Count(other, "PgShort"));
 
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(TestContext.Current.CancellationToken);
             }
 
             Assert.Equal(100L, await Count(connection, "PgShort"));
@@ -384,7 +385,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public async Task A_copy_that_fails_inside_a_transaction_leaves_the_earlier_work_of_the_transaction_alone()
         {
             await using var connection = await fixture.OpenAsync();
-            await using var transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
             await connection.Insert(new PgShortRow { Id = "before", Code = "ok" }, CancellationToken.None, transaction);
             await connection.Execute("SAVEPOINT s", null, CancellationToken.None, transaction);
 
@@ -394,7 +395,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
             await connection.Execute("ROLLBACK TO SAVEPOINT s", null, CancellationToken.None, transaction);
 
             Assert.Equal(1L, await Count(connection, "PgShort", transaction));
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -425,7 +426,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         {
             await using var connection = await fixture.OpenAsync();
             await using var other = await fixture.OpenAsync();
-            await using var foreign = await other.BeginTransactionAsync();
+            await using var foreign = await other.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
             await Assert.ThrowsAsync<DatabaseException>(() => connection.BulkInsert(ShortRows(2), CancellationToken.None, foreign));
 

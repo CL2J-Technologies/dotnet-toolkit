@@ -83,7 +83,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
 
             Assert.Contains("does not exist", ex.Message);
             Assert.Contains(name, ex.Message);
-            Assert.False(Client(name).Exists(), "a refused container must not have been created on the way");
+            Assert.False(Client(name).Exists(TestContext.Current.CancellationToken), "a refused container must not have been created on the way");
         }
 
         [Fact]
@@ -94,7 +94,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
 
             Assert.Throws<NotFoundException>(() => AzureProviderFactory.Create(azurite.ConnectionString, name, createIfMissing: null));
 
-            Assert.False(Client(name).Exists());
+            Assert.False(Client(name).Exists(TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -104,15 +104,15 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
 
             AzureProviderFactory.Create(azurite.ConnectionString, name, createIfMissing: true);
 
-            Assert.True(Client(name).Exists());
+            Assert.True(Client(name).Exists(TestContext.Current.CancellationToken));
         }
 
         [Fact]
         public async Task An_existing_container_is_used_as_it_is_whatever_CreateIfMissing_says()
         {
             var name = AzureProviderFactory.NewContainerName("existing");
-            await Client(name).CreateAsync();
-            await Client(name).GetBlobClient("already.txt").UploadAsync(new MemoryStream("there"u8.ToArray()));
+            await Client(name).CreateAsync(cancellationToken: TestContext.Current.CancellationToken);
+            await Client(name).GetBlobClient("already.txt").UploadAsync(new MemoryStream("there"u8.ToArray()), TestContext.Current.CancellationToken);
 
             var withoutCreation = AzureProviderFactory.Create(azurite.ConnectionString, name, createIfMissing: false);
             var withCreation = AzureProviderFactory.Create(azurite.ConnectionString, name, createIfMissing: true);
@@ -221,7 +221,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             using var content = new MemoryStream("{}"u8.ToArray());
             await provider.WriteAsync("data.json", content, "application/json");
 
-            var properties = (await Client(container).GetBlobClient("data.json").GetPropertiesAsync()).Value;
+            var properties = (await Client(container).GetBlobClient("data.json").GetPropertiesAsync(cancellationToken: TestContext.Current.CancellationToken)).Value;
             Assert.Equal("application/json", properties.ContentType);
         }
 
@@ -234,7 +234,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             using var content = new MemoryStream("x"u8.ToArray());
             await provider.WriteAsync("untyped.bin", content, null);
 
-            var properties = (await Client(container).GetBlobClient("untyped.bin").GetPropertiesAsync()).Value;
+            var properties = (await Client(container).GetBlobClient("untyped.bin").GetPropertiesAsync(cancellationToken: TestContext.Current.CancellationToken)).Value;
             Assert.Equal("application/octet-stream", properties.ContentType);
         }
 
@@ -249,7 +249,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             using (var second = new MemoryStream("<a/>"u8.ToArray()))
                 await provider.WriteAsync("f.txt", second, "application/xml");
 
-            var properties = (await Client(container).GetBlobClient("f.txt").GetPropertiesAsync()).Value;
+            var properties = (await Client(container).GetBlobClient("f.txt").GetPropertiesAsync(cancellationToken: TestContext.Current.CancellationToken)).Value;
             Assert.Equal("application/xml", properties.ContentType);
         }
 
@@ -292,7 +292,7 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
             using var content = new MemoryStream("x"u8.ToArray());
             await provider.AppendAsync("a.log", content);
 
-            var properties = (await Client(container).GetBlobClient("a.log").GetPropertiesAsync()).Value;
+            var properties = (await Client(container).GetBlobClient("a.log").GetPropertiesAsync(cancellationToken: TestContext.Current.CancellationToken)).Value;
             Assert.Equal(BlobType.Append, properties.BlobType);
         }
 

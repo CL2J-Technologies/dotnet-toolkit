@@ -27,7 +27,7 @@ namespace cl2j.Database.IntegrationTests
         //class has no connection of its own to ask, so the helper opens one just for that.
         private Task<string> Quote(string sql) => TestSql.QuoteAsync(fixture, sql);
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(FacadeRow), CancellationToken.None);
@@ -36,11 +36,12 @@ namespace cl2j.Database.IntegrationTests
             await connection.CreateTable<FacadeIdentityRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(FacadeRow), CancellationToken.None);
             await connection.DropTableIfExists(typeof(FacadeIdentityRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         private static async Task<FacadeRow> InsertRow(IDatabase database, string name, int quantity)
