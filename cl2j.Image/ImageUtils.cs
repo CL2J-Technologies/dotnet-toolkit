@@ -85,7 +85,7 @@ namespace cl2j.Image
             var targetRatio = Math.Round((decimal)w / h, 2);
 
             if (currentRatio == targetRatio)
-                return ImageResizer.ResizeIfOversize(image, w, h);
+                return ImageResizer.ScaleToLongestSide(image, w, h);
 
             int newW;
             int newH;
@@ -118,7 +118,7 @@ namespace cl2j.Image
             var targetRatio = Math.Round((decimal)w / h, 2);
 
             if (currentRatio == targetRatio)
-                return ImageResizer.ResizeIfOversize(image, w, h);
+                return ImageResizer.ScaleToLongestSide(image, w, h);
 
             int newW;
             int newH;
