@@ -355,5 +355,5 @@ MigrationBackup/
 .claude/worktrees/
 
 # Test and coverage output
-coverage/
+/coverage/
 TestResults/

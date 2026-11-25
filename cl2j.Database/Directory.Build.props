@@ -1,0 +1,20 @@
+<Project>
+  <!-- The Database family: cl2j.Database, cl2j.Database.SqlServer, cl2j.Database.MySql and
+       cl2j.Database.PostgreSql (and their tests, which are not packed). It has a version of its
+       own, so a change here does not republish the other eleven packages, and a breaking change
+       here does not force a new major on cl2j.FileStorage (#93). Every other package keeps the
+       toolkit version in the root Directory.Build.props, which this file imports first.
+
+       THE RULE. `dotnet pack` pins each ProjectReference at the referenced project's version, and
+       cl2j.Database references cl2j.Tooling and cl2j.Scripting. A change to either of those
+       therefore also bumps the number below by at least a patch. If it does not, the Database
+       packages keep resolving the old dependency, which is the stale-floor problem of #17.
+       ci.yml checks this on pull requests into main (.github/scripts/check-database-version.sh).
+
+       The line continues from the shared 6.6.x; both lines are 6.6.2 for that release. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <Version>6.6.2</Version>
+  </PropertyGroup>
+</Project>

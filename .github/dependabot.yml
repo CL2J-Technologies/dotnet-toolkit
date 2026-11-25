@@ -1,0 +1,39 @@
+# Dependency updates, one pull request per ecosystem per week (#73).
+#
+# Every package in this repository shares one version, so a dependency bump republishes the whole
+# set (see Versioning in CONTRIBUTING.md). Grouping keeps that infrequent: all the minor and patch
+# updates of a week arrive together, and are merged as one release.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    # Every project is scanned: there is no root project file, and the solution lists dozens.
+    directories:
+      - "/**/*"
+    schedule:
+      interval: weekly
+    groups:
+      nuget-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Majors held back on purpose until #76 ships them together, in one breaking release.
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Data.SqlClient"
+        update-types: ["version-update:semver-major"]
+      # xunit v3 and its matching runner: the migration touches every test project.
+      - dependency-name: "xunit"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "xunit.*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"

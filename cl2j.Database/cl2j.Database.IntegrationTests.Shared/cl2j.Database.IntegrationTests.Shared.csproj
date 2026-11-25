@@ -17,8 +17,8 @@
   <ItemGroup>
     <!-- xunit.core carries [Fact], [Theory] and IAsyncLifetime, xunit.assert the Assert class.
          Same version as the test projects, which reference the xunit metapackage. -->
-    <PackageReference Include="xunit.core" Version="2.9.2" />
-    <PackageReference Include="xunit.assert" Version="2.9.2" />
+    <PackageReference Include="xunit.core" Version="2.9.3" />
+    <PackageReference Include="xunit.assert" Version="2.9.3" />
   </ItemGroup>
 
   <ItemGroup>
