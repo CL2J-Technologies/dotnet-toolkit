@@ -21,12 +21,35 @@ follow the English-only rule with nothing left to translate. If you come across 
 translate it as part of your change, or in a pull request of its own if it is more than a line or
 two, so it does not bury a behaviour change.
 
+## Layout
+
+Every library lives in a **domain folder** named after the package family, and so do its tests:
+
+```
+cl2j.Tooling/
+  README.md                 package README, shared by everything in the folder
+  cl2j.Tooling/             the library (cl2j.Tooling.csproj)
+  cl2j.Tooling.Tests/       its unit tests
+cl2j.Database/
+  cl2j.Database/            the library
+  cl2j.Database.SqlServer/  a provider of the same family
+  cl2j.Database.Tests/
+  cl2j.Database.IntegrationTests/
+```
+
+A test project goes in the domain folder of the library it tests, never at the repository root.
+Per-family settings (a version, CI path filters) can then cover a family's packages and its tests
+together. A single top-level `tests/` folder was considered and rejected for that reason.
+
+`benchmarks/`, `Samples/` and `Tools/` hold the projects that are not packages. They are in
+`dotnet-toolkit.slnx` as well, so CI keeps them compiling.
+
 ## Tests
 
 New behaviour and bug fixes come with tests, and the test is written before the fix. A test written
 afterwards passes immediately, which proves that it runs — not that it would have caught anything.
 
-Test projects must be registered in `dotnet-toolkit.slnx`. A test project outside the solution is
+Every project must be registered in `dotnet-toolkit.slnx`. A test project outside the solution is
 never built and never run — `cl2j.Scripting.Tests` and `cl2j.FileStorage.Tests` were in exactly
 that state and had never executed in CI.
 

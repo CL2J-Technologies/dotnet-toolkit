@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage\cl2j.FileStorage.csproj" />
+    <ProjectReference Include="..\cl2j.FileStorage\cl2j.FileStorage.csproj" />
   </ItemGroup>
 
 </Project>
