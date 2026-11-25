@@ -150,6 +150,17 @@ namespace cl2j.Tooling.Tests
             Assert.IsNotType<FormatException>(noServer.Failure);
         }
 
+        [Theory]
+        [InlineData("a@x.com,b@y.com")]
+        [InlineData("a@x.com, b@y.com")]
+        [InlineData("a@x.com ,b@y.com")]
+        public void A_comma_separated_list_becomes_one_recipient_per_address_with_or_without_spaces(string to)
+        {
+            using var message = EmailService.CreateMailMessage("sender@example.invalid", "subject", "body", to, false);
+
+            Assert.Equal(["a@x.com", "b@y.com"], message.To.Select(a => a.Address));
+        }
+
         [Fact]
         public void A_reply_to_address_lands_in_the_message()
         {

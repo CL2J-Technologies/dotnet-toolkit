@@ -113,6 +113,9 @@ namespace cl2j.DataStore.Tests
 
         public List<string> Calls { get; } = [];
 
+        /// <summary>Awaited at the start of an insert, so a test can hold one in flight.</summary>
+        public Func<Task>? Gate { get; set; }
+
         public Task<IReadOnlyList<TValue>> GetAllAsync()
         {
             Calls.Add("GetAll");
@@ -125,11 +128,12 @@ namespace cl2j.DataStore.Tests
             return Task.FromResult(items.FirstOrDefault(i => EqualityComparer<TKey>.Default.Equals(getKey(i), key)));
         }
 
-        public Task InsertAsync(TValue entity)
+        public async Task InsertAsync(TValue entity)
         {
             Calls.Add("Insert");
+            if (Gate is not null)
+                await Gate();
             items.Add(entity);
-            return Task.CompletedTask;
         }
 
         public Task UpdateAsync(TValue entity)

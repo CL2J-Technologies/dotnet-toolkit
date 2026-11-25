@@ -299,13 +299,13 @@ namespace cl2j.DataStore.Tests
     public class DictionaryCacheContentionTests
     {
         [Fact]
-        public async Task One_store_writing_blocks_an_unrelated_store_from_writing()
+        public async Task One_store_writing_does_not_block_an_unrelated_store_from_writing()
         {
-            //Characterisation, not endorsement. The semaphore guarding the cache is declared
-            //static on DataStoreDictionaryLoadCache<TKey, TValue>, so there is one per closed
-            //generic type rather than one per store. Two entirely separate stores that happen to
-            //share type arguments serialise against each other: a slow write to one holds up every
-            //write to the other.
+            //The semaphore guarding the cache used to be static on
+            //DataStoreDictionaryLoadCache<TKey, TValue>: one per closed generic type rather than one
+            //per store. Two separate stores that happen to share type arguments then serialised
+            //against each other, and a slow write to one held up every write to the other. It is
+            //per instance now.
             var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var firstIsInside = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -330,14 +330,13 @@ namespace cl2j.DataStore.Tests
             var other = unrelated.InsertAsync("2", new Contended { Id = "2" });
             var finished = await Task.WhenAny(other, Task.Delay(TimeSpan.FromMilliseconds(500)));
 
-            Assert.NotSame(other, finished);
-            Assert.Empty(unrelatedStore.Contents);
+            Assert.Same(other, finished);
+            Assert.Single(unrelatedStore.Contents);
 
             held.SetResult();
             await blocking;
-            await other;
 
-            Assert.Single(unrelatedStore.Contents);
+            Assert.Single(slowStore.Contents);
         }
     }
 }

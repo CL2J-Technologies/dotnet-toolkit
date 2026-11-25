@@ -53,7 +53,14 @@ namespace cl2j.Tooling
                 //addNamespace was only honoured on the non-generic branch below. Callers write
                 //this straight into source they compile, so a bare name is only ever a compile
                 //error inside generated code. See issue #31.
-                return addNamespace ? GetTypeNameWithNamespace(representation, t.Namespace) : representation;
+                if (!addNamespace)
+                    return representation;
+
+                //A generic nested in a plain type is written Outer.Inner<T>, like a plain nested type.
+                if (t.DeclaringType is { IsGenericType: false })
+                    return $"{GetCSharpRepresentation(t.DeclaringType, trimArgCount, true)}.{representation}";
+
+                return GetTypeNameWithNamespace(representation, t.Namespace);
             }
 
             //A plain type nested in a plain one is written Outer.Inner. Without this the argument of a
@@ -75,8 +82,11 @@ namespace cl2j.Tooling
                 if (trimArgCount && value.IndexOf('`') > -1)
                     value = value[..value.IndexOf('`')];
 
-                // This is a nested type, build the nesting type first
-                if (t.DeclaringType != null)
+                // A type nested in a generic one names the generic declaring type first, with its
+                // arguments. A plain declaring type is left to the caller: it is already part of
+                // ReflectedType.FullName, or is written in front by the generic branch above, and
+                // repeating it here is what produced Outer.Outer+Inner<T>.
+                if (t.DeclaringType is { IsGenericType: true })
                     value = GetCSharpRepresentation(t.DeclaringType, trimArgCount, availableArguments) + "+" + value;
 
                 // Build the type arguments (if any)

@@ -154,16 +154,62 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public async Task The_body_is_written_to_the_output_file_in_every_build()
+        {
+            //outputFileName used to be honoured in Debug only, so a caller of RestClient.GetAsync
+            //got no file from a Release build, which is every published package.
+            var path = Path.Combine(Path.GetTempPath(), $"cl2j-parse-{Guid.NewGuid():N}.json");
+            try
+            {
+                using var response = Responding("{\"firstName\":\"Renée\",\"itemCount\":3}");
+
+                var result = await response.ParseResponseAsync<Result>(path);
+
+                Assert.Equal("Renée", result?.FirstName);
+                Assert.Equal("{\"firstName\":\"Renée\",\"itemCount\":3}", await File.ReadAllTextAsync(path));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Fact]
+        public async Task A_body_that_cannot_be_parsed_is_still_written_to_the_output_file()
+        {
+            //The file is how a caller inspects a payload that does not fit the type, so it is
+            //written before the parse, not after.
+            var path = Path.Combine(Path.GetTempPath(), $"cl2j-parse-{Guid.NewGuid():N}.json");
+            try
+            {
+                using var response = Responding("{ this is not json");
+
+                await Assert.ThrowsAnyAsync<JsonException>(() => response.ParseResponseAsync<Result>(path));
+
+                Assert.Equal("{ this is not json", await File.ReadAllTextAsync(path));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Fact]
+        public async Task No_file_is_written_when_no_output_file_is_named()
+        {
+            var before = Directory.GetFiles(Path.GetTempPath(), "cl2j-parse-*").Length;
+            using var response = Responding("{\"firstName\":\"Renée\"}");
+
+            await response.ParseResponseAsync<Result>();
+
+            Assert.Equal(before, Directory.GetFiles(Path.GetTempPath(), "cl2j-parse-*").Length);
+        }
+
+        [Fact]
         public async Task A_malformed_body_is_reported_rather_than_returning_null()
         {
-            //Characterisation with a caveat, and the caveat is the point: in a DEBUG build this
-            //method catches the failure, prints it to the console and retries through an untyped
-            //round trip, which can succeed. In a RELEASE build it throws.
-            //
-            //CI and every published package are Release; a developer's F5 is Debug. So this
-            //assertion is written to hold in both, and the divergence itself is reported in the
-            //issue raised alongside these tests: the outputFileName parameter, which RestClient
-            //exposes publicly on GetAsync, is silently a no-op in every build that ships.
+            //The same in every build configuration: a Debug-only retry through an untyped round
+            //trip used to make this succeed in a developer's F5 and throw in the shipped package.
             using var response = Responding("{ this is not json");
 
             await Assert.ThrowsAnyAsync<JsonException>(() => response.ParseResponseAsync<Result>());

@@ -42,12 +42,20 @@ namespace cl2j.Tooling.Tests
             Assert.EndsWith("InnerGeneric<System.Int32>", name, StringComparison.Ordinal);
         }
 
-        [Fact(Skip = "Bug: a generic type nested in a plain one repeats the declaring type (Outer.Outer+InnerGeneric<...>)")]
+        [Fact]
         public void A_generic_type_nested_in_a_plain_one_names_the_declaring_type_once()
         {
             Assert.Equal(
                 "cl2j.Tooling.Tests.TypeUtilsNamingTests+Outer.InnerGeneric<System.Int32>",
                 TypeUtils.GetTypeName<Outer.InnerGeneric<int>>());
+        }
+
+        [Fact]
+        public void A_generic_type_nested_in_a_plain_one_keeps_its_declaring_type_as_a_generic_argument()
+        {
+            Assert.Equal(
+                "System.Collections.Generic.List<cl2j.Tooling.Tests.TypeUtilsNamingTests.Outer.InnerGeneric<System.Int32>>",
+                TypeUtils.GetTypeName<List<Outer.InnerGeneric<int>>>());
         }
 
         [Fact]

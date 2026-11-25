@@ -220,6 +220,22 @@ The read-only interfaces `IDataStoreListLoad<TValue>` and `IDataStoreListQuery<T
 
 A store can also be created without being registered: `CreateDataStoreListCommandAndQueryJson<TKey, TValue>(fileStorageName, fileName)` and `CreateDataStoreDictionaryJson<TKey, TValue>(fileStorageName, fileName)` return the store itself.
 
+## Entities with polymorphic members
+
+The JSON stores read and write through [cl2j.FileStorage](../cl2j.FileStorage/README.md#json-and-type), which refuses every `$type` whose type is not on a list. By default the list is empty: an entity whose member holds a subclass (or a concrete type behind an interface), and a file that already holds a `$type`, make the store throw a `JsonSerializationException` instead of reading as the declared type and losing the derived properties.
+
+> **Behaviour change (6.6.1).** Such an entity used to be written with a `$type` and read back. It now throws unless you list the types.
+
+List them with the optional trailing `jsonOptions` argument, which every `...Json...` registration and creation method and every JSON store constructor takes:
+
+```cs
+var options = new JsonStorageOptions { AllowedTypes = [typeof(Dog), typeof(Cat)] };
+
+serviceProvider.CreateAndAddDataStoreListCommandAndQueryJsonWithCache<string, Owner>("Owners", "DataStore", "owners.json", TimeSpan.FromSeconds(5), options);
+```
+
+`JsonStorageOptions` is in `cl2j.FileStorage.Extensions`. The archive (see below) takes the same optional trailing `jsonOptions`; without it, a snapshot of a polymorphic entity is refused and logged at Error, like any snapshot that cannot be written.
+
 # Cache
 
 Adding a memory cache, that is thread-safe, and refresh itself at specified interval is as simple as using the `...WithCache` variant of the registration in your startup or program:
@@ -253,6 +269,8 @@ await Task.WhenAll(warmables.Select(w => w.WarmAsync())).WaitAsync(TimeSpan.From
 ## Archive
 
 `DataStoreListCommandAndQueryArchive<TKey, TValue>` wraps a list store and, after every change, writes a snapshot of the whole store to a file storage. The file name is a format string in which `{0}` receives the timestamp (`yyyyMMdd-HHmm`), for example `colors-{0}.json`.
+
+The archive is written after the store has accepted the change. If it cannot be written, the change is **not** reported as failed: the failure is logged at `Error` through the optional `logger` constructor argument (nothing is logged without one). Check that log if archives matter to you. Each snapshot reads the whole store back with `GetAllAsync()`.
 
 # Feedback & Community
 

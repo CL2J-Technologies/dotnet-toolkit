@@ -9,7 +9,8 @@ namespace cl2j.DataStore.List
         private readonly CacheLoader cacheLoader;
         private List<TValue> cache = [];
 
-        private static readonly SemaphoreSlim semaphore = new(1, 1);
+        //One per instance, not per closed generic type: see DataStoreDictionaryLoadCache.
+        private readonly SemaphoreSlim semaphore = new(1, 1);
 
         private readonly Tooling.Observers.Observable<IReadOnlyList<TValue>> observable = new();
 
