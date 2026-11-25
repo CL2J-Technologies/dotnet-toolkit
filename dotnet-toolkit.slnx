@@ -25,6 +25,12 @@
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/cl2j.Database.Benchmarks/cl2j.Database.Benchmarks.csproj" />
   </Folder>
+  <Folder Name="/Samples/">
+    <Project Path="Samples/DatabaseSample/DatabaseSample.csproj" />
+  </Folder>
+  <Folder Name="/Tools/">
+    <Project Path="Tools/cl2j.SqlServerMaintenancePlan/cl2j.SqlServerMaintenancePlan.csproj" />
+  </Folder>
   <Folder Name="/cl2j.FileStorage/" />
   <Folder Name="/cl2j.Scripting/" />
   <Folder Name="/DataStore/">
