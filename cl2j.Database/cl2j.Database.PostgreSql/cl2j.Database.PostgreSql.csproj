@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <!-- 10.0.3: the latest release that is at least two weeks old when this provider was written. -->
-    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Npgsql" Version="10.0.4" />
   </ItemGroup>
 
   <ItemGroup>

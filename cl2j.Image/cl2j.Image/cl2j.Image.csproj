@@ -18,8 +18,8 @@
          on Linux out of the box — not working there unnoticed is how it once went fifteen months
          without producing a thumbnail. NoDependencies bundles what libSkiaSharp needs instead of
          expecting fontconfig on the host. Windows and macOS assets come with SkiaSharp itself. -->
-    <PackageReference Include="SkiaSharp" Version="4.153.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp" Version="4.157.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.157.0" />
   </ItemGroup>
 
   <ItemGroup>
