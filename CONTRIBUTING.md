@@ -88,6 +88,35 @@ the run that published it to NuGet.org — a failure arrived after the merge, du
 Linux is deliberate. `cl2j.Image` shipped for fifteen months unable to produce a single thumbnail
 off Windows, and nothing ever built it on Linux to notice.
 
+### Coverage
+
+`ci.yml` measures line coverage on every pull request, with the collector bundled in
+`Microsoft.NET.Test.Sdk` (`--collect:"Code Coverage;Format=cobertura"`). It writes one merged
+Cobertura report, uploaded as the `coverage-cobertura` artifact, and a per-package table into the
+job summary. Only the `cl2j.*` library assemblies are counted: no test project, nothing third party.
+A line counts when any test project ran it, and the integration tests count, so the number is only
+comparable where Docker is available.
+
+Each package has a **floor** in `.github/coverage/floors.json`, about one point under what it
+measured when the floor was set. `.github/coverage/check-coverage.mjs` fails the job when a package
+falls under its floor, when a floor names a package that was not reported, and when a package has
+no floor. To see the numbers locally, run `dotnet test dotnet-toolkit.slnx -c Release
+--collect:"Code Coverage;Format=cobertura" --results-directory ./coverage`, then
+`node .github/coverage/check-coverage.mjs ./coverage --print`. Do not use
+`--collect:"XPlat Code Coverage"`: that is the coverlet collector, no test project references it,
+and it produces nothing without saying so.
+
+**The rule is a ratchet.** Raise a floor in the pull request that raises the number, not as a target
+to reach later. Never lower one to make a build pass: if coverage fell, add the tests that bring it
+back. A threshold that only ever moves with the code stays honest; one nobody meets gets lowered or
+ignored.
+
+**Coverage says which lines ran, not whether the assertions are any good.** A package
+also scores for code that another suite merely runs: the `cl2j.Database` tests execute
+`cl2j.Scripting` to compile their readers, which counts those lines whether or not anything asserts
+how the scripting behaves. A floor stops ground being lost; it does not find defects. Those come from tests that
+assert something new, and a high number is not a reason to skip writing one.
+
 ## Versioning
 
 **Every package publishes the same version**, held in `<Version>` in `Directory.Build.props` at the
