@@ -25,6 +25,18 @@ jobs:
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The Database family check below diffs against the base branch, so it needs history.
+          fetch-depth: 0
+
+      # cl2j.Database references cl2j.Tooling and cl2j.Scripting, and dotnet pack pins them at the
+      # version in force. A change to either must therefore bump the Database family version in
+      # cl2j.Database/Directory.Build.props (CONTRIBUTING.md, Versioning). Only enforced on pull
+      # requests into main: a release branch collects several changes, and its own PR is where
+      # the family number is settled.
+      - name: Database family version
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: bash .github/scripts/check-database-version.sh "origin/${{ github.base_ref }}"
 
       - uses: actions/setup-dotnet@v4
         with:

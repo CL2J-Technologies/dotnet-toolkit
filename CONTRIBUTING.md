@@ -119,12 +119,36 @@ assert something new, and a high number is not a reason to skip writing one.
 
 ## Versioning
 
-**Every package publishes the same version**, held in `<Version>` in `Directory.Build.props` at the
-repository root. To release: bump that one number, commit to `main`, and the workflow publishes the
-whole set together.
+**There are two version lines.** Every package publishes the toolkit version, held in `<Version>` in
+`Directory.Build.props` at the repository root, except the Database family, which has its own in
+`cl2j.Database/Directory.Build.props`:
+
+| Line | Packages | Held in |
+|---|---|---|
+| Toolkit | the eleven other packages | `Directory.Build.props` (root) |
+| Database family | `cl2j.Database`, `.SqlServer`, `.MySql`, `.PostgreSql` | `cl2j.Database/Directory.Build.props` |
+
+Both lines are 6.6.2 for that release. To release: bump the number of each line that changed,
+commit to `main`, and the workflow publishes. `--skip-duplicate` makes a family number that did not
+move a no-op, so a toolkit-only release does not republish the Database packages.
 
 **No `.csproj` declares its own `<Version>`.** A local override is not a shortcut, it is the bug —
-see below.
+see below. The family file is not an override: it sets one number for the whole family, so the
+packages inside it still cannot drift from each other.
+
+### The dependency rule
+
+`cl2j.Database` references `cl2j.Tooling` and `cl2j.Scripting`, and `dotnet pack` pins them at the
+version they carry when the Database packages are packed. **A change to `cl2j.Tooling` or
+`cl2j.Scripting` therefore also bumps the Database family version, by at least a patch.** Without
+that, the Database packages keep resolving the old dependency — the stale floor described below.
+
+`ci.yml` enforces this on pull requests into `main`
+(`.github/scripts/check-database-version.sh`): if a file under `cl2j.Tooling/cl2j.Tooling` or
+`cl2j.Scripting/cl2j.Scripting` changed and the family version did not, the job fails. It does not
+run on pull requests into a release branch, where the family number is settled in the release PR.
+It only compares the family number with the base branch's; it cannot know whether the bump is the
+right size, which stays the reviewer's call.
 
 ### Why shared, and not per package
 

@@ -29,6 +29,13 @@
          The cost, accepted knowingly: a package that did not change still gets a new number, so
          the version says which release a package belongs to, not what changed inside it.
 
+         6.6.2: the one exception to "no override". cl2j.Database and its three providers have a
+         version line of their own in cl2j.Database/Directory.Build.props (#93), because a change
+         to them should not republish the other eleven packages. That file imports this one and
+         sets only <Version>. The stale-floor risk it reopens is closed by a rule: a change to
+         cl2j.Tooling or cl2j.Scripting also bumps the Database family (CONTRIBUTING.md,
+         Versioning), checked by ci.yml on pull requests into main.
+
          4.0.0 was the first shared number after the per-package period, clearing every version
          published during it — the highest being cl2j.Image 3.1.0.
 
