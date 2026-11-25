@@ -9,7 +9,9 @@ namespace cl2j.DataStore.Dictionary
     {
         protected readonly CacheLoader cacheLoader;
         protected Dictionary<TKey, TValue> cache = [];
-        protected static readonly SemaphoreSlim semaphore = new(1, 1);
+        //One per instance. It used to be static, which on a generic class means one per closed generic
+        //type: two stores sharing type arguments serialised each other's writes for no reason.
+        protected readonly SemaphoreSlim semaphore = new(1, 1);
 
         private readonly Tooling.Observers.Observable<IReadOnlyDictionary<TKey, TValue>> observable = new();
 

@@ -1,4 +1,5 @@
 using cl2j.DataStore.List;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace cl2j.DataStore.Tests
@@ -22,6 +23,18 @@ namespace cl2j.DataStore.Tests
             var archive = new DataStoreListCommandAndQueryArchive<string, Person>(
                 store, storage, "people-{0}.json", () => now);
             return (archive, store, storage);
+        }
+
+        private static (DataStoreListCommandAndQueryArchive<string, Person> Archive, InMemoryListStore<string, Person> Store, InMemoryFileStorage Storage, RecordingLogger Logger)
+            BuildLogged(DateTimeOffset now, params Person[] seed)
+        {
+            var store = new InMemoryListStore<string, Person>(p => p.Id);
+            store.Seed(seed);
+            var storage = new InMemoryFileStorage();
+            var logger = new RecordingLogger();
+            var archive = new DataStoreListCommandAndQueryArchive<string, Person>(
+                store, storage, "people-{0}.json", () => now, logger);
+            return (archive, store, storage, logger);
         }
 
         [Fact]
@@ -113,9 +126,10 @@ namespace cl2j.DataStore.Tests
         [Fact]
         public async Task Each_change_costs_a_full_read_of_the_store()
         {
-            //Characterisation, and the price of the design: the snapshot is built by asking the
-            //store for everything it has, so a store with a million rows reads a million rows per
-            //write.
+            //Characterisation, and the price of the design, kept on purpose: the archive decorates
+            //any store, knows no key and sees no change made behind its back, so the only way to
+            //write the state after the change is to ask the store for everything it has. A store
+            //with a million rows reads a million rows per write.
             var (archive, store, _) = Build(Afternoon);
 
             await archive.InsertAsync(new Person("1", "Renée"));
@@ -124,17 +138,85 @@ namespace cl2j.DataStore.Tests
         }
 
         [Fact]
-        public async Task An_archive_that_cannot_be_written_fails_the_change_that_already_happened()
+        public async Task An_archive_that_cannot_be_written_does_not_fail_the_change_that_already_happened()
         {
-            //Characterisation. The archive is written after the store has accepted the change, and
-            //a failure to write it is not caught — so the caller sees an exception for an operation
-            //that did succeed, and a retry would apply it twice.
+            //The archive is written after the store has accepted the change. Throwing for it told
+            //the caller that an operation which succeeded had failed, and a retry applied it twice.
+            //The failure is logged at Error instead.
+            var (archive, store, storage, logger) = BuildLogged(Afternoon);
+            storage.FailWrites = true;
+
+            await archive.InsertAsync(new Person("1", "Renée"));
+
+            Assert.Single(store.Contents);
+            Assert.Empty(storage.Files);
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.Level);
+            Assert.IsType<IOException>(entry.Exception);
+            Assert.Contains("people-20260907-1345.json", entry.Message, StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public async Task Every_kind_of_change_survives_an_archive_that_cannot_be_written()
+        {
+            var (archive, store, storage, logger) = BuildLogged(Afternoon, new Person("1", "Renée"));
+            storage.FailWrites = true;
+
+            await archive.InsertAsync(new Person("2", "Ari"));
+            await archive.UpdateAsync(new Person("2", "Ari Tremblay"));
+            await archive.DeleteAsync("1");
+            await archive.ReplaceAllByAsync([new Person("3", "Cléo")]);
+
+            Assert.Equal("Cléo", Assert.Single(store.Contents).Name);
+            Assert.Equal(4, logger.Entries.Count(e => e.Level == LogLevel.Error));
+        }
+
+        [Fact]
+        public async Task An_archive_that_cannot_be_written_does_not_fail_the_change_when_no_logger_was_given()
+        {
+            //Without a logger there is nowhere to report to, but the change must still go through.
             var (archive, store, storage) = Build(Afternoon);
             storage.FailWrites = true;
 
-            await Assert.ThrowsAsync<IOException>(() => archive.InsertAsync(new Person("1", "Renée")));
+            await archive.InsertAsync(new Person("1", "Renée"));
 
             Assert.Single(store.Contents);
+        }
+
+        [Fact]
+        public async Task An_archive_that_is_written_logs_no_error()
+        {
+            var (archive, _, _, logger) = BuildLogged(Afternoon);
+
+            await archive.InsertAsync(new Person("1", "Renée"));
+
+            Assert.DoesNotContain(logger.Entries, e => e.Level >= LogLevel.Warning);
+        }
+
+        [Fact]
+        public async Task A_store_that_cannot_be_read_back_does_not_fail_the_change_either()
+        {
+            //The snapshot is built from the store after the change, so reading it is part of the
+            //archive too, and fails the same way.
+            var store = new InMemoryListStore<string, Person>(p => p.Id);
+            var logger = new RecordingLogger();
+            var archive = new DataStoreListCommandAndQueryArchive<string, Person>(
+                new UnreadableAfterWriteStore(store), new InMemoryFileStorage(), "people-{0}.json", () => Afternoon, logger);
+
+            await archive.InsertAsync(new Person("1", "Renée"));
+
+            Assert.Single(store.Contents);
+            Assert.Equal(LogLevel.Error, Assert.Single(logger.Entries).Level);
+        }
+
+        private sealed class UnreadableAfterWriteStore(InMemoryListStore<string, Person> inner) : IDataStoreListCommandAndQuery<string, Person>
+        {
+            public Task<IReadOnlyList<Person>> GetAllAsync() => throw new InvalidOperationException("the store cannot be read");
+            public Task<Person?> GetByIdAsync(string key) => inner.GetByIdAsync(key);
+            public Task InsertAsync(Person entity) => inner.InsertAsync(entity);
+            public Task UpdateAsync(Person entity) => inner.UpdateAsync(entity);
+            public Task DeleteAsync(string key) => inner.DeleteAsync(key);
+            public Task ReplaceAllByAsync(ICollection<Person> items) => inner.ReplaceAllByAsync(items);
         }
     }
 }

@@ -254,6 +254,8 @@ await Task.WhenAll(warmables.Select(w => w.WarmAsync())).WaitAsync(TimeSpan.From
 
 `DataStoreListCommandAndQueryArchive<TKey, TValue>` wraps a list store and, after every change, writes a snapshot of the whole store to a file storage. The file name is a format string in which `{0}` receives the timestamp (`yyyyMMdd-HHmm`), for example `colors-{0}.json`.
 
+The archive is written after the store has accepted the change. If it cannot be written, the change is **not** reported as failed: the failure is logged at `Error` through the optional `logger` constructor argument (nothing is logged without one). Check that log if archives matter to you. Each snapshot reads the whole store back with `GetAllAsync()`.
+
 # Feedback & Community
 
 We look forward to hearing your comments.
