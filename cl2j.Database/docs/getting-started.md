@@ -87,10 +87,9 @@ Why each step exists:
 | `UseDatabase()` | Publishes the logger and the options to **static** state (`ConnectionExtensions.Logger`, `ConnectionExtensions.DatabaseOptions`). Call it once, at startup. |
 | `SqlServer.Register()` | Registers the SQL Server command builder in `CommandBuilderFactory`, a static registry. Calling it again replaces the previous registration, which is how you change the [identifier generator](keys.md#identifier-generators). |
 
-`UseDatabase` resolves a non-generic `ILogger` from the container. A default host registers only
-`ILogger<T>` and `ILoggerFactory`, so unless you register an `ILogger` yourself the static logger stays
-`null` and statement tracing by the connection extensions is off (tracked as
-[#68](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/68)). See
+`UseDatabase` takes its logger from `ILoggerFactory.CreateLogger("cl2j.Database")`, so the logging of a standard
+host works with nothing extra. Without an `ILoggerFactory` it falls back to a registered non-generic `ILogger`;
+if there is none either, statement tracing by the connection extensions is off. See
 [Errors and diagnostics](errors-and-diagnostics.md#logging).
 
 ### Without a host

@@ -6,34 +6,25 @@ namespace cl2j.Tooling
 {
     public static class HttpClientExtensions
     {
+        /// <summary>
+        ///     Deserialises the body of the response. An empty body is the default value.
+        ///
+        ///     <para>
+        ///     When <paramref name="outputFileName"/> is given, the raw body is written to that file
+        ///     first, in every build configuration, so that a payload that does not fit the type
+        ///     can still be inspected. A body that cannot be deserialised throws.
+        ///     </para>
+        /// </summary>
         public static async Task<TResponse?> ParseResponseAsync<TResponse>(this HttpResponseMessage response, string? outputFileName = null)
         {
             var value = await response.Content.ReadAsStringAsync();
-            if (!string.IsNullOrEmpty(value))
-            {
-#if DEBUG
-                if (!string.IsNullOrEmpty(outputFileName))
-                    File.WriteAllText(outputFileName, value);
+            if (string.IsNullOrEmpty(value))
+                return default;
 
-                try
-                {
-#endif
-                    return JsonConvert.DeserializeObject<TResponse>(value);
-#if DEBUG
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
+            if (!string.IsNullOrEmpty(outputFileName))
+                await File.WriteAllTextAsync(outputFileName, value);
 
-                    //Get the real line to debug more easily
-                    var obj = JsonConvert.DeserializeObject(value);
-                    value = JsonConvert.SerializeObject(obj, Formatting.Indented);
-                    return JsonConvert.DeserializeObject<TResponse>(value);
-                }
-#endif
-            }
-
-            return default;
+            return JsonConvert.DeserializeObject<TResponse>(value);
         }
 
         public static StringContent PrepareRequestBody<TIn>(this TIn content)

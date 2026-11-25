@@ -21,14 +21,20 @@ namespace cl2j.DataStore.Json.Dictionary
     ///     safe direction: it never under-serialises two pointing at the same one. It protects
     ///     nothing across processes.
     ///     </para>
+    ///
+    ///     <para>
+    ///     <c>jsonOptions</c> lists the types a <c>$type</c> may name, for an entity that has
+    ///     polymorphic members. None by default, which makes the store throw on a polymorphic
+    ///     value rather than lose its derived properties. See <see cref="JsonStorageOptions"/>.
+    ///     </para>
     /// </summary>
-    public class DataStoreDictionaryCommandAndQueryJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, ILogger logger, bool indent = false) : IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
+    public class DataStoreDictionaryCommandAndQueryJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, ILogger logger, bool indent = false, JsonStorageOptions? jsonOptions = null) : IDataStoreDictionaryCommandAndQuery<TKey, TValue> where TKey : notnull
     {
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
         public async Task<IReadOnlyDictionary<TKey, TValue>> GetAllAsync()
         {
-            return await fileStorageProvider.GetDictionaryValuesAsync<TKey, TValue>(filename, logger);
+            return await fileStorageProvider.GetDictionaryValuesAsync<TKey, TValue>(filename, logger, jsonOptions);
         }
 
         public async Task<TValue?> GetByIdAsync(TKey key)
@@ -102,7 +108,7 @@ namespace cl2j.DataStore.Json.Dictionary
             await semaphore.WaitAsync();
             try
             {
-                var items = await fileStorageProvider.GetDictionaryValuesAsync<TKey, TValue>(filename, logger);
+                var items = await fileStorageProvider.GetDictionaryValuesAsync<TKey, TValue>(filename, logger, jsonOptions);
 
                 mutate(items);
 
@@ -116,7 +122,7 @@ namespace cl2j.DataStore.Json.Dictionary
 
         private async Task WriteAsync(IDictionary<TKey, TValue> items)
         {
-            await fileStorageProvider.WriteJsonObjectAsync(filename, items, indent, null);
+            await fileStorageProvider.WriteJsonObjectAsync(filename, items, jsonOptions, indent);
         }
     }
 }

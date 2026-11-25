@@ -6,13 +6,19 @@ using Microsoft.Extensions.Logging;
 
 namespace cl2j.DataStore.Json.List
 {
-    public class DataStoreListCommandAndQueryJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, Func<TValue, TKey> getKeyPredicate, ILogger logger, bool indent = false) : DataStoreListCommandAndQueryBase<TKey, TValue>(getKeyPredicate)
+    /// <summary>
+    ///     A list store backed by one JSON file. <c>jsonOptions</c> lists the types a <c>$type</c>
+    ///     may name, for an entity that has polymorphic members. None by default, which makes the
+    ///     store throw on a polymorphic value rather than lose its derived properties. See
+    ///     <see cref="JsonStorageOptions"/>.
+    /// </summary>
+    public class DataStoreListCommandAndQueryJson<TKey, TValue>(IFileStorageProvider fileStorageProvider, string filename, Func<TValue, TKey> getKeyPredicate, ILogger logger, bool indent = false, JsonStorageOptions? jsonOptions = null) : DataStoreListCommandAndQueryBase<TKey, TValue>(getKeyPredicate)
     {
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
         public override async Task<IReadOnlyList<TValue>> GetAllAsync()
         {
-            return await fileStorageProvider.GetListValuesAsync<TValue>(filename, logger);
+            return await fileStorageProvider.GetListValuesAsync<TValue>(filename, logger, jsonOptions);
         }
 
         public override async Task<TValue?> GetByIdAsync(TKey key)
@@ -97,7 +103,7 @@ namespace cl2j.DataStore.Json.List
 
         private async Task WriteAsync(IEnumerable<TValue> list)
         {
-            await fileStorageProvider.WriteJsonObjectAsync(filename, list, indent, null);
+            await fileStorageProvider.WriteJsonObjectAsync(filename, list, jsonOptions, indent);
         }
 
         private int RemoveAll(List<TValue> list, TKey key)

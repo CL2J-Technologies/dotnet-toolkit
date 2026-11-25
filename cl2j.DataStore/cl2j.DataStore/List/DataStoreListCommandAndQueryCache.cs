@@ -12,7 +12,8 @@ namespace cl2j.DataStore.List
 
         private readonly Tooling.Observers.Observable<IReadOnlyList<TValue>> observable = new();
 
-        private static readonly SemaphoreSlim semaphore = new(1, 1);
+        //One per instance, not per closed generic type: see DataStoreDictionaryLoadCache.
+        private readonly SemaphoreSlim semaphore = new(1, 1);
 
         //Kept so GetAllAsync can say which store, and why, rather than answering empty.
         private readonly string name;

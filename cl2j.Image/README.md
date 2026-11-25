@@ -90,7 +90,7 @@ using var banner = ImageUtils.CreateThumbnailWithRatio(source, 320);
 | Method | What it does |
 |---|---|
 | `ImageResizer.Resize(image, w, h)` | Scales to exactly `w` x `h` (ratio not preserved). Large reductions are halved first, then a Catmull-Rom pass, to avoid aliasing. |
-| `ImageResizer.ResizeIfOversize(image, maxW, maxH)` | Scales so the longest side matches the limit. See the gotchas below. |
+| `ImageResizer.ResizeIfOversize(image, maxW, maxH)` | Scales down, aspect ratio kept, until both dimensions fit the limits; an image already within them is returned as the same instance. |
 | `ImageUtils.CreateThumbnailCropped(bytes or image, w, h)` | Centre-crops to the target ratio, then resizes. The `byte[]` overload throws `ValidationException("Invalid image")` for unreadable bytes. |
 | `ImageUtils.CreateThumbnail(image, w, h, RgbColor)` | Fits inside `w` x `h` on a solid background. |
 | `ImageUtils.CreateThumbnailWithRatio(image, w)` | Given width, height derived from the image ratio. |
@@ -131,7 +131,6 @@ Lower-level helpers: `ImageUtils.Compare(a, b, out diff)` (mean grey difference,
 # Ownership and gotchas
 
 - **Dispose what you get.** `RasterImage` holds native memory. But several methods **return the instance they received** when there is nothing to do: `ImageResizer.Resize` at the same size, `Crop` with no border, `CropCenter` on an image already small enough, `CleanImage(RasterImage, ...)` with nothing to resize. Compare with `ReferenceEquals` before disposing a result (`MediaHelpers` does this).
-- **`ResizeIfOversize` does not check that the image is oversize.** It scales the longest side to the limit, so a smaller image is enlarged. For a landscape image only `maxW` is used; for a portrait or square one only `maxH`. `CleanImage` and `OptimizeImage` test the size before calling it.
 - **Not decoded:** HEIC, AVIF and TIFF. Use `NameUnsupportedFormat` to explain the refusal and convert client-side. `CleanImage` throws `cl2j.Tooling.Exceptions.ValidationException` for them.
 - **`ReadImage` is lenient with truncated files**: it decodes what is there, as browsers do.
 - **`ConvertToSrgb` is off by default** because it changes the pixels of wide-gamut photos, and therefore thumbnails and `AreImagesIdentical` verdicts compared with images read before.

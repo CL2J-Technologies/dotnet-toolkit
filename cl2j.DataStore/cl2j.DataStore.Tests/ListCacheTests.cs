@@ -342,6 +342,40 @@ namespace cl2j.DataStore.Tests
 
             public Task ReplaceAllByAsync(ICollection<Person> items) => Task.CompletedTask;
         }
+
+        [Fact]
+        public async Task One_store_writing_does_not_block_an_unrelated_store_from_writing()
+        {
+            //The semaphore used to be static, so two stores sharing type arguments serialised each
+            //other's writes. It is per instance now.
+            var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstIsInside = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var slowStore = Seeded();
+            slowStore.Gate = async () =>
+            {
+                firstIsInside.TrySetResult();
+                await held.Task;
+            };
+            var unrelatedStore = Seeded();
+
+            using var slow = Cache(slowStore);
+            using var unrelated = Cache(unrelatedStore);
+
+            var blocking = slow.InsertAsync(new Person("1", "Renée"));
+            await firstIsInside.Task;
+
+            var other = unrelated.InsertAsync(new Person("2", "Ari"));
+            var finished = await Task.WhenAny(other, Task.Delay(TimeSpan.FromSeconds(5)));
+
+            Assert.Same(other, finished);
+            Assert.Single(unrelatedStore.Contents);
+
+            held.SetResult();
+            await blocking;
+
+            Assert.Single(slowStore.Contents);
+        }
     }
 
     public class ListLoadCacheTests

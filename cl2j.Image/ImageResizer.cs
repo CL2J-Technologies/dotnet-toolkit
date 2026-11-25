@@ -44,7 +44,41 @@ namespace cl2j.Image
             return new RasterImage(resized, image.Origin, image.HasMetadata);
         }
 
+        /// <summary>
+        /// The image scaled down, aspect ratio kept, until both dimensions fit within `maxW` x
+        /// `maxH`. An image that already fits is never enlarged: it is returned as **the same
+        /// instance**, so callers must compare with `ReferenceEquals` before disposing the result.
+        /// </summary>
         public static RasterImage ResizeIfOversize(RasterImage image, int maxW, int maxH)
+        {
+            if (image.Width <= maxW && image.Height <= maxH)
+                return image;
+
+            //The tighter limit decides, and it is hit exactly; the other dimension follows the
+            //aspect ratio. Compared by cross-multiplying, in long, so that nothing is rounded or
+            //overflows before the choice is made.
+            int newW;
+            int newH;
+            if ((long)image.Width * maxH > (long)image.Height * maxW)
+            {
+                newW = maxW;
+                newH = (int)((long)image.Height * maxW / image.Width);
+            }
+            else
+            {
+                newH = maxH;
+                newW = (int)((long)image.Width * maxH / image.Height);
+            }
+
+            return Resize(image, Math.Max(1, newW), Math.Max(1, newH));
+        }
+
+        /// <summary>
+        /// The image scaled so that its longer side matches the limit, **enlarging** it when it is
+        /// smaller. The thumbnail builders rely on that to fill a fixed-size frame; use
+        /// <see cref="ResizeIfOversize"/> to only ever reduce.
+        /// </summary>
+        internal static RasterImage ScaleToLongestSide(RasterImage image, int maxW, int maxH)
         {
             int newW;
             int newH;
