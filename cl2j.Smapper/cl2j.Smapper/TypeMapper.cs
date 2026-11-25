@@ -11,7 +11,7 @@ namespace cl2j.Smapper
             var mapper = new TypeMapper();
 
             var sourceProperties = ObjectExtensions.GetReadableProperties(source);
-            var destinationProperties = ObjectExtensions.GetReadaleWritableProperties(destination);
+            var destinationProperties = ObjectExtensions.GetReadableWritableProperties(destination);
 
             foreach (var destinationProperty in destinationProperties)
             {
