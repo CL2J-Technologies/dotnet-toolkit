@@ -15,7 +15,8 @@ bool there = await database.Exists<Customer>(new { Id = id });
 ```
 
 - The properties of the anonymous object become equality tests, combined with `AND`. Values are
-  parameters.
+  parameters. A `string` is sent as `nvarchar`, even against a `varchar` key: see
+  [Anonymous parameters and varchar keys](parameters-and-plan-cache.md#anonymous-parameters-and-varchar-keys).
 - The property names must match **column names** (the `[Column(Name = ...)]` name when there is one).
 - **There is no `LIKE`, range, `OR` or `IN` in a query by example.** Use SQL for those.
 - **A `null` property matches nothing.** `new { Name = (string?)null }` becomes `= NULL`, which is never

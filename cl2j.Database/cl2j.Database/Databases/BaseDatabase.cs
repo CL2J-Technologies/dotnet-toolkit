@@ -133,7 +133,7 @@ namespace cl2j.Database.Databases
             catch (Exception ex)
             {
                 if (logger.IsEnabled(options.ExceptionLevel))
-                    logger.Log(options.ExceptionLevel, ex, $"Database.Insert<{typeof(T).Name}> - Exception thrown");
+                    logger.Log(options.ExceptionLevel, ex, $"Database.NewKey<{typeof(T).Name}> - Exception thrown");
                 throw;
             }
         }

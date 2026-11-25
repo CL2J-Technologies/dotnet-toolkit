@@ -36,5 +36,20 @@ namespace cl2j.Database.Helpers
 
             return (TOut)Convert.ChangeType(value, target, CultureInfo.InvariantCulture);
         }
+
+        /// <summary>
+        ///     The same conversion for a target known only at run time, such as the type of a key
+        ///     property. Returns <c>null</c> for <c>null</c> and <c>DBNull</c>.
+        /// </summary>
+        internal static object? To(object? value, Type target)
+        {
+            if (value is null or DBNull)
+                return null;
+
+            if (target.IsInstanceOfType(value))
+                return value;
+
+            return Convert.ChangeType(value, Nullable.GetUnderlyingType(target) ?? target, CultureInfo.InvariantCulture);
+        }
     }
 }

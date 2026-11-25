@@ -51,6 +51,49 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
+        public void A_default_host_publishes_a_logger_from_its_logger_factory()
+        {
+            var previousOptions = ConnectionExtensions.DatabaseOptions;
+            var previousLogger = ConnectionExtensions.Logger;
+            try
+            {
+                ConnectionExtensions.Logger = null;
+                //A default host registers ILoggerFactory and ILogger<T>, never a bare ILogger.
+                using var host = Host.CreateDefaultBuilder().Build();
+
+                host.UseDatabase();
+
+                Assert.NotNull(ConnectionExtensions.Logger);
+            }
+            finally
+            {
+                ConnectionExtensions.DatabaseOptions = previousOptions;
+                ConnectionExtensions.Logger = previousLogger;
+            }
+        }
+
+        [Fact]
+        public void A_service_provider_with_standard_logging_publishes_a_logger_from_its_logger_factory()
+        {
+            var previousOptions = ConnectionExtensions.DatabaseOptions;
+            var previousLogger = ConnectionExtensions.Logger;
+            try
+            {
+                ConnectionExtensions.Logger = null;
+                using var provider = new ServiceCollection().AddLogging().BuildServiceProvider();
+
+                provider.UseDatabase();
+
+                Assert.NotNull(ConnectionExtensions.Logger);
+            }
+            finally
+            {
+                ConnectionExtensions.DatabaseOptions = previousOptions;
+                ConnectionExtensions.Logger = previousLogger;
+            }
+        }
+
+        [Fact]
         public void A_host_that_registered_nothing_leaves_the_current_options_alone()
         {
             var previousOptions = ConnectionExtensions.DatabaseOptions;

@@ -26,11 +26,39 @@ actually caches.
 - A raw `Query<T>(sql, new { ... })` gets the same declarations from the **property types** of the anonymous
   object: a `string` is `nvarchar`, a `DateTime` is `datetime2`.
 
-## Known limitation
+## Anonymous parameters and varchar keys
 
-The `varchar` binding needs to know which column a value belongs to. It is applied to `QueryKey` and to the
-parameters of generated statements, but **not** to the anonymous-parameter paths:
-`QuerySingle<T>(new { ... })`, `Query<T>(new { ... })`, `Exists` and raw SQL send an `nvarchar` parameter,
-which can defeat the index of a `varchar` key column
-([#43](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/43)). For hot paths on a `varchar` key, use
-`QueryKey`, or declare the key column `nvarchar` with `TypeName`.
+The `varchar` binding needs to know which column a value belongs to. It is applied to:
+
+- `QueryKey<T>`, `QueryKeys<T>` and `DeleteKey<T>`, which bind the key column of `T`;
+- the parameters of `Insert`, `Update` and `Delete` of an entity, which come from the `[Column]` attributes of `T`.
+
+It is **not** applied to `Query`, `QuerySingle` and `Exists` (and their `IDatabase` equivalents) called with an
+anonymous parameter object such as `new { Id = id }`, nor to raw SQL. An anonymous type carries no `[Column]`, so the
+library cannot know that the column is a `varchar` key, and the string is sent as `nvarchar`. The library does not
+infer it from the key columns of `T` either: the same parameter name may refer to an `nvarchar` column in the SQL you
+wrote, and binding it as ANSI would silently lose non-Latin characters. So the caller decides, in SQL, by casting to
+the column's own type and length.
+
+On SQL Server, comparing a `varchar` column with an `nvarchar` parameter converts the column, so the index seek
+becomes a scan. It is invisible on small tables; on a million-row table a single-row lookup measured about 34,000
+logical reads instead of 3.
+
+```csharp
+// nvarchar parameter against a varchar(36) key: the index is not used
+var slow = await database.QuerySingle<Customer>("SELECT * FROM [Customer] WHERE [Id] = @id", new { id });
+
+// the cast makes the parameter varchar: index seek
+var fast = await database.QuerySingle<Customer>(
+    "SELECT * FROM [Customer] WHERE [Id] = CAST(@id AS varchar(36))", new { id });
+
+// no cast needed: the key column is known
+await using var connection = await database.CreateConnection();
+var customer = await connection.QueryKey<Customer>(id);
+```
+
+A query by example (`QuerySingle<T>(new { Id = id })`, no SQL) has nothing to cast in: use `QueryKey`, or write the
+SQL with the cast.
+
+Explained in [#43](https://github.com/CL2J-Technologies/dotnet-toolkit/issues/43). Alternatively, declare the key
+column `nvarchar` with `TypeName`.
