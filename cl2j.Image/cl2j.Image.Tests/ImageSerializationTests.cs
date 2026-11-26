@@ -12,6 +12,21 @@ namespace cl2j.Image.Tests
     public class ImageSerializationTests
     {
         [Fact]
+        public void SaveJpegToStream_writes_the_same_jpeg_as_SaveJpegToBytes()
+        {
+            using var image = Photo(320, 240);
+
+            using var stream = ImageSerialization.SaveJpegToStream(image, 80L);
+
+            using var copy = new MemoryStream();
+            stream.CopyTo(copy);
+            Assert.Equal(ImageSerialization.SaveJpegToBytes(image, 80L), copy.ToArray());
+            var header = ImageUtils.Identify(ImageSerialization.SaveJpegToBytes(image, 80L));
+            Assert.Equal("JPEG", header?.Format);
+            Assert.Equal(320, header?.Width);
+        }
+
+        [Fact]
         public void SaveWebpToBytes_writes_a_riff_webp_container()
         {
             using var image = Photo(320, 240);

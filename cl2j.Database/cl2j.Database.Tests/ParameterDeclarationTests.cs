@@ -103,6 +103,30 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
+        public void The_fixed_declaration_holds_up_to_ten_digits_before_the_point()
+        {
+            var fits = Bind(new { Amount = 9_999_999_999.999999999999999999m }, "Amount");
+            var overflows = Bind(new { Amount = 10_000_000_000m }, "Amount");
+            var negative = Bind(new { Amount = -10_000_000_000m }, "Amount");
+
+            Assert.Equal((byte)38, fits.Precision);
+            Assert.Equal((byte)18, fits.Scale);
+            Assert.Equal((byte)0, overflows.Precision);
+            Assert.Equal((byte)0, negative.Precision);
+        }
+
+        [Fact]
+        public void The_decimal_limit_is_ten_to_the_tenth()
+        {
+            //The constant is private and inlined where it is used, so reading the field is the only
+            //way to see the value the boundary above is built on.
+            var limit = typeof(ParameterDeclaration).GetField("DecimalLimit", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+            Assert.NotNull(limit);
+            Assert.Equal(10_000_000_000m, limit.GetValue(null));
+        }
+
+        [Fact]
         public void A_null_is_declared_with_the_type_of_its_property()
         {
             Assert.Equal(DbType.DateTimeOffset, Bind(new { When = (DateTimeOffset?)null }, "When").DbType);

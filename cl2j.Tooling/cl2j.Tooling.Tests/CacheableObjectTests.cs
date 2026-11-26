@@ -104,6 +104,39 @@ namespace cl2j.Tooling.Tests
             Assert.Contains(logger.Snapshot(), e => e.Level == LogLevel.Error && e.Message.Contains("store"));
         }
 
+        /// <summary>Throws from the debug line that follows a load, which the load itself does not guard.</summary>
+        private sealed class ThrowingDebugLogger : ILogger
+        {
+            public List<(LogLevel Level, Exception? Exception)> Entries { get; } = [];
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Debug)
+                    throw new InvalidOperationException("logger is broken");
+                lock (Entries)
+                    Entries.Add((logLevel, exception));
+            }
+        }
+
+        [Fact]
+        public async Task A_failure_outside_the_load_is_logged_as_critical_and_does_not_escape()
+        {
+            var logger = new ThrowingDebugLogger();
+            using var store = new Store(() => Task.FromResult(new List<string> { "a" }), logger);
+
+            await store.Refresh();
+
+            lock (logger.Entries)
+            {
+                var critical = Assert.Single(logger.Entries, e => e.Level == LogLevel.Critical);
+                Assert.IsType<InvalidOperationException>(critical.Exception);
+            }
+        }
+
         [Fact]
         public async Task A_failed_refresh_does_not_keep_the_next_one_from_running()
         {

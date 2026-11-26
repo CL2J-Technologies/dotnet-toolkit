@@ -313,6 +313,16 @@ namespace cl2j.FileStorage.AzureBlobStorage.IntegrationTests
         // ---- Exists and info ----
 
         [Fact]
+        public async Task A_container_deleted_after_the_provider_started_has_no_files()
+        {
+            var name = AzureProviderFactory.NewContainerName("gone");
+            var provider = Provider(name);
+            await Client(name).DeleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.False(await provider.ExistsAsync("anything.txt"));
+        }
+
+        [Fact]
         public async Task A_file_that_was_written_exists()
         {
             var provider = Provider();

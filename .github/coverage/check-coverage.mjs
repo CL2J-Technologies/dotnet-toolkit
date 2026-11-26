@@ -12,6 +12,10 @@
 // (assembly, source file, line), keeping the highest hit count. A library is often exercised by a
 // suite other than its own (cl2j.Scripting by the cl2j.Database tests), so a per-test-project
 // figure would misreport it.
+//
+// Source files under an obj/ directory are skipped: that is generated code (the [GeneratedRegex]
+// output in cl2j.Tooling and cl2j.FileStorage), not code this repository writes, and no test can
+// target it.
 
 import { readdirSync, readFileSync, statSync, appendFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -42,6 +46,9 @@ function* walk(dir) {
 const isLibrary = name =>
   name.startsWith('cl2j.') && !/\.(Tests|IntegrationTests|IntegrationTests\.Shared|Benchmarks)$/.test(name);
 
+// A path with an obj directory segment, written with either separator.
+const isGenerated = filename => /(^|[\\/])obj[\\/]/.test(filename);
+
 const files = [...walk(resultsDir)];
 if (files.length === 0) {
   console.error(`No *.cobertura.xml under ${resultsDir}.`);
@@ -57,6 +64,7 @@ for (const file of files) {
     const lines = assemblies.get(pm[1]) ?? new Map();
     assemblies.set(pm[1], lines);
     for (const cm of pm[2].matchAll(/<class\b[^>]*\bfilename="([^"]*)"[^>]*>([\s\S]*?)<\/class>/g)) {
+      if (isGenerated(cm[1])) continue;
       for (const lm of cm[2].matchAll(/<line\b[^>]*\bnumber="(\d+)"[^>]*\bhits="(\d+)"/g)) {
         const key = `${cm[1]}|${lm[1]}`;
         lines.set(key, Math.max(lines.get(key) ?? 0, Number(lm[2])));

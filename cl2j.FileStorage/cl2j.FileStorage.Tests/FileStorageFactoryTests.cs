@@ -1,3 +1,4 @@
+using System.Reflection;
 using cl2j.FileStorage.Core;
 using cl2j.Tooling.Exceptions;
 using Microsoft.Extensions.Configuration;
@@ -111,6 +112,39 @@ namespace cl2j.FileStorage.Tests
             Build((name, "Stub")).Register<StubProvider>("Stub");
 
             Assert.NotNull(Build().GetProvider(name));
+        }
+
+        [Fact]
+        public void A_provider_registered_while_a_lookup_waits_for_the_lock_is_found_by_that_lookup()
+        {
+            //GetProvider checks its cache, then takes a lock and checks again, for a provider that
+            //was registered in between. The lock is held here so the lookup is parked inside that
+            //gap while the provider is registered.
+            var name = "late-" + Suffix;
+            var factory = Build((name, "Stub"));
+            var gate = (Lock)typeof(FileStorageFactory).GetField("Lock", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+            IFileStorageProvider? found = null;
+            var lookup = new Thread(() => found = factory.GetProvider(name));
+
+            gate.Enter();
+            try
+            {
+                lookup.Start();
+                //A thread blocked on the lock is in WaitSleepJoin; it spins first, which shows as running.
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+                while (lookup.ThreadState != ThreadState.WaitSleepJoin && DateTime.UtcNow < deadline)
+                    Thread.Sleep(5);
+                Assert.Equal(ThreadState.WaitSleepJoin, lookup.ThreadState);
+
+                factory.Register<StubProvider>("Stub");
+            }
+            finally
+            {
+                gate.Exit();
+            }
+
+            Assert.True(lookup.Join(TimeSpan.FromSeconds(10)));
+            Assert.Equal(name, Assert.IsType<StubProvider>(found).Name);
         }
 
         [Fact]

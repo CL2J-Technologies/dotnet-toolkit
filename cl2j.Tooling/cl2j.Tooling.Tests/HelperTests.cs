@@ -157,6 +157,31 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public void No_text_has_no_stream()
+        {
+            Assert.Null(StreamUtils.ToStream(null!));
+        }
+
+        [Fact]
+        public void A_stream_already_read_is_returned_whole()
+        {
+            using var stream = new MemoryStream([1, 2, 3, 4, 5]) { Position = 3 };
+
+            Assert.Equal([1, 2, 3, 4, 5], stream.ToBytes());
+        }
+
+        [Fact]
+        public void Copying_a_stream_already_read_starts_from_the_beginning()
+        {
+            using var source = new MemoryStream([1, 2, 3, 4, 5]) { Position = 3 };
+            using var destination = new MemoryStream();
+
+            StreamUtils.CopyTo(source, destination);
+
+            Assert.Equal([1, 2, 3, 4, 5], destination.ToArray());
+        }
+
+        [Fact]
         public void Copying_moves_every_byte()
         {
             using var source = new MemoryStream([1, 2, 3, 4, 5]);
