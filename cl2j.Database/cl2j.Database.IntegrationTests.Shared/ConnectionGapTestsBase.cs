@@ -10,7 +10,7 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class ConnectionGapTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(FacadeRow), CancellationToken.None);
@@ -18,11 +18,12 @@ namespace cl2j.Database.IntegrationTests
             await connection.CreateTable<FacadeRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(FacadeRow), CancellationToken.None);
             await connection.DropTableIfExists(typeof(PlainKeyedRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

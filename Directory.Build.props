@@ -5,6 +5,25 @@
     <Nullable>enable</Nullable>
     <AnalysisMode>Recommended</AnalysisMode>
 
+    <!-- Warnings fail the build, in every project, tests included (#72). A new warning used to land
+         unnoticed because nothing broke; now it is fixed in the change that introduces it.
+
+         AnalysisLevel is pinned so that an SDK update cannot add an analyzer rule and break the
+         build on its own. The cost: picking up newer rules is a deliberate bump of this number.
+         There is no blanket NoWarn and no per-project opt-out; a rule that does not fit is
+         suppressed at the line that needs it, with the reason beside it. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>10.0</AnalysisLevel>
+
+    <!-- xunit v3 test projects are Microsoft.Testing.Platform applications by default, and from the
+         .NET 10 SDK on, `dotnet test` refuses to run those through VSTest ("opt-in to the new
+         dotnet test experience"). This repository runs them through VSTest on purpose: CI
+         collects coverage with the VSTest "Code Coverage" collector, which
+         Microsoft.Testing.Platform does not offer. Switching the flag off keeps
+         Microsoft.NET.Test.Sdk and xunit.runner.visualstudio in charge; the projects are still
+         xunit v3 executables. The property means nothing to a project that is not a test project. -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+
     <!-- Shared versioning: every package in this repository publishes this number, and no
          .csproj overrides it. Bump it here, commit to main, and the workflow publishes the whole
          set together.
@@ -18,6 +37,13 @@
 
          The cost, accepted knowingly: a package that did not change still gets a new number, so
          the version says which release a package belongs to, not what changed inside it.
+
+         6.6.2: the one exception to "no override". cl2j.Database and its three providers have a
+         version line of their own in cl2j.Database/Directory.Build.props (#93), because a change
+         to them should not republish the other eleven packages. That file imports this one and
+         sets only <Version>. The stale-floor risk it reopens is closed by a rule: a change to
+         cl2j.Tooling or cl2j.Scripting also bumps the Database family (CONTRIBUTING.md,
+         Versioning), checked by ci.yml on pull requests into main.
 
          4.0.0 was the first shared number after the per-package period, clearing every version
          published during it — the highest being cl2j.Image 3.1.0.
@@ -277,7 +303,7 @@
          6.6.0 is a minor bump: it adds two packages, cl2j.Database.MySql and
          cl2j.Database.PostgreSql, on a provider base shared with cl2j.Database.SqlServer. Nothing
          that was already here changes for a caller that does not reference them. -->
-    <Version>6.6.1</Version>
+    <Version>6.6.2</Version>
         
   
     <Authors>CL2J Technologies</Authors>

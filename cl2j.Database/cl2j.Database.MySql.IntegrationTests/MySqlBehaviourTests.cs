@@ -20,9 +20,13 @@ namespace cl2j.Database.MySql.IntegrationTests
             typeof(MyShortRow), typeof(MyBatchRow), typeof(MyTemporalRow),
         ];
 
-        public async Task InitializeAsync() => await DropAll();
+        public async ValueTask InitializeAsync() => await DropAll();
 
-        public async Task DisposeAsync() => await DropAll();
+        public async ValueTask DisposeAsync()
+        {
+            await DropAll();
+            GC.SuppressFinalize(this);
+        }
 
         private async Task DropAll()
         {
@@ -289,7 +293,7 @@ namespace cl2j.Database.MySql.IntegrationTests
         {
             await using var connection = await OpenFor(how);
             await connection.CreateTable<MyBatchRow>();
-            await using var transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
             await Assert.ThrowsAnyAsync<Exception>(() => connection.BulkInsert(Rows(2500, (2100, "id-5")), CancellationToken.None, transaction));
 
@@ -298,8 +302,40 @@ namespace cl2j.Database.MySql.IntegrationTests
             //row but the duplicate was loaded.
             Assert.Equal(how == "batched" ? 2000 : 2499, stored);
 
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(TestContext.Current.CancellationToken);
             Assert.Empty(await connection.Query<MyBatchRow>());
+        }
+
+        [Theory]
+        [InlineData("batched", true)]
+        [InlineData("batched", false)]
+        [InlineData("bulkcopy", true)]
+        [InlineData("bulkcopy", false)]
+        public async Task With_a_caller_transaction_a_bulk_insert_stays_until_the_caller_decides(string how, bool commit)
+        {
+            await using var connection = await OpenFor(how);
+            await connection.CreateTable<MyBatchRow>();
+            await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+            await connection.BulkInsert(Rows(25), CancellationToken.None, transaction);
+
+            //Inside the caller's transaction the rows are visible, and the provider has not committed them.
+            Assert.Equal(25, (await connection.Query<MyBatchRow>(null, CancellationToken.None, transaction)).Count);
+            if (commit)
+                await transaction.CommitAsync(TestContext.Current.CancellationToken);
+            else
+                await transaction.RollbackAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(commit ? 25 : 0, (await connection.Query<MyBatchRow>()).Count);
+        }
+
+        [Fact]
+        public async Task A_property_of_a_type_with_no_column_mapping_is_refused_when_the_table_is_created()
+        {
+            await using var connection = await fixture.OpenAsync();
+
+            var ex = await Assert.ThrowsAsync<Exceptions.DatabaseException>(() => connection.CreateTable<MyUnmappedRow>());
+
+            Assert.Contains("No column type for 'Int32[]' on 'Tags'", ex.Message, StringComparison.Ordinal);
         }
 
         [Theory]

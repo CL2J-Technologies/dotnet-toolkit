@@ -15,21 +15,22 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         private static readonly Type[] Tables =
         [
             typeof(PgJsonRow), typeof(PgMomentRow), typeof(PgShortRow), typeof(PgIntKeyRow),
-            typeof(PgLongKeyRow), typeof(PgGuidKeyRow), typeof(PgCopyRow), typeof(PgOddRow)
+            typeof(PgLongKeyRow), typeof(PgGuidKeyRow), typeof(PgCopyRow), typeof(PgOddRow), typeof(PgArrayRow), typeof(PgTextJsonRow)
         ];
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await DropAll(connection);
-            foreach (var table in Tables.Where(t => t != typeof(PgOddRow)))
+            foreach (var table in Tables.Where(t => t != typeof(PgOddRow) && t != typeof(PgArrayRow)))
                 await connection.CreateTable(table, CancellationToken.None);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await DropAll(connection);
+            GC.SuppressFinalize(this);
         }
 
         private static async Task DropAll(DbConnection connection)
@@ -352,12 +353,12 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public async Task A_copy_in_a_transaction_is_rolled_back_with_it()
         {
             await using var connection = await fixture.OpenAsync();
-            await using (var transaction = await connection.BeginTransactionAsync())
+            await using (var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken))
             {
                 await connection.BulkInsert(ShortRows(100), CancellationToken.None, transaction);
                 Assert.Equal(100L, await Count(connection, "PgShort", transaction));
 
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(TestContext.Current.CancellationToken);
             }
 
             Assert.Equal(0L, await Count(connection, "PgShort"));
@@ -367,14 +368,14 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public async Task A_copy_in_a_transaction_is_kept_when_it_commits()
         {
             await using var connection = await fixture.OpenAsync();
-            await using (var transaction = await connection.BeginTransactionAsync())
+            await using (var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken))
             {
                 await connection.BulkInsert(ShortRows(100), CancellationToken.None, transaction);
                 //Invisible to another connection until the commit.
                 await using var other = await fixture.OpenAsync();
                 Assert.Equal(0L, await Count(other, "PgShort"));
 
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(TestContext.Current.CancellationToken);
             }
 
             Assert.Equal(100L, await Count(connection, "PgShort"));
@@ -384,7 +385,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public async Task A_copy_that_fails_inside_a_transaction_leaves_the_earlier_work_of_the_transaction_alone()
         {
             await using var connection = await fixture.OpenAsync();
-            await using var transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync(TestContext.Current.CancellationToken);
             await connection.Insert(new PgShortRow { Id = "before", Code = "ok" }, CancellationToken.None, transaction);
             await connection.Execute("SAVEPOINT s", null, CancellationToken.None, transaction);
 
@@ -394,7 +395,48 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
             await connection.Execute("ROLLBACK TO SAVEPOINT s", null, CancellationToken.None, transaction);
 
             Assert.Equal(1L, await Count(connection, "PgShort", transaction));
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(TestContext.Current.CancellationToken);
+        }
+
+        [Theory]
+        [InlineData("insert")]
+        [InlineData("copy")]
+        public async Task A_json_document_in_a_text_column_is_written_as_text_not_typed_as_json(string how)
+        {
+            await using var connection = await fixture.OpenAsync();
+            var row = new PgTextJsonRow { Id = "t", Details = new PgDocument { Kind = "k", Values = [1, 2] } };
+
+            if (how == "insert")
+                await connection.Insert(row);
+            else
+                await connection.BulkInsert([row]);
+
+            Assert.Equal("text", await ColumnType(connection, "Pg_TextJson", "Details"));
+            var stored = (string?)await Scalar(connection, "SELECT \"Details\" FROM \"Pg_TextJson\" WHERE \"Id\" = 't'");
+            Assert.Contains("\"Kind\":\"k\"", stored, StringComparison.Ordinal);
+            Assert.Equal("k", (await connection.QueryKey<PgTextJsonRow>("t"))!.Details!.Kind);
+        }
+
+        [Fact]
+        public async Task A_column_type_nobody_mapped_is_left_to_Npgsql_by_the_copy_writer()
+        {
+            //The library will not create this column (see the next test), so the table is made by hand.
+            await using var connection = await fixture.OpenAsync();
+            await connection.Execute("CREATE TABLE \"Pg_Array\" (\"Id\" varchar(50) PRIMARY KEY, \"Tags\" integer[] NOT NULL)");
+
+            await connection.BulkInsert([new PgArrayRow { Id = "a", Tags = [3, 1, 2] }]);
+
+            Assert.Equal("{3,1,2}", await Scalar(connection, "SELECT \"Tags\"::text FROM \"Pg_Array\" WHERE \"Id\" = 'a'"));
+        }
+
+        [Fact]
+        public async Task A_property_of_a_type_with_no_column_mapping_is_refused_when_the_table_is_created()
+        {
+            await using var connection = await fixture.OpenAsync();
+
+            var ex = await Assert.ThrowsAsync<DatabaseException>(() => connection.CreateTable<PgArrayRow>());
+
+            Assert.Contains("No column type for 'Int32[]' on 'Tags'", ex.Message, StringComparison.Ordinal);
         }
 
         [Fact]
@@ -425,7 +467,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         {
             await using var connection = await fixture.OpenAsync();
             await using var other = await fixture.OpenAsync();
-            await using var foreign = await other.BeginTransactionAsync();
+            await using var foreign = await other.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
             await Assert.ThrowsAsync<DatabaseException>(() => connection.BulkInsert(ShortRows(2), CancellationToken.None, foreign));
 

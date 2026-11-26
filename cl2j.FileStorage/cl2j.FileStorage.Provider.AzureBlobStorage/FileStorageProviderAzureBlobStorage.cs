@@ -93,7 +93,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             var folder = FolderPrefix(path);
             var list = new List<string>();
 
-            await foreach (var blob in container.GetBlobsAsync(prefix: folder))
+            await foreach (var blob in container.GetBlobsAsync(new GetBlobsOptions { Prefix = folder }))
             {
                 var name = blob.Name[folder.Length..];
                 if (name.IndexOf('/') < 0)
@@ -115,7 +115,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             var folder = FolderPrefix(path);
             var list = new List<string>();
 
-            await foreach (var blob in container.GetBlobsAsync(prefix: folder + namePrefix))
+            await foreach (var blob in container.GetBlobsAsync(new GetBlobsOptions { Prefix = folder + namePrefix }))
             {
                 var name = blob.Name[folder.Length..];
                 if (name.IndexOf('/') < 0)
@@ -133,7 +133,7 @@ namespace cl2j.FileStorage.Provider.AzureBlobStorage
             var folder = FolderPrefix(path);
             var list = new HashSet<string>();
 
-            await foreach (var blob in container.GetBlobsAsync(prefix: folder))
+            await foreach (var blob in container.GetBlobsAsync(new GetBlobsOptions { Prefix = folder }))
             {
                 var name = blob.Name[folder.Length..];
 

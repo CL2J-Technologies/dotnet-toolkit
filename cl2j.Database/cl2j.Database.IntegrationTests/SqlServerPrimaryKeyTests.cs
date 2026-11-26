@@ -12,16 +12,17 @@ namespace cl2j.Database.IntegrationTests
     [Collection(SqlServerCollection.Name)]
     public class SqlServerPrimaryKeyTests(SqlServerFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(PkClusteredRow), CancellationToken.None);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(PkClusteredRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]
@@ -32,7 +33,7 @@ namespace cl2j.Database.IntegrationTests
 
             await using var command = connection.CreateCommand();
             command.CommandText = "SELECT type_desc FROM sys.indexes WHERE object_id = OBJECT_ID(N'PkClustered') AND is_primary_key = 1";
-            var indexType = await command.ExecuteScalarAsync();
+            var indexType = await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal("CLUSTERED", indexType);
         }

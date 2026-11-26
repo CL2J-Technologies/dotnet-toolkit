@@ -28,7 +28,7 @@ namespace cl2j.Database.IntegrationTests
         /// </summary>
         protected virtual int KeyBatchRowCount => 2500;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(BulkRow), CancellationToken.None);
@@ -37,11 +37,12 @@ namespace cl2j.Database.IntegrationTests
             await connection.CreateTable<KeyBatchRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(BulkRow), CancellationToken.None);
             await connection.DropTableIfExists(typeof(KeyBatchRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

@@ -24,7 +24,7 @@ namespace cl2j.Database.IntegrationTests
     [Collection(SqlServerCollection.Name)]
     public class ParameterTypingPlanTests(SqlServerFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(AnsiKeyedRow), CancellationToken.None);
@@ -34,10 +34,11 @@ namespace cl2j.Database.IntegrationTests
                 await connection.Insert(new AnsiKeyedRow { Code = $"code-{i:D3}", Label = $"label {i}" });
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(AnsiKeyedRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -55,7 +56,7 @@ namespace cl2j.Database.IntegrationTests
                 WHERE TABLE_NAME = 'AnsiKeyed' AND COLUMN_NAME = 'Code'
                 """;
 
-            var dataType = (string?)await command.ExecuteScalarAsync();
+            var dataType = (string?)await command.ExecuteScalarAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal("varchar", dataType);
         }
@@ -91,8 +92,8 @@ namespace cl2j.Database.IntegrationTests
                 parameter.Value = "code-007";
                 command.Parameters.Add(parameter);
 
-                await using var reader = await command.ExecuteReaderAsync();
-                while (await reader.ReadAsync()) { }
+                await using var reader = await command.ExecuteReaderAsync(TestContext.Current.CancellationToken);
+                while (await reader.ReadAsync(TestContext.Current.CancellationToken)) { }
             }
 
             var plan = await FindPlanAsync(connection, "AnsiKeyed");

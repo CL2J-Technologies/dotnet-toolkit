@@ -35,6 +35,18 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
+        public void A_provider_is_found_by_name_from_the_service_provider()
+        {
+            var services = Build();
+            services.AddFileStorage(f => f.Register<ProviderOne>("One"));
+
+            var provider = services.BuildServiceProvider().GetProvider("first");
+
+            Assert.IsType<ProviderOne>(provider);
+            Assert.Equal("first", provider.Name);
+        }
+
+        [Fact]
         public void The_disk_provider_is_still_there_when_another_is_added()
         {
             var services = Build();

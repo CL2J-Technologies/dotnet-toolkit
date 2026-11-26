@@ -22,17 +22,18 @@ namespace cl2j.Database.IntegrationTests
         /// </summary>
         protected virtual DateTimeOffset MomentValue => new(2026, 9, 6, 14, 30, 15, TimeSpan.FromHours(-4));
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(ReaderShapesRow), CancellationToken.None);
             await connection.CreateTable<ReaderShapesRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(ReaderShapesRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

@@ -1,0 +1,20 @@
+{
+  "_comment": "Minimum line coverage per package, in percent. Each sits about one point under what the package measured when the floor was set (#30). Raise a floor when a change raises the number; never lower one to make a build pass. See Coverage in CONTRIBUTING.md.",
+  "floors": {
+    "cl2j.Database": 99,
+    "cl2j.Database.MySql": 99,
+    "cl2j.Database.PostgreSql": 99,
+    "cl2j.Database.SqlServer": 99,
+    "cl2j.DataStore": 99,
+    "cl2j.DataStore.Json": 99,
+    "cl2j.FileStorage": 95,
+    "cl2j.FileStorage.Provider.AzureBlobStorage": 98,
+    "cl2j.FileStorage.Provider.S3": 99,
+    "cl2j.Image": 97,
+    "cl2j.Logging": 99,
+    "cl2j.Scripting": 95,
+    "cl2j.Smapper": 99,
+    "cl2j.Tooling": 99,
+    "cl2j.WebTooling": 99
+  }
+}

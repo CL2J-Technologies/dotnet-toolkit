@@ -10,17 +10,18 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class GeneratedKeyTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(IdentityKeyedRow), CancellationToken.None);
             await connection.CreateTable<IdentityKeyedRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(IdentityKeyedRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

@@ -46,7 +46,7 @@ namespace cl2j.Database.IntegrationTests
         public IDatabase CreateDatabase(DatabaseOptions options, ILogger logger)
             => new SqlServerDatabase(ConnectionString, options, logger);
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             cl2j.Database.SqlServer.SqlServer.Register();
 
@@ -54,7 +54,7 @@ namespace cl2j.Database.IntegrationTests
             ConnectionString = container.GetConnectionString();
         }
 
-        public async Task DisposeAsync() => await container.DisposeAsync();
+        public async ValueTask DisposeAsync() => await container.DisposeAsync();
 
         /// <summary>
         ///     A new open connection. Each test gets its own rather than sharing one, so a test

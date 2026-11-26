@@ -61,13 +61,13 @@ namespace cl2j.FileStorage.S3.IntegrationTests
 
         public string ServiceUrl { get; private set; } = string.Empty;
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await container.StartAsync();
             ServiceUrl = $"http://{container.Hostname}:{container.GetMappedPublicPort(Port)}";
         }
 
-        public async Task DisposeAsync() => await container.DisposeAsync();
+        public async ValueTask DisposeAsync() => await container.DisposeAsync();
     }
 
     [CollectionDefinition(Name)]

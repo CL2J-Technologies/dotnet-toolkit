@@ -7,9 +7,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-#if DEBUG
-
-#if true
 var services = new ServiceCollection();
 services.AddLogging(builder =>
 {
@@ -20,9 +17,6 @@ services.AddDatabase(register: o => SqlServer.Register());
 var serviceProvider = services.BuildServiceProvider();
 serviceProvider.UseDatabase();
 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-#else
-SqlServer.Register();
-#endif
 
 var connectionString = "Data Source=.;Initial Catalog=DatabaseSample;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=15;encrypt=true;trustServerCertificate=true";
 using var connection = new SqlConnection(connectionString);
@@ -100,8 +94,3 @@ var res = await connection.Execute("UPDATE [Product] SET Price=@Price WHERE [Id]
 Debug.Assert(res == 1);
 Console.WriteLine($"Updated product 14");
 
-#else
-
-var summary = BenchmarkDotNet.Running.BenchmarkRunner.Run(typeof(Program).Assembly);
-
-#endif

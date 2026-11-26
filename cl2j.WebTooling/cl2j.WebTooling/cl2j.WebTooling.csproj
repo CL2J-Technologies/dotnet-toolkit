@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>cl2j.WebTooling</PackageId>
+    <Description>ASP.NET Core one-liners: claims, client IP and URL, language selection, and posting uploaded files with HttpClient. Nothing to configure.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\cl2j.Tooling\cl2j.Tooling\cl2j.Tooling.csproj" />
+  </ItemGroup>
+</Project>

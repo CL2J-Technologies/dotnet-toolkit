@@ -8,6 +8,25 @@ namespace cl2j.FileStorage.Tests
         private readonly InMemoryFileStorageProvider provider = new();
 
         [Fact]
+        public async Task Writing_no_text_writes_an_empty_file()
+        {
+            await provider.WriteTextAsync("empty.txt", null!);
+
+            Assert.True(await provider.ExistsAsync("empty.txt"));
+            Assert.Empty(provider.Files["empty.txt"]);
+        }
+
+        [Fact]
+        public async Task Appending_no_text_adds_nothing()
+        {
+            await provider.WriteTextAsync("log.txt", "first");
+
+            await provider.AppendTextAsync("log.txt", null!);
+
+            Assert.Equal("first", await provider.ReadTextAsync("log.txt"));
+        }
+
+        [Fact]
         public async Task ClearDirectoryAsync_deletes_every_file_of_the_directory_and_counts_them()
         {
             await provider.WriteTextAsync("logs/a.txt", "a");

@@ -25,6 +25,17 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public PgDocument? Capped { get; set; }
     }
 
+    /// <summary>A JSON document kept in a column declared as plain text: a TypeName that is neither json nor jsonb.</summary>
+    [Table("Pg_TextJson")]
+    public sealed class PgTextJsonRow
+    {
+        [Column(Name = "Id", Key = KeyType.Key, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "Details", Json = true, TypeName = "text")]
+        public PgDocument? Details { get; set; }
+    }
+
     [Table("PgMoments")]
     public sealed class PgMomentRow
     {
@@ -123,6 +134,20 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
     {
         [Column(Name = "Id", Key = KeyType.SelfGeneratedKey, Length = 50)]
         public string Id { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    ///     A column of a type the provider maps to nothing: the table is made by hand, which is the
+    ///     only way such a column exists, and the COPY writer leaves the wire type to Npgsql.
+    /// </summary>
+    [Table("Pg_Array")]
+    public sealed class PgArrayRow
+    {
+        [Column(Name = "Id", Key = KeyType.Key, Length = 50)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "Tags")]
+        public int[] Tags { get; set; } = [];
     }
 
     /// <summary>

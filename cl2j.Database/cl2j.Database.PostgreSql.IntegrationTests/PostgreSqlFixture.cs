@@ -32,7 +32,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
         public IDatabase CreateDatabase(DatabaseOptions options, ILogger logger)
             => new PostgreSqlDatabase(ConnectionString, options, logger);
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             cl2j.Database.PostgreSql.PostgreSql.Register();
 
@@ -40,7 +40,7 @@ namespace cl2j.Database.PostgreSql.IntegrationTests
             ConnectionString = container.GetConnectionString();
         }
 
-        public async Task DisposeAsync() => await container.DisposeAsync();
+        public async ValueTask DisposeAsync() => await container.DisposeAsync();
 
         public async Task<DbConnection> OpenAsync()
         {

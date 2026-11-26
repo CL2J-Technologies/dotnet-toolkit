@@ -8,17 +8,18 @@ namespace cl2j.Database.IntegrationTests
     /// </summary>
     public abstract class TransactionTestsBase(IDatabaseFixture fixture) : IAsyncLifetime
     {
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(TransactedRow), CancellationToken.None);
             await connection.CreateTable<TransactedRow>();
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             await connection.DropTableIfExists(typeof(TransactedRow), CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]

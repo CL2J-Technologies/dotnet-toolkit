@@ -59,7 +59,7 @@ namespace cl2j.Database.Tests
                 cl2j.Database.SqlServer.SqlServer.Register();
 
             Volatile.Write(ref stop, true);
-            await Task.WhenAll(resolvers).WaitAsync(TimeSpan.FromSeconds(30));
+            await Task.WhenAll(resolvers).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
             Assert.Empty(failures);
         }

@@ -230,5 +230,4 @@ logger.LogDebugIfEnabled("loaded {Count} items in {Ms} ms", items.Count, elapsed
 
 # More
 
-The unit tests in `cl2j.Logging.Tests` show each behavior above, and `cl2j.Logging.TestApp` is a runnable console
-sample.
+The unit tests in `cl2j.Logging.Tests` show each behavior above.

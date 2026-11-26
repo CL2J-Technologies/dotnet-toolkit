@@ -328,7 +328,7 @@ namespace cl2j.DataStore.Tests
             await firstIsInside.Task;
 
             var other = unrelated.InsertAsync("2", new Contended { Id = "2" });
-            var finished = await Task.WhenAny(other, Task.Delay(TimeSpan.FromMilliseconds(500)));
+            var finished = await Task.WhenAny(other, Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken));
 
             Assert.Same(other, finished);
             Assert.Single(unrelatedStore.Contents);

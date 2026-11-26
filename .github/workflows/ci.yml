@@ -25,6 +25,18 @@ jobs:
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The Database family check below diffs against the base branch, so it needs history.
+          fetch-depth: 0
+
+      # cl2j.Database references cl2j.Tooling and cl2j.Scripting, and dotnet pack pins them at the
+      # version in force. A change to either must therefore bump the Database family version in
+      # cl2j.Database/Directory.Build.props (CONTRIBUTING.md, Versioning). Only enforced on pull
+      # requests into main: a release branch collects several changes, and its own PR is where
+      # the family number is settled.
+      - name: Database family version
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: bash .github/scripts/check-database-version.sh "origin/${{ github.base_ref }}"
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -37,7 +49,27 @@ jobs:
       # ubuntu-latest is deliberate rather than incidental: cl2j.Image shipped for fifteen months
       # unable to produce a single thumbnail off Windows, and nobody noticed because nothing ever
       # built it on Linux. Tests that run on the platform the failure occurs on are the point.
-      - run: dotnet test --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory ./test-results
+      #
+      # Coverage comes from the collector bundled in Microsoft.NET.Test.Sdk, which writes one merged
+      # Cobertura file for the whole solution. Do not switch to "XPlat Code Coverage": that is the
+      # coverlet collector, no test project references it, and it silently produces nothing.
+      # The integration tests count, so the number is only comparable on a runner that has Docker.
+      - run: dotnet test --no-build -c Release --collect:"Code Coverage;Format=cobertura" --logger "trx;LogFileName=results.trx" --results-directory ./test-results
+
+      # A per-package table in the job summary, and a failure when a package drops under its floor
+      # in .github/coverage/floors.json. Library assemblies only: no test project, nothing third
+      # party. The ratchet rule is in CONTRIBUTING.md.
+      - name: Coverage by package
+        run: node .github/coverage/check-coverage.mjs ./test-results --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-cobertura
+          path: ./test-results/**/*.cobertura.xml
+          if-no-files-found: ignore
+          retention-days: 14
 
       # Uploaded on failure only. A green run's results are not worth the storage; a red one is
       # read by whoever has to work out what broke.

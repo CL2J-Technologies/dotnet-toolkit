@@ -13,18 +13,19 @@ namespace cl2j.Database.IntegrationTests
     {
         private static readonly Type[] Tables = [typeof(StringKeyBulkRow), typeof(LongKeyRow), typeof(GuidKeyRow), typeof(JsonNullRow)];
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             foreach (var table in Tables)
                 await connection.DropTableIfExists(table, CancellationToken.None);
         }
 
-        public async Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
             await using var connection = await fixture.OpenAsync();
             foreach (var table in Tables)
                 await connection.DropTableIfExists(table, CancellationToken.None);
+            GC.SuppressFinalize(this);
         }
 
         [Fact]
