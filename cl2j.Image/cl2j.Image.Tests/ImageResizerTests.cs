@@ -41,6 +41,21 @@ namespace cl2j.Image.Tests
             Assert.Equal(expectedH, result.Height);
         }
 
+        [Theory]
+        [InlineData(400, 200, 100, 100, 100, 50)] // landscape: the width is the longest side
+        [InlineData(200, 400, 100, 100, 50, 100)] // portrait: the height is the longest side
+        [InlineData(100, 100, 50, 50, 50, 50)] // square: taken as the height-bound case
+        [InlineData(100, 200, 300, 400, 200, 400)] // a smaller portrait image is enlarged to fill the frame
+        public void ScaleToLongestSide_fits_the_longest_side_to_its_limit_and_keeps_the_aspect_ratio(int width, int height, int maxW, int maxH, int expectedW, int expectedH)
+        {
+            using var image = new RasterImage(width, height);
+
+            using var result = ImageResizer.ScaleToLongestSide(image, maxW, maxH);
+
+            Assert.Equal(expectedW, result.Width);
+            Assert.Equal(expectedH, result.Height);
+        }
+
         [Fact]
         public void An_image_oversize_in_one_dimension_only_is_scaled_down()
         {

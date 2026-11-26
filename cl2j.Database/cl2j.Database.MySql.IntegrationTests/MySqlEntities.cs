@@ -84,6 +84,17 @@ namespace cl2j.Database.MySql.IntegrationTests
         public int Position { get; set; }
     }
 
+    /// <summary>A property of a type the provider maps to no column, and says no TypeName for.</summary>
+    [Table("My_Unmapped")]
+    public sealed class MyUnmappedRow
+    {
+        [Column(Name = "Id", Key = KeyType.Key, Length = 40)]
+        public string Id { get; set; } = string.Empty;
+
+        [Column(Name = "Tags")]
+        public int[] Tags { get; set; } = [];
+    }
+
     /// <summary>The temporal columns of the offset, precision and range tests.</summary>
     [Table("My_Temporal")]
     public sealed class MyTemporalRow

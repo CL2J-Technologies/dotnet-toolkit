@@ -65,6 +65,51 @@ namespace cl2j.Scripting.Tests
         }
 
         [Fact]
+        public void A_script_exposes_the_options_it_was_created_from()
+        {
+            var options = ScriptOptions.Create<int>("return 1;");
+
+            var script = Script.Create(options);
+
+            Assert.Same(options, script.Options);
+        }
+
+        [Fact]
+        public void A_null_context_calls_the_method_that_takes_none()
+        {
+            //A null passes no argument at all, so the parameterless method answers.
+            var script = Script.Create(ScriptOptions.Create<int>("return 7;"));
+
+            Assert.Equal(7, script.Execute<string, int>(null));
+        }
+
+        [Fact]
+        public void A_script_compiled_with_debug_information_runs_like_any_other()
+        {
+            var options = ScriptOptions.Create<string, int>("return context.Length;");
+            options.CompileWithDebug = true;
+
+            var script = Script.Create(options);
+
+            Assert.Equal(5, script.Execute<string, int>("hello"));
+        }
+
+        [Fact]
+        public void A_generated_class_that_cannot_be_constructed_is_reported_with_the_cause()
+        {
+            //A field initializer runs in the constructor, so it fails the construction of the
+            //generated class without the code having to name that class.
+            var options = ScriptOptions.Create<int>("return 1;");
+            options.MethodDeclaration = "private readonly int broken = Fail();\nprivate static int Fail() => throw new InvalidOperationException(\"no instance\");\n" + options.MethodDeclaration;
+
+            var exception = Assert.Throws<ScriptException>(() => Script.Create(options));
+
+            Assert.Contains("Error while creating the generated class instance", exception.Message);
+            Assert.Equal("return 1;", exception.CompileSource);
+            Assert.NotNull(exception.InnerException);
+        }
+
+        [Fact]
         public void Code_that_does_not_compile_is_refused_with_the_compiler_message()
         {
             //The failure has to name what the compiler objected to. The generated source is

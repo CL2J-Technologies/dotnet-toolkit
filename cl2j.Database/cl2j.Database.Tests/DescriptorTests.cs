@@ -32,6 +32,24 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
+        public void A_table_is_described_by_its_name()
+        {
+            Assert.Equal("Customer", Describe(typeof(Customer)).ToString());
+        }
+
+        [Fact]
+        public void A_column_is_described_by_its_name_and_what_it_declares()
+        {
+            var column = Describe(typeof(Customer)).Columns.Single(c => c.Name == "Id");
+
+            var text = column.ToString();
+
+            Assert.StartsWith("Id Column[Name=Id, ", text);
+            Assert.Contains("Key=Key", text);
+            Assert.Contains("Length=50", text);
+        }
+
+        [Fact]
         public void An_ignored_property_never_becomes_a_column()
         {
             var descriptor = Describe(typeof(Invoice));

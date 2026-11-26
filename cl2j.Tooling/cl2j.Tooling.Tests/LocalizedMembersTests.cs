@@ -44,6 +44,15 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public void The_extensions_EmptyString_is_empty_in_both_languages()
+        {
+            var localized = LocalizedExtensions.EmptyString();
+
+            Assert.Equal(string.Empty, localized["en"]);
+            Assert.Equal(string.Empty, localized["fr"]);
+        }
+
+        [Fact]
         public void FromDict_copies_every_entry()
         {
             var localized = Localized<int>.FromDict(new Dictionary<string, int> { ["en"] = 1, ["fr"] = 2 });

@@ -12,7 +12,9 @@ namespace cl2j.Tooling.Tests
         public static TheoryData<Func<string, Exception, Exception>> WithInner => new()
         {
             (m, i) => new BadRequestException(m, i),
+            (m, i) => new ConflictException(m, i),
             (m, i) => new ForbiddenException(m, i),
+            (m, i) => new NotFoundException(m, i),
             (m, i) => new PropertyNotFoundException(m, i),
             (m, i) => new TooManyRequestsException(m, i),
             (m, i) => new UnauthorizedException(m, i),

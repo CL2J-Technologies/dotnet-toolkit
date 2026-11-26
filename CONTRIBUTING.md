@@ -95,7 +95,9 @@ off Windows, and nothing ever built it on Linux to notice.
 Cobertura report, uploaded as the `coverage-cobertura` artifact, and a per-package table into the
 job summary. Only the `cl2j.*` library assemblies are counted: no test project, nothing third party.
 A line counts when any test project ran it, and the integration tests count, so the number is only
-comparable where Docker is available.
+comparable where Docker is available. Generated source under an `obj/` directory (the output of
+`[GeneratedRegex]`, for instance) is skipped: nobody wrote those lines, so no test of ours can be
+asked to cover them.
 
 Each package has a **floor** in `.github/coverage/floors.json`, about one point under what it
 measured when the floor was set. `.github/coverage/check-coverage.mjs` fails the job when a package

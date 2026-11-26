@@ -65,6 +65,28 @@ namespace cl2j.Database.Tests
         }
 
         [Fact]
+        public void Null_and_a_database_null_have_no_value_for_a_target_known_at_run_time()
+        {
+            Type integer = typeof(int);
+            Type nullableLong = typeof(long?);
+
+            Assert.Null(IdentityConversion.To(null, integer));
+            Assert.Null(IdentityConversion.To(DBNull.Value, nullableLong));
+        }
+
+        [Fact]
+        public void A_value_converts_to_a_target_known_at_run_time()
+        {
+            Type integer = typeof(int);
+            Type nullableLong = typeof(long?);
+            Type text = typeof(string);
+
+            Assert.Equal(7, IdentityConversion.To(7UL, integer));
+            Assert.Equal(7L, IdentityConversion.To(7, nullableLong));
+            Assert.Equal("abc", IdentityConversion.To("abc", text));
+        }
+
+        [Fact]
         public void A_value_too_big_for_the_target_is_an_error_rather_than_a_wrapped_number()
         {
             Assert.Throws<OverflowException>(() => IdentityConversion.To<int>(9_000_000_000UL));

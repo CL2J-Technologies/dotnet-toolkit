@@ -42,6 +42,34 @@ namespace cl2j.FileStorage.Tests
         }
 
         [Fact]
+        public async Task A_second_Dispose_does_nothing_and_does_not_write_the_buffer_twice()
+        {
+            var provider = new InMemoryFileStorageProvider();
+            var storage = new BufferedFileStorage(provider, "log_{0:yyyyMMdd}_{1:00}.log", 1024 * 1024, TimeSpan.FromHours(1), clearFile: false);
+            await storage.AppendAsync("only line");
+
+            storage.Dispose();
+            storage.Dispose();
+
+            Assert.Equal("only line", provider.Text(storage.CurrentFileName));
+        }
+
+        [Fact]
+        public async Task A_tick_that_arrives_after_Dispose_is_ignored()
+        {
+            //A tick queued before Dispose stopped the timer can still arrive: it must neither throw
+            //nor write anything, since Dispose has already flushed.
+            var provider = new InMemoryFileStorageProvider();
+            var storage = new BufferedFileStorage(provider, "log_{0:yyyyMMdd}_{1:00}.log", 1024 * 1024, TimeSpan.FromHours(1), clearFile: false);
+            await storage.AppendAsync("only line");
+            storage.Dispose();
+
+            storage.RefreshAsync(null);
+
+            Assert.Equal("only line", provider.Text(storage.CurrentFileName));
+        }
+
+        [Fact]
         public async Task Dispose_waits_for_a_flush_the_timer_has_already_started()
         {
             var provider = new GatedProvider();

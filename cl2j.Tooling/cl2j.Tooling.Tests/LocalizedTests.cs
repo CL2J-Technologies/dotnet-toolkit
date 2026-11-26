@@ -97,6 +97,31 @@ namespace cl2j.Tooling.Tests
         }
 
         [Fact]
+        public void Get_with_only_null_values_answers_the_first_of_them()
+        {
+            //TryGetValue treats a null value as nothing to fall back to, so Get reaches its own
+            //"take the first value" branch, which is the null itself.
+            var localized = new Localized<string>();
+            localized.Add("es", null!);
+
+            Assert.Null(localized.Get("fr", "default"));
+        }
+
+        [Fact]
+        public void Contains_matches_the_language_and_the_value_together()
+        {
+            var localized = Localized(("en", "Hello"));
+
+            var sameBoth = localized.Contains(new KeyValuePair<string, string>("en", "Hello"));
+            var otherValue = localized.Contains(new KeyValuePair<string, string>("en", "Hi"));
+            var otherLanguage = localized.Contains(new KeyValuePair<string, string>("fr", "Hello"));
+
+            Assert.True(sameBoth);
+            Assert.False(otherValue);
+            Assert.False(otherLanguage);
+        }
+
+        [Fact]
         public void A_value_can_be_replaced_through_the_indexer()
         {
             var localized = Localized(("en", "Hello"));
