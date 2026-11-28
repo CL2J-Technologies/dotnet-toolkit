@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Xunit;
 
 namespace cl2j.Smapper.Tests
@@ -173,17 +173,6 @@ namespace cl2j.Smapper.Tests
         public void GetReadableWritableProperties_returns_only_properties_with_both_accessors()
         {
             Assert.Equal(["ReadWrite"], Names(ObjectExtensions.GetReadableWritableProperties(typeof(Sample))));
-        }
-
-        [Fact]
-        public void GetReadaleWritableProperties_misspelled_name_returns_the_same_properties_as_the_new_name()
-        {
-            // The misspelled name is deprecated on purpose and still has to behave like the new one until it is removed.
-#pragma warning disable CS0618
-            var legacy = ObjectExtensions.GetReadaleWritableProperties(typeof(Sample));
-#pragma warning restore CS0618
-
-            Assert.Equal(ObjectExtensions.GetReadableWritableProperties(typeof(Sample)), legacy);
         }
     }
 }
