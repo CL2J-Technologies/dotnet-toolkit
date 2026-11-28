@@ -88,4 +88,4 @@ Behaviour confirmed by the test suite:
 - **The destination needs a public parameterless constructor** when you do not pass `input`.
 - **`Map` on a `null` source throws** (`NullReferenceException`): it reads `source.GetType()`.
 - `Clone` goes through `System.Text.Json`, so it copies public properties only and needs a type that `System.Text.Json` can round-trip.
-- `cl2j.Smapper.ObjectExtensions` is public and exposes the two reflection helpers the mapper uses, `GetReadableProperties(Type)` and `GetReadableWritableProperties(Type)`. The earlier misspelled name, `GetReadaleWritableProperties(Type)`, still works but is deprecated (`[Obsolete]`) and will be removed in the next major version.
+- `cl2j.Smapper.ObjectExtensions` is public and exposes the two reflection helpers the mapper uses, `GetReadableProperties(Type)` and `GetReadableWritableProperties(Type)`.
